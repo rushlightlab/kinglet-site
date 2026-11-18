@@ -1,0 +1,50 @@
+---
+title: Quickstart
+description: Kinglet up and running in five minutes.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+<Steps>
+
+1. **Start the server**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   Kinglet is a single container backed by a volume — no Redis, no Kafka,
+   no Postgres.
+
+2. **Grab your token**
+
+   ```bash
+   docker compose exec kinglet cat /data/kinglet.token
+   ```
+
+   A fresh token is generated on first boot and printed to the logs. Prefer
+   your own? Set `KINGLET_TOKENS` in `.env`.
+
+3. **Open the UI**
+
+   Visit `http://localhost:8080`, paste the token, and hit **Spray demo logs**
+   to watch the live tail, histogram, and filter bar do their thing.
+
+4. **Send a real event**
+
+   ```bash
+   curl -X POST http://localhost:8080/v1/events \
+     -H "Authorization: Bearer $KINGLET_TOKEN" \
+     -H "Content-Type: application/x-ndjson" \
+     --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
+   ```
+
+   It appears instantly — the UI subscribes over SSE while it's live.
+
+</Steps>
+
+<Aside type="tip" title="No Docker yet?">
+  Kinglet runs from source too: clone the repo, then
+  `pnpm install && pnpm dev`. The API listens on `:3000`, the UI on `:5173`
+  and proxies to it.
+</Aside>

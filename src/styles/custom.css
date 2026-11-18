@@ -1,0 +1,13 @@
+/* Kinglet brand: crown gold on Starlight's dark defaults. */
+
+:root {
+  --sl-color-accent: #fbbf24;
+  --sl-color-accent-low: #fbbf2426;
+  --sl-color-accent-high: #fcd34d;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent: #b45309;
+  --sl-color-accent-low: #f59e0b26;
+  --sl-color-accent-high: #92400e;
+}

@@ -1,0 +1,54 @@
+---
+title: Node SDK
+description: Buffer, batch, and ship logs from Node.js without blocking your app.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`@kinglet/sdk-node` is a zero-dependency batching client. Events buffer
+in-process and ship as a single NDJSON batch — 200 events or every second,
+whichever comes first. A failed batch is re-queued (with a cap) and reported
+through `onError`, so your app never blocks on logging.
+
+## Install
+
+```bash
+npm install @kinglet/sdk-node
+```
+
+## Use
+
+```ts
+import { createLogger } from "@kinglet/sdk-node";
+
+const log = createLogger({
+  url: "http://localhost:8080",      // your Kinglet server
+  token: process.env.KINGLET_TOKEN!,
+  service: "my-app",
+  env: "prod",
+});
+
+log.info("user signed in", { userId: 42 });
+log.error("payment failed", { orderId: 1234, code: "card_declined" });
+
+// best-effort final flush in your shutdown handler
+await log.close();
+```
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `url` | — | Kinglet base URL (required) |
+| `token` | — | ingest token (required) |
+| `service` / `env` | — | tagged onto every event |
+| `batchSize` | `200` | flush after this many buffered events |
+| `flushMs` | `1000` | flush at least this often |
+| `onError` | — | called when a flush fails; the batch is re-queued |
+
+<Aside type="note" title="Roadmap">
+  A pino transport (`transport: { target: "@kinglet/pino" }`) and a zero-code
+  preload — `node --import @kinglet/preload app.js`, which hooks `console`,
+  `uncaughtException`, and `unhandledRejection` — are next. A Monolog handler
+  covers PHP (Laravel, Symfony, WordPress) after that.
+</Aside>

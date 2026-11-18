@@ -1,0 +1,44 @@
+---
+title: Query language
+description: Filter grammar, live tail, and the histogram.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The filter bar accepts a small, composable grammar:
+
+| Syntax | Matches |
+| --- | --- |
+| `level:error` | events at exactly error level |
+| `level>=warn` | level comparisons (`>`, `>=`, `<`, `<=`) |
+| `service:api` | a specific service |
+| `env:prod` | a specific environment |
+| `"conn refused"` | message contains the phrase |
+| `connection` | message contains the word — substring search, any position |
+| `-healthcheck` | message must **not** contain this |
+
+Combine freely:
+
+```
+level>=warn service:api -healthcheck
+"connection refused" env:prod
+```
+
+The same grammar works everywhere: the UI filter bar, the `q` parameter on
+`GET /v1/events`, and the SSE live tail (`GET /v1/stream?q=…`) — so your
+filters follow you into the live view.
+
+## In the UI
+
+- **Live** — subscribes over SSE; new events appear at the top as they're
+  ingested.
+- **Follow** — keeps you pinned to the newest event while live.
+- **Histogram** — drag across any time range to zoom in; each bucket stacks
+  by level.
+- **Event drawer** — click any row for the full message and pretty-printed
+  fields.
+
+<Aside type="tip">
+  Search is substring-based (FTS5 trigram), so `timeout` finds
+  `connectiontimeouterror` — not just exact words.
+</Aside>

@@ -1,0 +1,76 @@
+---
+title: HTTP ingestion
+description: Ship logs to Kinglet from any language, shipper, or container.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Everything speaks HTTP, so everything can log to Kinglet. The ingest endpoint
+accepts two shapes:
+
+## NDJSON (recommended)
+
+One JSON object per line — cheap to stream, trivial to produce:
+
+```http
+POST /v1/events
+Authorization: Bearer tok_…
+Content-Type: application/x-ndjson
+
+{"level":"error","message":"payment failed","service":"billing","fields":{"order":1234}}
+{"level":"info","message":"retry scheduled","service":"billing"}
+```
+
+## JSON batch
+
+A single object with an `events` array, or a bare array:
+
+```json
+{
+  "events": [
+    { "level": "warn", "message": "cache miss", "service": "api" },
+    { "level": "info", "message": "user signed in", "service": "web" }
+  ]
+}
+```
+
+## Event fields
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `message` (or `msg`) | yes | the log line, up to 8,000 characters |
+| `level` | no | `trace`…`fatal`, or a number 0–5; unknown values default to `info` |
+| `ts` (or `time`/`timestamp`) | no | epoch ms, epoch seconds (auto-detected), or ISO string; defaults to now |
+| `service` | no | lowercase identifier, shown and filterable in the UI |
+| `env` | no | e.g. `prod`, `staging` |
+| `fields` | no | arbitrary JSON object up to 32 KB serialized |
+
+## Limits
+
+- Request body: 8 MB
+- Events per batch: 10,000 (extras are dropped and reported in the response)
+
+Invalid events don't fail the batch — Kinglet returns
+`{ "accepted": n, "rejected": m }` so one bad line never blocks your pipeline.
+
+## Ship without changing your app
+
+Anything that can POST NDJSON with a bearer token works today. For example,
+[Vector](https://vector.dev):
+
+```toml
+[sinks.kinglet]
+type     = "http"
+inputs   = ["my_source_transform"]
+uri      = "http://kinglet:8080/v1/events"
+encoding.codec = "ndjson"
+
+[sinks.kinglet.request]
+headers.Authorization = "Bearer tok_…"
+```
+
+<Aside type="note" title="Roadmap">
+  Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so
+  OpenTelemetry pipelines and rsyslog ship with zero glue code. Until then,
+  Vector/Fluent Bit bridging gets you the same result.
+</Aside>

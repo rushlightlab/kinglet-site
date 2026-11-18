@@ -1,0 +1,41 @@
+---
+title: Kinglet
+description: Small. Light. King. — the tiny self-hostable log platform.
+template: splash
+hero:
+  tagline: >-
+    Small. Light. King. An Axiom-shaped log platform that runs on a $5 VPS —
+    one container, one database file, one fast dark UI.
+  actions:
+    - text: Get started
+      link: /quickstart/
+      variant: primary
+    - text: Send your first log
+      link: /ingestion/
+      variant: secondary
+---
+
+import { CardGrid, Card } from "@astrojs/starlight/components";
+
+Kinglet collects logs from any app that can make an HTTP request, stores them
+in a single SQLite or libSQL database, and gives you a live-tailing UI with
+substring search — all on one small container.
+
+<CardGrid>
+  <Card title="Tiny by default">
+    One process, one file, zero external services. ~150–250 MB of RAM, and
+    millions of events a day fit comfortably on a 2 vCPU VPS.
+  </Card>
+  <Card title="Log from anything">
+    NDJSON or JSON over HTTP. curl, Vector, Fluent Bit, the Node SDK — if it
+    can POST, it can log to Kinglet.
+  </Card>
+  <Card title="Fast to search">
+    SQLite FTS5 trigram indexing means substring matches (`"timeout"`) just
+    work, plus a live tail over server-sent events.
+  </Card>
+  <Card title="Yours to run">
+    Docker Compose in, Litestream backups out. MIT licensed, no phone-home,
+    no telemetry.
+  </Card>
+</CardGrid>

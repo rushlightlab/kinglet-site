@@ -1,0 +1,43 @@
+---
+title: API reference
+description: Every route, parameter, and limit.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+All `/v1` routes require `Authorization: Bearer <token>`.
+
+| Route | Method | What it does |
+| --- | --- | --- |
+| `/v1/events` | `POST` | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events |
+| `/v1/events` | `GET` | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor` |
+| `/v1/histogram` | `GET` | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240) |
+| `/v1/services` | `GET` | Known services with event counts |
+| `/v1/stream` | `GET` | SSE live tail. Params: `q` — plus `token` (EventSource can't send headers) |
+| `/healthz` | `GET` | Health check (no auth) |
+
+## Pagination
+
+`GET /v1/events` returns events newest-first plus a `nextCursor` (the id of
+the last row returned) when more may exist. Request the next page with
+`cursor=<nextCursor>`:
+
+```bash
+curl "http://localhost:8080/v1/events?q=level:error&limit=500&cursor=84021" \
+  -H "Authorization: Bearer tok_…"
+```
+
+## Ingest responses
+
+```json
+{ "accepted": 1998, "rejected": 2, "errors": ["missing message"] }
+```
+
+Bad lines are counted and (up to three) reported — the rest of the batch
+still lands.
+
+<Aside type="caution" title="SSE tokens">
+  `GET /v1/stream` accepts `?token=` because EventSource cannot set headers.
+  Fine for a private self-hosted instance; short-lived stream tickets are
+  planned for multi-user deployments.
+</Aside>

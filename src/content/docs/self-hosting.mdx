@@ -1,0 +1,70 @@
+---
+title: Self-hosting
+description: Deployment, sizing, backups, and upgrades.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+## Deploy
+
+```yaml
+# docker-compose.yml
+services:
+  kinglet:
+    build: .                # or: ghcr.io/your-org/kinglet:latest
+    ports:
+      - "8080:3000"
+    environment:
+      KINGLET_DB_PATH: /data/kinglet.db
+      KINGLET_RETENTION_DAYS: 14
+    volumes:
+      - kinglet-data:/data
+    restart: unless-stopped
+
+volumes:
+  kinglet-data:
+```
+
+## Configuration
+
+| Env var | Default | What it does |
+| --- | --- | --- |
+| `KINGLET_PORT` | `3000` | HTTP port inside the container |
+| `KINGLET_STORAGE` | `auto` | `sqlite`, `libsql`, or `auto` (picks by db path scheme) |
+| `KINGLET_DB_PATH` | `data/kinglet.db` | Plain path → SQLite; `libsql://`/`https://`/`file:` → libSQL |
+| `KINGLET_DB_AUTH_TOKEN` | — | Auth token for remote libSQL/Turso |
+| `KINGLET_TOKENS` | *(auto-generate)* | Comma-separated ingest tokens |
+| `KINGLET_RETENTION_DAYS` | `14` | Delete events older than this |
+
+## Sizing
+
+- **RAM**: ~150–250 MB steady state.
+- **CPU**: 2 vCPUs comfortably handle millions of events per day — ingest is
+  batched SQLite writes, not per-request round trips.
+- **Disk**: roughly 300–500 MB per million retained events. With the default
+  14-day retention, a busy small app stays in single-digit gigabytes.
+
+## Backups
+
+The whole store is one file. [Litestream](https://litestream.io/) replicates
+it continuously to S3-compatible storage with a one-line sidecar:
+
+```yaml
+litestream:
+  image: litestream/litestream
+  volumes:
+    - kinglet-data:/data
+  command: replicate /data/kinglet.db s3://your-bucket/kinglet
+```
+
+## TLS and upgrades
+
+- Put Caddy or nginx in front for automatic TLS, or use a `caddy` compose
+  profile; the container speaks plain HTTP on its port.
+- Upgrades: `docker compose pull && docker compose up -d`. Graceful shutdown
+  flushes SQLite on `SIGTERM`, so `docker compose stop` is safe.
+
+<Aside type="tip" title="ARM64">
+  Low-end VPS deals are often aarch64 — build the image for both platforms
+  with `docker buildx build --platform linux/amd64,linux/arm64`.
+</Aside>

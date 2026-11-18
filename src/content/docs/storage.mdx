@@ -1,0 +1,52 @@
+---
+title: Storage backends
+description: SQLite by default, libSQL/Turso when you want it, ClickHouse on the roadmap.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Storage sits behind a small driver interface, so the API, retention job, and
+live tail never know what's underneath.
+
+## sqlite (default)
+
+better-sqlite3 with WAL mode and FTS5 trigram indexing. One file, zero
+services, zero config:
+
+```bash
+KINGLET_DB_PATH=/data/kinglet.db
+```
+
+## libsql
+
+The [libSQL](https://turso.tech) driver — for a local `file:` database or a
+hosted [Turso](https://turso.tech) instance. Same container, same API:
+
+```bash
+# local libSQL file
+KINGLET_STORAGE=libsql
+KINGLET_DB_PATH=file:/data/kinglet.db
+
+# Turso — just point at your database
+KINGLET_DB_PATH=libsql://your-db.turso.io
+KINGLET_DB_AUTH_TOKEN=eyJ…
+```
+
+With `KINGLET_STORAGE=auto` (the default), the driver is picked from the db
+path scheme: plain paths use sqlite; `libsql://`, `https://`, `wss://`, and
+`file:` URLs use libSQL.
+
+<Aside type="note" title="FTS5 trigram caveat">
+  Some hosted libSQL builds lack the trigram tokenizer. Kinglet detects this
+  at boot and falls back to word-prefix search with a console warning rather
+  than refusing to start.
+</Aside>
+
+## ClickHouse (roadmap)
+
+When a single node stops being enough, a ClickHouse driver implementing the
+same interface is the graduation path — the API and UI won't change. And
+since the [`Storage`
+contract](https://github.com/your-org/kinglet/blob/main/apps/api/src/storage/types.ts)
+is deliberately tiny, a custom Postgres or MySQL driver is a weekend project
+if that's what your stack wants.
