@@ -3,6 +3,11 @@
   mono voice everywhere, warm ink/mist greys instead of Starlight's blue
   greys, a faint gold grid atmosphere, and Chakra Petch headings.
   Dark is the default; light theme mirrors the palette on paper-white.
+
+  Variable names verified against @astrojs/starlight/dist/style/props.css:
+    header surface → --sl-color-bg-nav
+    body text      → --sl-color-text (defaults to gray-2)
+    text on accent → --sl-color-text-invert
 */
 
 @import "@fontsource-variable/jetbrains-mono";
@@ -21,7 +26,7 @@
   --sl-color-white: #e4e8e3;
   --sl-color-black: #07080a;
   --sl-color-gray-1: #cdd4ce;
-  --sl-color-gray-2: #a8b0a9;
+  --sl-color-gray-2: #b3bbb4;
   --sl-color-gray-3: #949d94;
   --sl-color-gray-4: #5c665e;
   --sl-color-gray-5: #2a2f31;
@@ -32,10 +37,14 @@
   --sl-color-accent-low: #fbbf2426;
   --sl-color-accent-high: #fcd34d;
 
+  /* text roles (overrides Starlight's derived defaults) */
+  --sl-color-text: #cfd6d0;
+  --sl-color-text-invert: #07080a;
+
+  /* surfaces */
   --sl-color-bg: #07080a;
-  --sl-color-bg-header: #0a0c0e;
+  --sl-color-bg-nav: #0a0c0e;
   --sl-color-bg-sidebar: #090b0d;
-  --sl-color-bg-footer: #0a0c0e;
   --sl-color-bg-inline-code: #13161a;
 }
 
@@ -69,9 +78,11 @@ body::before {
   --sl-color-accent-low: #f59e0b26;
   --sl-color-accent-high: #92400e;
 
+  --sl-color-text: #39413f;
+  --sl-color-text-invert: #f4f5f1;
+
   --sl-color-bg: #f4f5f1;
-  --sl-color-bg-header: #edeef0;
-  --sl-color-bg-sidebar: #eceef0;
-  --sl-color-bg-footer: #edeef0;
+  --sl-color-bg-nav: #edeef0;
+  --sl-color-bg-sidebar: #f4f5f1;
   --sl-color-bg-inline-code: #e4e7e0;
 }
