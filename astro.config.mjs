@@ -2,9 +2,9 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import sitemap from "@astrojs/sitemap";
 
-// Canonical origin for sitemap/canonical URLs. Set SITE_URL before deploying
-// (e.g. SITE_URL=https://kinglet.dev pnpm build). The fallback is a placeholder.
-const SITE = process.env.SITE_URL ?? "https://kinglet.example.com";
+// Canonical origin for sitemap/canonical URLs. Override with SITE_URL when
+// building for a different host.
+const SITE = process.env.SITE_URL ?? "https://kinglet.rushlightlab.com";
 
 /* Code highlighting in the Kinglet palette — same colors the landing's
    code shell uses: faint comments, warm strings, coral keywords, gold keys. */
