@@ -108,8 +108,12 @@ litestream:
 
 ## TLS and upgrades
 
-- Put Caddy or nginx in front for automatic TLS, or use a `caddy` compose
-  profile; the container speaks plain HTTP on its port.
+- A ready-made Caddy setup lives in `deploy/` (`Caddyfile` +
+  `docker-compose.tls.yml`). It obtains certificates automatically, sets HSTS,
+  and keeps Kinglet off the public network — only Caddy publishes 80/443.
+- Put Caddy or nginx in front for automatic TLS; the container speaks plain
+  HTTP on its port. Set `KINGLET_BASE_URL` to the public HTTPS origin so
+  session cookies are `Secure` and alert links are correct.
 - Upgrades: `docker compose pull && docker compose up -d`. Graceful shutdown
   flushes SQLite on `SIGTERM`, so `docker compose stop` is safe.
 
