@@ -1,9 +1,12 @@
-# 👑 kinglet-site
+# Kinglet site
 
-Docs and landing page for [Kinglet](../kinglet) — the tiny self-hostable log
-platform. Built with [Astro](https://astro.build) +
-[Starlight](https://starlight.astro.build): static output, zero client-side
-JavaScript, deployable anywhere.
+Docs and landing page for [Kinglet](https://github.com/rushlightlab/kinglet) — the
+tiny self-hostable log platform. Built with [Astro](https://astro.build) +
+[Starlight](https://starlight.astro.build): static output, no client-side
+framework, deployable anywhere.
+
+Production URL: **https://kinglet.rushlightlab.com** (set as the canonical
+`site` in `astro.config.mjs`; override with `SITE_URL` for other hosts).
 
 ## Develop
 
@@ -17,17 +20,14 @@ pnpm build     # static output in dist/
 
 Any static host works:
 
-- **Cloudflare Pages / Vercel / Netlify** — point at the repo, build command
-  `pnpm build`, output directory `dist/`
+- **GitHub Pages** — `public/CNAME` already contains
+  `kinglet.rushlightlab.com`. Point a DNS `CNAME` record at
+  `rushlightlab.github.io`, then enable Pages for this repository and serve the
+  built `dist/` output (or publish it with an Actions workflow).
+- **Cloudflare Pages / Vercel / Netlify** — point at this repo, build command
+  `pnpm build`, output directory `dist/`.
 - **Docker** — `docker build -t kinglet-site .` (nginx serves the static
-  output)
+  output behind your TLS proxy).
 
-## Before going live
-
-- [ ] Set the real domain in `astro.config.mjs` (`site:`)
-- [ ] Point `social.github` at the real repository
-- [ ] Update the GitHub links in `storage.mdx` and `index.mdx`
-
-## License
-
-MIT — see [LICENSE](./LICENSE).
+All GitHub and GHCR links already point at
+[`rushlightlab`](https://github.com/rushlightlab).
