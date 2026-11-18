@@ -1,6 +1,9 @@
-/* Kinglet brand applied to Starlight: ink dark, crown gold,
-   Chakra Petch headings, JetBrains Mono for code. Dark is the default theme;
-   the light theme keeps a darker gold for contrast. */
+/*
+  Kinglet brand applied to Starlight — a real restyle, not just a tint:
+  mono voice everywhere, warm ink/mist greys instead of Starlight's blue
+  greys, a faint gold grid atmosphere, and Chakra Petch headings.
+  Dark is the default; light theme mirrors the palette on paper-white.
+*/
 
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource/chakra-petch/400.css";
@@ -8,21 +11,67 @@
 @import "@fontsource/chakra-petch/700.css";
 
 :root {
+  /* typography: the landing's voice, everywhere */
+  --sl-font: "JetBrains Mono", ui-monospace, monospace;
+  --sl-font-heading: "Chakra Petch", sans-serif;
+  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --sl-font-code: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ink + mist palette */
+  --sl-color-white: #e4e8e3;
+  --sl-color-black: #07080a;
+  --sl-color-gray-1: #cdd4ce;
+  --sl-color-gray-2: #a8b0a9;
+  --sl-color-gray-3: #949d94;
+  --sl-color-gray-4: #5c665e;
+  --sl-color-gray-5: #2a2f31;
+  --sl-color-gray-6: #191d1f;
+  --sl-color-gray-7: #101315;
+
   --sl-color-accent: #fbbf24;
   --sl-color-accent-low: #fbbf2426;
   --sl-color-accent-high: #fcd34d;
+
   --sl-color-bg: #07080a;
   --sl-color-bg-header: #0a0c0e;
   --sl-color-bg-sidebar: #090b0d;
+  --sl-color-bg-footer: #0a0c0e;
   --sl-color-bg-inline-code: #13161a;
-  --sl-color-bg-inline-code-text: #e4e8e3;
-  --sl-font-heading: "Chakra Petch", var(--sl-font-sans);
-  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --sl-font-code: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* faint gold grid behind the content, like the landing's atmosphere */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(251, 191, 36, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(251, 191, 36, 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 50% at 50% 0%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse 90% 50% at 50% 0%, #000 0%, transparent 70%);
 }
 
 :root[data-theme="light"] {
+  --sl-color-white: #07080a;
+  --sl-color-black: #f4f5f1;
+  --sl-color-gray-1: #1f2426;
+  --sl-color-gray-2: #39413f;
+  --sl-color-gray-3: #5c665e;
+  --sl-color-gray-4: #7a837b;
+  --sl-color-gray-5: #d8ded7;
+  --sl-color-gray-6: #e8ece6;
+  --sl-color-gray-7: #f2f5ef;
+
   --sl-color-accent: #b45309;
   --sl-color-accent-low: #f59e0b26;
   --sl-color-accent-high: #92400e;
+
+  --sl-color-bg: #f4f5f1;
+  --sl-color-bg-header: #edeef0;
+  --sl-color-bg-sidebar: #eceef0;
+  --sl-color-bg-footer: #edeef0;
+  --sl-color-bg-inline-code: #e4e7e0;
 }
