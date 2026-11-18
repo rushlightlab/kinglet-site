@@ -5,7 +5,7 @@
   "description": "Docs and landing page for Kinglet — small. light. king.",
   "packageManager": "pnpm@10.15.0",
   "engines": {
-    "node": ">=26"
+    "node": ">=24"
   },
   "type": "module",
   "scripts": {
