@@ -5,25 +5,37 @@ description: Every route, parameter, and limit.
 
 import { Aside } from "@astrojs/starlight/components";
 
-Auth is either the `kinglet_session` cookie (web UI) or
-`Authorization: Bearer kl_…` (project API keys). Sessions pass `?project=<id>`
-on project-scoped routes; API keys are bound to their project and enforce their
-`ingest` / `query` scopes.
+Auth is either the Better Auth session cookie (web UI) or
+`Authorization: Bearer kl_…` (project API keys). Session requests to
+project-scoped routes pass `?project=<id>`; API keys are bound to their project
+and enforce their `ingest` / `query` scopes.
+
+Browser sign-in, sign-out, and password changes are served by Better Auth under
+`/api/auth/*`. Public self-signup is disabled — administrators create accounts.
+
+<Aside type="caution" title="CSRF header">
+  Cookie-authenticated mutations (`POST`, `PATCH`, `DELETE` under `/v1`) must
+  send `X-Kinglet-Request: 1`. The web UI does this automatically; scripts
+  driving the API with a session cookie must set it too. Requests using an
+  `Authorization: Bearer` key are exempt.
+</Aside>
 
 ## Auth & workspace
 
 | Route | Method | What it does |
 | --- | --- | --- |
-| `/v1/auth/login` | `POST` | Sign in — sets the session cookie |
-| `/v1/auth/logout` | `POST` | Sign out |
+| `/api/auth/sign-in/email` | `POST` | Sign in — sets the session cookie |
+| `/api/auth/sign-out` | `POST` | Sign out |
+| `/api/auth/get-session` | `GET` | Current Better Auth session |
+| `/api/auth/change-password` | `POST` | Change your password |
 | `/v1/me` | `GET` | Current user + permissions |
-| `/v1/me/password` | `PATCH` | Change your password |
 | `/v1/projects` | `GET`/`POST` | List / create projects |
 | `/v1/projects/:id` | `DELETE` | Delete a project and all its data |
 | `/v1/users` | `GET`/`POST` | List / create users (admin) |
 | `/v1/users/:id` | `PATCH`/`DELETE` | Change role / delete user (admin) |
 | `/v1/projects/:id/keys` | `GET`/`POST` | List / create API keys for a project |
 | `/v1/keys/:id` | `DELETE` | Revoke a key (requires `?project=`) |
+| `/v1/system/status` | `GET` | Operational diagnostics — retention, monitors, counts (admin) |
 
 ## Logs
 

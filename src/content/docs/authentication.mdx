@@ -65,8 +65,10 @@ inherits a human role:
 | `query` | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
 
 Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
-in **/settings → projects & keys**; the list keeps a display prefix, scopes, and
-last-used time.
+in **/settings → projects & keys**; the list keeps a display prefix, scopes,
+creator, and last-used time. A key created without an explicit `scopes` array
+defaults to `["ingest"]`; unknown scopes are rejected with a 400. When a user is
+demoted or deleted, keys they created are revoked.
 
 ```bash
 curl -X POST http://localhost:8080/v1/events \
@@ -82,13 +84,15 @@ list projects, manage monitors, or touch users.
 
 1. `Authorization: Bearer kl_…` → project-scoped API key
 2. `Authorization: Bearer tok_…` → **legacy** global token (`KINGLET_TOKENS`):
-   all projects, full access — kept for quick tests and old automation
-3. `kinglet_session` cookie → signed-in user, with role permissions
+   all projects, full access — meant for quick tests and old automation. Set
+   `KINGLET_DISABLE_LEGACY_TOKENS=1` to turn this path off entirely.
+3. `better-auth.session_token` cookie → signed-in user, with role permissions
 
 Browser routes accept the cookie; project-scoped calls use `?project=<id>`.
 SSE accepts `?key=`/`?token=` for shipper-style clients that cannot send
-headers. Sessions last `KINGLET_SESSION_DAYS` (default 30) and are revoked on
-sign-out.
+headers. Sessions last `KINGLET_SESSION_DAYS` (default 30). Role changes and
+account deletion delete the user's sessions and API keys; mutating requests
+always bypass the cookie cache, so a demoted user cannot keep writing.
 
 <Aside type="caution" title="Run behind TLS">
   Session cookies are HttpOnly + SameSite=Lax and become `Secure` when
