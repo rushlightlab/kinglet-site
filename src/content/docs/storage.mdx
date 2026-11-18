@@ -42,6 +42,28 @@ path scheme: plain paths use sqlite; `libsql://`, `https://`, `wss://`, and
   than refusing to start.
 </Aside>
 
+### Notes for hosted Turso
+
+```bash
+docker run -d --name kinglet -p 8080:3000 \
+  -e KINGLET_DB_PATH=libsql://your-db.turso.io \
+  -e KINGLET_DB_AUTH_TOKEN=eyJ… \
+  -e KINGLET_TOKENS=tok_change_me \
+  ghcr.io/your-org/kinglet:latest
+```
+
+- **One Kinglet instance per database.** Ingest assumes a single writer; two
+  instances against the same Turso DB would race on id read-back.
+- **Every query is a network round trip.** Keep ingest batched (the SDK does
+  this by default) and expect each enabled monitor's count check to cost one
+  round trip per interval — a handful of monitors is fine.
+- **Backups are Turso's job.** Litestream applies to local SQLite files only.
+- Schema (events, monitors, alerts, FTS + triggers) is created automatically on
+  first boot, same as a local file.
+- Embedded replicas (local read cache with a remote primary) are a natural
+  future upgrade — libSQL supports them; Kinglet's driver doesn't wire them up
+  yet.
+
 ## ClickHouse (roadmap)
 
 When a single node stops being enough, a ClickHouse driver implementing the
