@@ -75,6 +75,9 @@ git push origin v0.1.0
 | `KINGLET_DB_AUTH_TOKEN` | — | Auth token for remote libSQL/Turso |
 | `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | Bootstrap administrator email (first boot only) |
 | `KINGLET_ADMIN_PASSWORD` | *(generated)* | Bootstrap administrator password (first boot only) |
+| `BETTER_AUTH_SECRET` | *(generated, persisted)* | Session signing secret — set explicitly for multi-instance installs |
+| `KINGLET_TRUSTED_PROXIES` | — | CIDRs allowed to set `X-Forwarded-For` |
+| `KINGLET_ALLOW_PRIVATE_WEBHOOKS` | — | Allow private/internal webhook targets (SSRF escape hatch) |
 | `KINGLET_SESSION_DAYS` | `30` | Web session lifetime |
 | `KINGLET_TOKENS` | *(auto-generate)* | Legacy global tokens — all projects, full access |
 | `KINGLET_RETENTION_DAYS` | `14` | Delete events older than this |

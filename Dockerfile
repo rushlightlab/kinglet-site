@@ -5,7 +5,7 @@ FROM node:26-bookworm-slim AS build
 WORKDIR /site
 RUN npm install -g pnpm@10.15.0
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 

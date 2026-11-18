@@ -91,7 +91,7 @@ headers. Sessions last `KINGLET_SESSION_DAYS` (default 30) and are revoked on
 sign-out.
 
 <Aside type="caution" title="Run behind TLS">
-  Session cookies are HttpOnly + SameSite=Lax and marked `Secure` when the
-  request arrives over HTTPS (directly or via `X-Forwarded-Proto`). For anything
-  beyond localhost, put Kinglet behind Caddy/nginx TLS.
+  Session cookies are HttpOnly + SameSite=Lax and become `Secure` when
+  `KINGLET_BASE_URL` is an HTTPS URL. For anything beyond localhost, set
+  `KINGLET_BASE_URL` and put Kinglet behind Caddy/nginx TLS.
 </Aside>
