@@ -8,14 +8,14 @@ import { Aside, Steps } from "@astrojs/starlight/components";
 ## Deploy
 
 Kinglet ships as a multi-arch image (`linux/amd64` + `linux/arm64`) at
-`ghcr.io/kinglet-labs/kinglet` — the repo's release workflow publishes it (see
+`ghcr.io/rushlightlab/kinglet` — the repo's release workflow publishes it (see
 [Publishing images](#publishing-images)).
 
 ```yaml
 # docker-compose.yml
 services:
   kinglet:
-    image: ghcr.io/kinglet-labs/kinglet:latest   # pin a version in production, e.g. :0.1.0
+    image: ghcr.io/rushlightlab/kinglet:latest   # pin a version in production, e.g. :0.1.0
     ports:
       - "8080:3000"
     environment:

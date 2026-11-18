@@ -43,7 +43,7 @@ export default defineConfig({
         {
           label: "GitHub",
           icon: "github",
-          href: "https://github.com/kinglet-labs/kinglet",
+          href: "https://github.com/rushlightlab/kinglet",
         },
       ],
       customCss: ["./src/styles/custom.css"],
