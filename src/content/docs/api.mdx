@@ -5,7 +5,27 @@ description: Every route, parameter, and limit.
 
 import { Aside } from "@astrojs/starlight/components";
 
-All `/v1` routes require `Authorization: Bearer <token>`.
+Auth is either the `kinglet_session` cookie (web UI) or
+`Authorization: Bearer kl_…` (project API keys). Sessions pass `?project=<id>`
+on project-scoped routes; API keys are bound to their project and enforce their
+`ingest` / `query` scopes.
+
+## Auth & workspace
+
+| Route | Method | What it does |
+| --- | --- | --- |
+| `/v1/auth/login` | `POST` | Sign in — sets the session cookie |
+| `/v1/auth/logout` | `POST` | Sign out |
+| `/v1/me` | `GET` | Current user + permissions |
+| `/v1/me/password` | `PATCH` | Change your password |
+| `/v1/projects` | `GET`/`POST` | List / create projects |
+| `/v1/projects/:id` | `DELETE` | Delete a project and all its data |
+| `/v1/users` | `GET`/`POST` | List / create users (admin) |
+| `/v1/users/:id` | `PATCH`/`DELETE` | Change role / delete user (admin) |
+| `/v1/projects/:id/keys` | `GET`/`POST` | List / create API keys for a project |
+| `/v1/keys/:id` | `DELETE` | Revoke a key (requires `?project=`) |
+
+## Logs
 
 | Route | Method | What it does |
 | --- | --- | --- |
@@ -13,8 +33,17 @@ All `/v1` routes require `Authorization: Bearer <token>`.
 | `/v1/events` | `GET` | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor` |
 | `/v1/histogram` | `GET` | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240) |
 | `/v1/services` | `GET` | Known services with event counts |
-| `/v1/stream` | `GET` | SSE live tail. Params: `q` — plus `token` (EventSource can't send headers) |
+| `/v1/stream` | `GET` | SSE live tail. Params: `q` — cookie auth, plus `key`/`token` for headerless clients |
 | `/healthz` | `GET` | Health check (no auth) |
+
+## Monitors & alerts
+
+| Route | Method | What it does |
+| --- | --- | --- |
+| `/v1/monitors` | `GET`/`POST` | List / create monitors (session only — keys can't manage them) |
+| `/v1/monitors/:id` | `PATCH`/`DELETE` | Update / delete a monitor |
+| `/v1/monitors/:id/test` | `POST` | Send a test notification through every channel |
+| `/v1/alerts` | `GET` | Alert history, latest first |
 
 ## Pagination
 
@@ -23,8 +52,8 @@ the last row returned) when more may exist. Request the next page with
 `cursor=<nextCursor>`:
 
 ```bash
-curl "http://localhost:8080/v1/events?q=level:error&limit=500&cursor=84021" \
-  -H "Authorization: Bearer tok_…"
+curl "http://localhost:8080/v1/events?project=1&q=level:error&limit=500&cursor=84021" \
+  -H "Authorization: Bearer kl_…"
 ```
 
 ## Ingest responses
@@ -36,8 +65,7 @@ curl "http://localhost:8080/v1/events?q=level:error&limit=500&cursor=84021" \
 Bad lines are counted and (up to three) reported — the rest of the batch
 still lands.
 
-<Aside type="caution" title="SSE tokens">
-  `GET /v1/stream` accepts `?token=` because EventSource cannot set headers.
-  Fine for a private self-hosted instance; short-lived stream tickets are
-  planned for multi-user deployments.
+<Aside type="tip" title="Live tail auth">
+  Browsers use the session cookie. Shippers that cannot send headers can use
+  `?key=kl_…` (API key) or `?token=tok_…` (legacy token) on `/v1/stream`.
 </Aside>

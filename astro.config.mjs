@@ -67,6 +67,7 @@ export default defineConfig({
         {
           label: "Operating",
           items: [
+            { label: "Authentication & projects", link: "/authentication/" },
             { label: "Storage backends", link: "/storage/" },
             { label: "Self-hosting", link: "/self-hosting/" },
           ],

@@ -14,7 +14,7 @@ One JSON object per line — cheap to stream, trivial to produce:
 
 ```http
 POST /v1/events
-Authorization: Bearer tok_…
+Authorization: Bearer kl_…
 Content-Type: application/x-ndjson
 
 {"level":"error","message":"payment failed","service":"billing","fields":{"order":1234}}
@@ -66,7 +66,7 @@ uri      = "http://kinglet:8080/v1/events"
 encoding.codec = "ndjson"
 
 [sinks.kinglet.request]
-headers.Authorization = "Bearer tok_…"
+headers.Authorization = "Bearer kl_…"
 ```
 
 <Aside type="note" title="Roadmap">

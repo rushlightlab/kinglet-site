@@ -73,7 +73,10 @@ git push origin v0.1.0
 | `KINGLET_STORAGE` | `auto` | `sqlite`, `libsql`, or `auto` (picks by db path scheme) |
 | `KINGLET_DB_PATH` | `data/kinglet.db` | Plain path → SQLite; `libsql://`/`https://`/`file:` → libSQL |
 | `KINGLET_DB_AUTH_TOKEN` | — | Auth token for remote libSQL/Turso |
-| `KINGLET_TOKENS` | *(auto-generate)* | Comma-separated ingest tokens |
+| `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | Bootstrap administrator email (first boot only) |
+| `KINGLET_ADMIN_PASSWORD` | *(generated)* | Bootstrap administrator password (first boot only) |
+| `KINGLET_SESSION_DAYS` | `30` | Web session lifetime |
+| `KINGLET_TOKENS` | *(auto-generate)* | Legacy global tokens — all projects, full access |
 | `KINGLET_RETENTION_DAYS` | `14` | Delete events older than this |
 
 ## Sizing

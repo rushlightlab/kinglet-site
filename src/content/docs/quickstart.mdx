@@ -16,25 +16,30 @@ import { Steps, Aside } from "@astrojs/starlight/components";
    Kinglet is a single container backed by a volume — no Redis, no Kafka,
    no Postgres.
 
-2. **Grab your token**
+2. **Sign in as the administrator**
+
+   The first boot creates an admin account. If you didn't set
+   `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD`, the generated password is
+   in the container logs and in `admin-password.txt`:
 
    ```bash
-   docker compose exec kinglet cat /data/kinglet.token
+   docker compose exec kinglet cat /data/admin-password.txt
    ```
 
-   A fresh token is generated on first boot and printed to the logs. Prefer
-   your own? Set `KINGLET_TOKENS` in `.env`.
+3. **Open the UI and sign in**
 
-3. **Open the UI**
+   Visit `http://localhost:8080` and sign in with the admin email (default
+   `admin@kinglet.local`) and that password. Hit **Spray demo logs** to watch
+   the live tail, histogram, and filter bar do their thing.
 
-   Visit `http://localhost:8080`, paste the token, and hit **Spray demo logs**
-   to watch the live tail, histogram, and filter bar do their thing.
+4. **Create an API key and send a real event**
 
-4. **Send a real event**
+   In **/settings → projects & keys**, create a key with the `ingest` scope,
+   then:
 
    ```bash
    curl -X POST http://localhost:8080/v1/events \
-     -H "Authorization: Bearer $KINGLET_TOKEN" \
+     -H "Authorization: Bearer kl_…" \
      -H "Content-Type: application/x-ndjson" \
      --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
    ```

@@ -1,0 +1,87 @@
+---
+title: Authentication & projects
+description: Users, roles, sessions, projects, and scoped API keys.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet ships with real user accounts: email + password sign-in, server-side
+sessions in an HttpOnly cookie, three built-in roles, and multiple projects
+with their own API keys.
+
+## First boot
+
+When the users table is empty, Kinglet creates the administrator:
+
+| Env var | Default | Notes |
+| --- | --- | --- |
+| `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | login identifier |
+| `KINGLET_ADMIN_PASSWORD` | *(generated)* | printed once + written to `admin-password.txt` |
+
+These only apply on the **first** boot — changing them later does nothing. The
+administrator cannot be deleted.
+
+## Roles
+
+| Role | Can do |
+| --- | --- |
+| **admin** | everything: projects, users, keys, logs, monitors. Cannot be deleted or demoted while last |
+| **member** | read/write logs, manage monitors, manage API keys |
+| **viewer** | read logs and monitors only |
+
+Roles map to explicit permission keys (`logs.read`, `monitors.write`,
+`keys.write`, `users.read`, …) internally, so custom roles later are a data
+change rather than a refactor.
+
+<Aside type="note" title="Workspace-wide for now">
+  Roles apply across the whole workspace. Per-project memberships are the
+  natural next step; today every signed-in user can see every project.
+</Aside>
+
+## Projects
+
+Every project owns its events, monitors, alert history, and API keys. Switch
+projects from the header dropdown; the logs, histogram, live tail, monitors,
+and alerts all follow. Admins create and delete projects in **/settings**.
+
+## API keys
+
+Machine credentials live per project with explicit **scopes** — a key never
+inherits a human role:
+
+| Scope | Allows |
+| --- | --- |
+| `ingest` | `POST /v1/events` |
+| `query` | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
+
+Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
+in **/settings → projects & keys**; the list keeps a display prefix, scopes, and
+last-used time.
+
+```bash
+curl -X POST http://localhost:8080/v1/events \
+  -H "Authorization: Bearer kl_…" \
+  -H "Content-Type: application/x-ndjson" \
+  --data-binary '{"level":"info","message":"hello","service":"my-app"}'
+```
+
+API keys are bound to their project — no `?project=` needed, and they cannot
+list projects, manage monitors, or touch users.
+
+## How auth is resolved
+
+1. `Authorization: Bearer kl_…` → project-scoped API key
+2. `Authorization: Bearer tok_…` → **legacy** global token (`KINGLET_TOKENS`):
+   all projects, full access — kept for quick tests and old automation
+3. `kinglet_session` cookie → signed-in user, with role permissions
+
+Browser routes accept the cookie; project-scoped calls use `?project=<id>`.
+SSE accepts `?key=`/`?token=` for shipper-style clients that cannot send
+headers. Sessions last `KINGLET_SESSION_DAYS` (default 30) and are revoked on
+sign-out.
+
+<Aside type="caution" title="Run behind TLS">
+  Session cookies are HttpOnly + SameSite=Lax and marked `Secure` when the
+  request arrives over HTTPS (directly or via `X-Forwarded-Proto`). For anything
+  beyond localhost, put Kinglet behind Caddy/nginx TLS.
+</Aside>
