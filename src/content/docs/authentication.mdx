@@ -9,6 +9,16 @@ Kinglet ships with real user accounts: email + password sign-in, server-side
 sessions in an HttpOnly cookie, three built-in roles, and multiple projects
 with their own API keys.
 
+Authentication is powered by [Better Auth](https://better-auth.com) with the
+Drizzle adapter, tuned per its performance guide:
+
+- `better-auth/minimal` — Kysely is not bundled (Drizzle handles the database).
+- **Session cookie cache** (`5 min`) — `getSession` reads a signed cookie
+  instead of hitting the database on every request.
+- **Indexes** on `user.email`, `session.userId`/`token`, `account.userId`, and
+  `verification.identifier`.
+- Public self-signup is disabled; accounts are created by administrators.
+
 ## First boot
 
 When the users table is empty, Kinglet creates the administrator:
