@@ -2,8 +2,9 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import sitemap from "@astrojs/sitemap";
 
-// TODO: replace with the real domain before deploying.
-const SITE = "https://kinglet.example.com";
+// Canonical origin for sitemap/canonical URLs. Set SITE_URL before deploying
+// (e.g. SITE_URL=https://kinglet.dev pnpm build). The fallback is a placeholder.
+const SITE = process.env.SITE_URL ?? "https://kinglet.example.com";
 
 /* Code highlighting in the Kinglet palette — same colors the landing's
    code shell uses: faint comments, warm strings, coral keywords, gold keys. */
@@ -42,7 +43,7 @@ export default defineConfig({
         {
           label: "GitHub",
           icon: "github",
-          href: "https://github.com/your-org/kinglet",
+          href: "https://github.com/kinglet-labs/kinglet",
         },
       ],
       customCss: ["./src/styles/custom.css"],

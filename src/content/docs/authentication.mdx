@@ -43,10 +43,28 @@ Roles map to explicit permission keys (`logs.read`, `monitors.write`,
 `keys.write`, `users.read`, …) internally, so custom roles later are a data
 change rather than a refactor.
 
-<Aside type="note" title="Workspace-wide for now">
-  Roles apply across the whole workspace. Per-project memberships are the
-  natural next step; today every signed-in user can see every project.
+<Aside type="note" title="Project access">
+  Roles set what a user can do; project membership sets where they can do it.
+  Admins see every project. Members and viewers see only the projects assigned
+  to them in **/settings → projects & keys**.
 </Aside>
+
+## Project membership
+
+Admins always have access to every project. Everyone else needs a
+`project_members` assignment:
+
+- **Members** get their role's write capabilities (logs, monitors, keys)
+  inside assigned projects.
+- **Viewers** get read-only access inside assigned projects.
+- Assign or remove people in **/settings → projects & keys** while the project
+  is selected.
+- Upgrading from an older Kinglet backfills every user into every existing
+  project, so nobody loses access; prune assignments afterwards.
+
+The API exposes this as `GET`/`POST /v1/projects/:id/members` and
+`DELETE /v1/projects/:id/members/:userId` (admin only). A non-member requesting
+another project's data gets a `404`, so project ids cannot be probed.
 
 ## Projects
 
