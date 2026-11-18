@@ -7,11 +7,15 @@ import { Aside, Steps } from "@astrojs/starlight/components";
 
 ## Deploy
 
+Kinglet ships as a multi-arch image (`linux/amd64` + `linux/arm64`) at
+`ghcr.io/your-org/kinglet` — the repo's release workflow publishes it (see
+[Publishing images](#publishing-images)).
+
 ```yaml
 # docker-compose.yml
 services:
   kinglet:
-    build: .                # or: ghcr.io/your-org/kinglet:latest
+    image: ghcr.io/your-org/kinglet:latest   # pin a version in production, e.g. :0.1.0
     ports:
       - "8080:3000"
     environment:
@@ -23,6 +27,42 @@ services:
 
 volumes:
   kinglet-data:
+```
+
+```bash
+docker compose up -d       # pulls the right architecture automatically
+```
+
+<Aside type="tip" title="Building from source">
+  No published image? Clone the repo and swap `image:` for `build: .` —
+  `docker compose up -d --build` produces the same image locally.
+</Aside>
+
+<Aside type="note" title="Pinning versions">
+  Use release tags in production (`:0.1.0`) so upgrades stay deliberate —
+  `:latest` moves on every push to `main`. Available tags are listed on the
+  repository's packages page.
+</Aside>
+
+<Aside type="caution" title="Private packages">
+  GHCR packages start private even when the repository is public. For
+  anonymous `docker pull`, make the package public once (Packages → kinglet →
+  Package settings → Change visibility → Public). Otherwise run
+  `docker login ghcr.io` first.
+</Aside>
+
+### Publishing images
+
+`.github/workflows/docker.yml` builds and pushes the image:
+
+| Trigger | Tags |
+| --- | --- |
+| push to `main` | `:latest`, `:main`, `:sha-<commit>` |
+| push tag `vX.Y.Z` | `:X.Y.Z`, `:X.Y`, `:latest` |
+
+```bash
+git tag v0.1.0 -m "Kinglet v0.1.0"
+git push origin v0.1.0
 ```
 
 ## Configuration
