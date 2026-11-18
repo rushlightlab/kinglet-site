@@ -1,18 +1,6 @@
 ---
-title: Kinglet
-description: Small. Light. King. — the tiny self-hostable log platform.
-template: splash
-hero:
-  tagline: >-
-    Small. Light. King. An Axiom-shaped log platform that runs on a $5 VPS —
-    one container, one database file, one fast dark UI.
-  actions:
-    - text: Get started
-      link: /quickstart/
-      variant: primary
-    - text: Send your first log
-      link: /ingestion/
-      variant: secondary
+title: Overview
+description: What Kinglet is, what it does today, and where it's going.
 ---
 
 import { CardGrid, Card } from "@astrojs/starlight/components";
@@ -34,8 +22,25 @@ substring search — all on one small container.
     SQLite FTS5 trigram indexing means substring matches (`"timeout"`) just
     work, plus a live tail over server-sent events.
   </Card>
+  <Card title="Alerts that don't cry wolf">
+    Watch for instant matches, error-rate spikes, or a cron that went silent —
+    delivered to a webhook, Discord, or Slack with cooldowns and auto-resolve.
+  </Card>
   <Card title="Yours to run">
     Docker Compose in, Litestream backups out. MIT licensed, no phone-home,
     no telemetry.
   </Card>
+  <Card title="Storage you choose">
+    SQLite by default, libSQL for local files or hosted Turso, ClickHouse on
+    the roadmap — one small interface, swappable drivers.
+  </Card>
 </CardGrid>
+
+## Where it's going
+
+- **Node/PHP SDKs** — a pino transport, a zero-code console preload, and a
+  Monolog handler for Laravel/Symfony/WordPress.
+- **More receivers** — OTLP for OpenTelemetry pipelines, and syslog so
+  nginx/php-fpm ship with zero code changes.
+- **ClickHouse driver** — the same storage interface, for when a single node
+  stops being enough.

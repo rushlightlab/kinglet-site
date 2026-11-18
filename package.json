@@ -17,6 +17,8 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.5",
     "@astrojs/starlight": "^0.43.1",
+    "@fontsource-variable/jetbrains-mono": "^5.2.0",
+    "@fontsource/chakra-petch": "^5.1.0",
     "astro": "^7.4.12"
   }
 }

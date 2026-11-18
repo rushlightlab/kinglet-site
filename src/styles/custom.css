@@ -1,9 +1,24 @@
-/* Kinglet brand: crown gold on Starlight's dark defaults. */
+/* Kinglet brand applied to Starlight: ink dark, crown gold,
+   Chakra Petch headings, JetBrains Mono for code. Dark is the default theme;
+   the light theme keeps a darker gold for contrast. */
+
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/chakra-petch/400.css";
+@import "@fontsource/chakra-petch/600.css";
+@import "@fontsource/chakra-petch/700.css";
 
 :root {
   --sl-color-accent: #fbbf24;
   --sl-color-accent-low: #fbbf2426;
   --sl-color-accent-high: #fcd34d;
+  --sl-color-bg: #07080a;
+  --sl-color-bg-header: #0a0c0e;
+  --sl-color-bg-sidebar: #090b0d;
+  --sl-color-bg-inline-code: #13161a;
+  --sl-color-bg-inline-code-text: #e4e8e3;
+  --sl-font-heading: "Chakra Petch", var(--sl-font-sans);
+  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --sl-font-code: "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root[data-theme="light"] {

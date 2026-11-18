@@ -1,0 +1,564 @@
+---
+import "@fontsource-variable/jetbrains-mono";
+import "@fontsource/chakra-petch/400.css";
+import "@fontsource/chakra-petch/600.css";
+import "@fontsource/chakra-petch/700.css";
+import "../styles/landing.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Kinglet — the tiny self-hostable log platform. One container, one SQLite file, a live-tailing UI, and alerts that don't cry wolf. Small. Light. King."
+    />
+    <meta name="theme-color" content="#07080a" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Kinglet — small. light. king.</title>
+  </head>
+  <body>
+    <!-- atmosphere -->
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-glow" aria-hidden="true"></div>
+    <div class="bg-noise" aria-hidden="true"></div>
+    <div class="bg-scanline" aria-hidden="true"></div>
+
+    <!-- ============ HEADER ============ -->
+    <header id="siteHeader" class="site-header fixed top-0 left-0 w-full z-50" style="position: fixed; top: 0; left: 0; width: 100%; z-index: 50;">
+      <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; height: 72px;">
+        <a href="/" class="brand" aria-label="Kinglet home" style="display: inline-flex; align-items: center; gap: 10px;">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path fill="#fbbf24" d="M3 8l4.5 3L12 4l4.5 7 4.5-3v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          </svg>
+          <span class="brand-name">KINGLET</span>
+        </a>
+        <nav class="hidden-md" aria-label="Main navigation" style="display: flex; align-items: center; gap: 4px;">
+          <a href="/overview/" class="nav-link">/overview</a>
+          <a href="/quickstart/" class="nav-link">/quickstart</a>
+          <a href="/ingestion/" class="nav-link">/ingestion</a>
+          <a href="/storage/" class="nav-link">/storage</a>
+        </nav>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <a href="https://github.com/your-org/kinglet" target="_blank" rel="noopener" class="nav-link">
+            github ↗
+          </a>
+          <a href="/quickstart/" class="btn-primary btn-sm">Get started <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- ============ HERO ============ -->
+      <section class="relative" style="padding: 132px 0 80px;">
+        <div class="wrap">
+          <div class="hero-grid" style="display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center;">
+            <!-- hero copy -->
+            <div style="position: relative; z-index: 10;">
+              <div class="hero-reveal" style="--d:.05s; display: inline-flex;">
+                <div class="eyebrow" style="display: inline-flex; align-items: center; gap: 10px;">
+                  <span class="live-dot" aria-hidden="true"></span>
+                  <span>v0.1</span><span style="color: var(--faint)">/</span><span>alerts are live</span>
+                  <span class="eyebrow-arrow" aria-hidden="true">→</span>
+                </div>
+              </div>
+
+              <h1
+                class="hero-reveal"
+                style="font-family: var(--display); font-weight: 700; line-height: 0.95; margin: 28px 0 0; font-size: clamp(3.1rem, 7.4vw, 5.9rem); letter-spacing: -0.02em;"
+                >
+                Your logs.<br />
+                <span style="position: relative; display: inline-block;">Your rules.<span class="accent-underline" aria-hidden="true"></span></span><span style="color: var(--gold)">.</span>
+              </h1>
+
+              <p
+                class="hero-reveal"
+                style="--d:.2s; margin: 28px 0 0; max-width: 36ch; font-size: 15px; line-height: 1.7; color: var(--muted);"
+              >
+                Kinglet collects logs from anything that can POST, keeps them in a single
+                SQLite file, and gives you a live-tailing UI with substring search —
+                on one small container. <span style="color: var(--text)">MIT licensed.</span>
+              </p>
+
+              <div class="hero-reveal" style="--d:.28s; display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px;">
+                <a href="/quickstart/" class="btn-primary">Start for free <span aria-hidden="true">↗</span></a>
+                <a href="/overview/" class="btn-ghost">Read the docs <span aria-hidden="true">→</span></a>
+              </div>
+
+              <div class="hero-reveal" style="--d:.36s; margin-top: 40px; max-width: 440px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em; color: var(--faint); margin-bottom: 8px;">
+                  <span style="color: var(--gold)">$</span> one command, no dependencies
+                </div>
+                <div class="cmd-bar">
+                  <code class="cmd-text"><span style="color: var(--gold)">$</span> docker compose up -d</code>
+                  <button class="copy-btn" data-copy="docker compose up -d" aria-label="Copy install command">
+                    <span class="copy-label">copy</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="hero-reveal" style="--d:.44s; display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 32px; font-size: 11px; color: var(--faint);">
+                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> one container, one file</span>
+                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> ~150 MB RAM</span>
+                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> MIT licensed</span>
+              </div>
+            </div>
+
+            <!-- hero product mockup -->
+            <div class="hero-visual hero-reveal" style="--d:.3s; position: relative;">
+              <div class="visual-glow" aria-hidden="true"></div>
+
+              <div class="float-chip" style="position: absolute; top: -20px; left: -8px; z-index: 20;">
+                <span class="float-chip-dot" aria-hidden="true"></span>
+                <span style="color: var(--faint)">monitor fired</span>
+                <span style="color: var(--gold); font-weight: 600;">→ discord ✓</span>
+              </div>
+
+              <div class="window" style="position: relative; z-index: 10;">
+                <div class="window-bar">
+                  <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+                  <div class="window-title">kinglet <span style="color: var(--faint)">/</span> stream <span style="color: var(--faint)">/</span> <span style="color: var(--gold)">all services</span></div>
+                  <div class="window-live"><span class="live-dot" aria-hidden="true"></span> live</div>
+                </div>
+
+                <div class="dash-toolbar">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="toolbar-tab active">Logs</span>
+                    <span class="toolbar-tab">Monitors</span>
+                  </div>
+                  <div class="toolbar-search">⌕ &nbsp;level&gt;=error service:api</div>
+                </div>
+
+                <div class="mini-stats">
+                  <div><span class="mini-label">EVENTS</span><span class="mini-val">1.2M</span></div>
+                  <div><span class="mini-label">ERRORS</span><span class="mini-val" style="color: var(--coral)">0.3%</span></div>
+                  <div><span class="mini-label">RAM</span><span class="mini-val">148MB</span></div>
+                  <div><span class="mini-label">RETENTION</span><span class="mini-val">14d</span></div>
+                </div>
+
+                <div class="stream">
+                  <div class="log-row">
+                    <span class="log-time">14:32:05.114</span><span class="lvl lvl-info">info</span><span class="log-svc">web</span>
+                    <span>user signed in</span>
+                  </div>
+                  <div class="log-row">
+                    <span class="log-time">14:32:05.230</span><span class="lvl lvl-info">info</span><span class="log-svc">api</span>
+                    <span>request served in 42ms</span>
+                  </div>
+                  <div class="log-row">
+                    <span class="log-time">14:32:05.412</span><span class="lvl lvl-warn">warn</span><span class="log-svc">api</span>
+                    <span>slow query detected (812ms)</span>
+                  </div>
+                  <div class="log-row">
+                    <span class="log-time">14:32:05.507</span><span class="lvl lvl-error">error</span><span class="log-svc">billing</span>
+                    <span>payment failed: card_declined</span>
+                    <span class="log-errtag">FIRED → DISCORD</span>
+                  </div>
+                  <div class="log-row">
+                    <span class="log-time">14:32:06.001</span><span class="lvl lvl-info">info</span><span class="log-svc">worker</span>
+                    <span>job completed</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="float-chip float-chip-2" style="position: absolute; bottom: -20px; right: -8px; z-index: 20;">
+                <span class="float-chip-dot gold" aria-hidden="true"></span>
+                <span style="color: var(--faint)">search "timeout"</span>
+                <span style="color: var(--gold); font-weight: 600;">3 hits</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FEATURES / BENTO ============ -->
+      <section id="features" class="relative" style="padding: 96px 0;">
+        <div class="wrap">
+          <div class="reveal" style="display: flex; flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 56px; flex-wrap: wrap;">
+            <div>
+              <div class="section-kicker"><span style="color: var(--gold)">01</span> / capabilities</div>
+              <h2 style="font-family: var(--display); font-weight: 700; font-size: clamp(2rem, 4.5vw, 3.4rem); line-height: 1.15; margin: 16px 0 0;">
+                Built for the way<br />logs actually flow.
+              </h2>
+            </div>
+            <p style="font-size: 13px; color: var(--muted); max-width: 22rem; line-height: 1.7; margin: 0;">
+              Not another heavy observability stack. Kinglet is the single binary
+              that catches everything your apps throw — and makes it searchable.
+            </p>
+          </div>
+
+          <div class="bento">
+            <article class="bento-card bento-lg reveal" style="--d:.05s">
+              <div class="feature-tag">SEARCH THAT UNDERSTANDS SUBSTRINGS</div>
+              <h3 style="font-family: var(--display); font-size: 24px; font-weight: 600; margin: 16px 0 0;">
+                "timeout" finds connectiontimeouterror.
+              </h3>
+              <p style="font-size: 13px; color: var(--muted); margin-top: 12px; max-width: 28rem; line-height: 1.7;">
+                SQLite FTS5 with a trigram tokenizer, so you search the way you
+                think — any fragment, any position, instantly. Drag the
+                histogram to zoom into the moment things broke.
+              </p>
+              <div class="histo" aria-hidden="true">
+                <div class="histo-row">
+                  <span class="h-bar" style="width: 96%; height: 100%;"></span>
+                </div>
+                <div class="histo-row">
+                  <span class="h-bright" style="width: 42%; height: 72%;"></span>
+                  <span class="h-bar" style="width: 28%; margin-left: 2%; height: 62%;"></span>
+                </div>
+                <div class="histo-row">
+                  <span class="h-bar" style="width: 18%; margin-left: 4%; height: 48%;"></span>
+                  <span class="h-coral" style="width: 10%; margin-left: 4%; height: 88%;"></span>
+                  <span class="h-bright" style="width: 34%; margin-left: 4%; height: 66%;"></span>
+                </div>
+                <div class="histo-row">
+                  <span class="h-bright" style="width: 12%; margin-left: 8%; height: 40%;"></span>
+                  <span class="h-bar" style="width: 22%; margin-left: 8%; height: 58%;"></span>
+                  <span class="h-coral" style="width: 8%; margin-left: 4%; height: 78%;"></span>
+                </div>
+              </div>
+            </article>
+
+            <article class="bento-card reveal" style="--d:.12s">
+              <div class="feature-icon" aria-hidden="true">⌁</div>
+              <div class="feature-tag" style="margin-top: 24px;">LOG FROM ANYTHING</div>
+              <h3 style="font-family: var(--display); font-size: 20px; font-weight: 600; margin: 12px 0 0;">If it can POST, it can log.</h3>
+              <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
+                NDJSON over HTTP: curl, Vector, Fluent Bit, the Node SDK, or your
+                own two-line fetch. No agents, no sidecars, no lock-in.
+              </p>
+            </article>
+
+            <article class="bento-card reveal" style="--d:.18s">
+              <div class="feature-icon" aria-hidden="true">&#123; &#125;</div>
+              <div class="feature-tag" style="margin-top: 24px;">STORAGE YOU CHOOSE</div>
+              <h3 style="font-family: var(--display); font-size: 20px; font-weight: 600; margin: 12px 0 0;">One file, or Turso.</h3>
+              <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
+                SQLite by default, libSQL for scale-out, ClickHouse on the roadmap —
+                same interface, same app, your call.
+              </p>
+            </article>
+
+            <article class="bento-card bento-wide reveal" style="--d:.24s">
+              <div>
+                <div class="feature-tag">ALERTS THAT DON'T CRY WOLF</div>
+                <h3 style="font-family: var(--display); font-size: 24px; font-weight: 600; margin: 16px 0 0;">
+                  Match, spike, or silence.
+                </h3>
+                <p style="font-size: 13px; color: var(--muted); margin-top: 12px; max-width: 28rem; line-height: 1.7;">
+                  Watch for <span style="color: var(--text)">level:fatal</span>, alert when error rates
+                  spike, or get pinged when your cron goes quiet. Cooldowns and
+                  auto-resolve keep it calm. Channels are plain webhook URLs —
+                  Discord, Slack, n8n, anything.
+                </p>
+                <a href="/api/" class="text-link" style="margin-top: 20px;">Explore the API <span aria-hidden="true">↗</span></a>
+              </div>
+              <div class="alert-mock" aria-hidden="true">
+                <div class="alert-top"><span class="live-dot"></span> MONITOR FIRED <span style="color: var(--faint)">· 2m ago</span></div>
+                <div class="alert-line"><span>condition</span><span style="color: var(--coral)">4 errors in 5m</span></div>
+                <div class="alert-line"><span>matched query</span><span style="color: var(--gold)">level&gt;=error</span></div>
+                <div class="alert-line"><span>channels</span><span>webhook · discord <span style="color: var(--gold)">✓</span></span></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ QUICKSTART / TABS ============ -->
+      <section id="install" class="relative" style="padding: 96px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="wrap">
+          <div class="reveal" style="text-align: center; max-width: 42rem; margin: 0 auto 48px;">
+            <div class="section-kicker" style="justify-content: center;"><span style="color: var(--gold)">02</span> / quickstart</div>
+            <h2 style="font-family: var(--display); font-weight: 700; font-size: clamp(2rem, 4.5vw, 3.4rem); line-height: 1.15; margin: 16px 0 0;">
+              Logs flowing in <span style="color: var(--gold)">two minutes.</span>
+            </h2>
+            <p style="font-size: 13px; color: var(--muted); margin-top: 16px;">
+              Pick how you ship. No credit card, no signup — it's your server.
+            </p>
+          </div>
+
+          <div class="reveal code-shell" style="--d:.1s; max-width: 56rem; margin: 0 auto;">
+            <div class="code-topbar">
+              <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+              <div class="code-tabs" role="tablist" aria-label="Install method">
+                <button role="tab" aria-selected="true" aria-controls="panel-docker" id="tab-docker" data-tab="docker" class="code-tab active">Docker</button>
+                <button role="tab" aria-selected="false" aria-controls="panel-curl" id="tab-curl" data-tab="curl" class="code-tab">curl</button>
+                <button role="tab" aria-selected="false" aria-controls="panel-node" id="tab-node" data-tab="node" class="code-tab">Node.js</button>
+              </div>
+              <button class="copy-btn code-copy" data-copy-target="docker" aria-label="Copy code snippet">
+                <span class="copy-label">copy</span>
+              </button>
+            </div>
+
+            <div class="code-body">
+              <div role="tabpanel" id="panel-docker" data-panel="docker" class="code-panel">
+                <pre><code><span class="c-com"># start kinglet — one container, one volume</span>
+<span class="c-punc">$</span> docker compose up -d
+
+<span class="c-com"># grab your ingest token</span>
+<span class="c-punc">$</span> docker compose exec kinglet cat /data/kinglet.token
+
+<span class="c-ok">✓</span> <span class="c-dim">ui listening on http://localhost:8080</span></code></pre>
+              </div>
+              <div role="tabpanel" id="panel-curl" data-panel="curl" class="code-panel hidden">
+                <pre><code><span class="c-com"># send your first log — any app, any language</span>
+<span class="c-punc">$</span> curl -X POST http://localhost:8080/v1/events \
+    -H <span class="c-str">"Authorization: Bearer $KINGLET_TOKEN"</span> \
+    -H <span class="c-str">"Content-Type: application/x-ndjson"</span> \
+    --data-binary <span class="c-str">'&#123;"level":"info","message":"hello from my app","service":"my-app"&#125;'</span>
+
+<span class="c-ok">✓</span> <span class="c-dim">&#123;"accepted":1,"rejected":0&#125;</span></code></pre>
+              </div>
+              <div role="tabpanel" id="panel-node" data-panel="node" class="code-panel hidden">
+                <pre><code><span class="c-kw">import</span> &#123; createLogger &#125; <span class="c-kw">from</span> <span class="c-str">'@kinglet/sdk-node'</span>;
+
+<span class="c-kw">const</span> log = <span class="c-key">createLogger</span>(&#123;
+  <span class="c-prop">url</span>: <span class="c-str">'http://localhost:8080'</span>,
+  <span class="c-prop">token</span>: process.env.<span class="c-prop">KINGLET_TOKEN</span>,
+  <span class="c-prop">service</span>: <span class="c-str">'my-app'</span>,
+&#125;);
+
+log.<span class="c-key">info</span>(<span class="c-str">'user signed in'</span>, &#123; <span class="c-prop">userId</span>: <span class="c-num">42</span> &#125;);</code></pre>
+              </div>
+            </div>
+
+            <div class="code-footbar">
+              <span><span style="color: var(--gold)">↳</span> buffers in-process, ships as one batch — your app never blocks</span>
+              <span class="hidden-sm" style="color: var(--faint)">MIT licensed core</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ STATS ============ -->
+      <section id="metrics" class="relative" style="padding: 80px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="wrap">
+          <div class="reveal" style="text-align: center; margin-bottom: 48px;">
+            <div class="section-kicker" style="justify-content: center;"><span style="color: var(--gold)">03</span> / by the numbers</div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-cell reveal" style="--d:.05s">
+              <div class="stat-num"><span class="counter" data-target="150">0</span><span class="stat-unit">MB</span></div>
+              <div class="stat-label">steady-state ram</div>
+            </div>
+            <div class="stat-cell reveal" style="--d:.11s">
+              <div class="stat-num"><span class="counter" data-target="1">0</span></div>
+              <div class="stat-label">container, start to finish</div>
+            </div>
+            <div class="stat-cell reveal" style="--d:.17s">
+              <div class="stat-num"><span class="counter" data-target="0">0</span></div>
+              <div class="stat-label">external services required</div>
+            </div>
+            <div class="stat-cell reveal" style="--d:.23s">
+              <div class="stat-num"><span class="counter" data-target="10">0</span><span class="stat-unit">k</span></div>
+              <div class="stat-label">events per ingest batch</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FINAL CTA ============ -->
+      <section class="final-cta relative" style="padding: 112px 0; border-top: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+        <div class="cta-glow" aria-hidden="true"></div>
+        <div class="reveal" style="position: relative; max-width: 56rem; margin: 0 auto; padding: 0 1.5rem; text-align: center;">
+          <div class="section-kicker" style="justify-content: center;"><span style="color: var(--gold)">//</span> ready when you are</div>
+          <h2 style="font-family: var(--display); font-weight: 700; font-size: clamp(2.4rem, 6vw, 5rem); line-height: 1.02; margin: 24px 0 0;">
+            Stop scrolling.<br /><span style="color: var(--gold)">Start ruling.</span>
+          </h2>
+          <p style="font-size: 14px; color: var(--muted); margin: 24px auto 0; max-width: 28rem; line-height: 1.7;">
+            Point Kinglet at your apps tonight. Free forever — it's yours.
+          </p>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-top: 36px;">
+            <a href="/quickstart/" class="btn-primary btn-lg">Start for free <span aria-hidden="true">↗</span></a>
+            <a href="https://github.com/your-org/kinglet" target="_blank" rel="noopener" class="btn-ghost btn-lg">View on GitHub <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="cmd-bar" style="margin: 40px auto 0; max-width: 28rem;">
+            <code class="cmd-text"><span style="color: var(--gold)">$</span> docker compose up -d</code>
+            <button class="copy-btn" data-copy="docker compose up -d" aria-label="Copy install command">
+              <span class="copy-label">copy</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="relative" style="border-top: 1px solid rgba(255,255,255,0.06); background: var(--bg);">
+      <div class="wrap" style="padding-top: 56px; padding-bottom: 56px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px;">
+          <div>
+            <a href="/" class="brand" style="display: inline-flex; align-items: center; gap: 10px;">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path fill="#fbbf24" d="M3 8l4.5 3L12 4l4.5 7 4.5-3v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              </svg>
+              <span class="brand-name" style="font-size: 16px;">KINGLET</span>
+            </a>
+            <p style="font-size: 12px; color: var(--faint); margin: 16px 0 0; max-width: 18rem; line-height: 1.7;">
+              Small. Light. King. Self-hosted logs for apps that ship.
+            </p>
+            <div class="status-pill" style="margin-top: 20px;">
+              <span class="live-dot" aria-hidden="true"></span> single binary · always up
+            </div>
+          </div>
+          <div>
+            <div class="footer-head">Docs</div>
+            <a href="/quickstart/" class="footer-link">Quickstart</a>
+            <a href="/ingestion/" class="footer-link">HTTP ingestion</a>
+            <a href="/api/" class="footer-link">API reference</a>
+            <a href="/self-hosting/" class="footer-link">Self-hosting</a>
+          </div>
+          <div>
+            <div class="footer-head">Project</div>
+            <a href="/storage/" class="footer-link">Storage backends</a>
+            <a href="/overview/" class="footer-link">Overview</a>
+            <a href="https://github.com/your-org/kinglet" target="_blank" rel="noopener" class="footer-link">GitHub ↗</a>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: var(--faint);">
+          <span>© 2026 Kinglet contributors · MIT</span>
+          <a href="#top" class="footer-link" style="display: inline-flex; align-items: center; gap: 6px;">Back to top ↑</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // header scroll state
+      const header = document.getElementById("siteHeader");
+      const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 24);
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+
+      // code tab switcher (keyboard accessible)
+      const tabs = Array.from(document.querySelectorAll(".code-tab"));
+      const panels = Array.from(document.querySelectorAll(".code-panel"));
+      const codeCopyBtn = document.querySelector(".code-copy");
+
+      function activateTab(tab) {
+        const name = tab.dataset.tab;
+        tabs.forEach((t) => {
+          const active = t === tab;
+          t.classList.toggle("active", active);
+          t.setAttribute("aria-selected", String(active));
+          t.tabIndex = active ? 0 : -1;
+        });
+        panels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== name));
+        if (codeCopyBtn) codeCopyBtn.dataset.copyTarget = name;
+      }
+
+      tabs.forEach((tab, index) => {
+        tab.tabIndex = tab.classList.contains("active") ? 0 : -1;
+        tab.addEventListener("click", () => activateTab(tab));
+        tab.addEventListener("keydown", (e) => {
+          let next = null;
+          if (e.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
+          else if (e.key === "ArrowLeft") next = tabs[(index - 1 + tabs.length) % tabs.length];
+          if (next) {
+            e.preventDefault();
+            activateTab(next);
+            next.focus();
+          }
+        });
+      });
+
+      // copy to clipboard with feedback
+      function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+        return new Promise((resolve, reject) => {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          try {
+            document.execCommand("copy");
+            resolve();
+          } catch (err) {
+            reject(err);
+          } finally {
+            document.body.removeChild(ta);
+          }
+        });
+      }
+
+      document.querySelectorAll(".copy-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          let text = btn.dataset.copy;
+          if (!text && btn.dataset.copyTarget) {
+            const panel = panels.find((p) => p.dataset.panel === btn.dataset.copyTarget);
+            if (panel) text = panel.innerText.trim();
+          }
+          if (!text) return;
+          const label = btn.querySelector(".copy-label");
+          copyText(text)
+            .then(() => {
+              btn.classList.add("copied");
+              if (label) label.textContent = "copied!";
+            })
+            .catch(() => {
+              if (label) label.textContent = "failed";
+            })
+            .finally(() => {
+              setTimeout(() => {
+                btn.classList.remove("copied");
+                if (label) label.textContent = "copy";
+              }, 1800);
+            });
+        });
+      });
+
+      // animated counters
+      const counters = Array.from(document.querySelectorAll(".counter"));
+      function animateCounter(el) {
+        if (el.dataset.done) return;
+        el.dataset.done = "1";
+        const target = parseFloat(el.dataset.target) || 0;
+        const duration = 1600;
+        const start = performance.now();
+        function frame(now) {
+          const p = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = String(Math.round(target * eased));
+          if (p < 1) requestAnimationFrame(frame);
+          else el.textContent = String(target);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      // scroll reveal
+      const revealEls = Array.from(document.querySelectorAll(".reveal"));
+      if ("IntersectionObserver" in window) {
+        const revealObserver = new IntersectionObserver(
+          (entries, obs) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("in-view");
+                obs.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+        );
+        revealEls.forEach((el) => revealObserver.observe(el));
+        const counterObserver = new IntersectionObserver(
+          (entries, obs) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                animateCounter(entry.target);
+                obs.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.5 }
+        );
+        counters.forEach((el) => counterObserver.observe(el));
+      } else {
+        revealEls.forEach((el) => el.classList.add("in-view"));
+        counters.forEach(animateCounter);
+      }
+    </script>
+  </body>
+</html>

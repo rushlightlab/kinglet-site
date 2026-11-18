@@ -26,7 +26,7 @@ export default defineConfig({
         {
           label: "Start",
           items: [
-            { label: "Overview", link: "/" },
+            { label: "Overview", link: "/overview/" },
             { label: "Quickstart", link: "/quickstart/" },
             { label: "Query language", link: "/query-language/" },
           ],
