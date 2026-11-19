@@ -11,11 +11,10 @@ only your proxy, keep secrets out of logs, use least-privilege accounts and
 scoped keys, and keep the image and database healthy.
 
 <Aside type="caution" title="Before you expose Kinglet">
-  At minimum: set `KINGLET_BASE_URL` to the public HTTPS origin, put Kinglet
-  behind a TLS reverse proxy, set a strong `BETTER_AUTH_SECRET`, set a strong
-  bootstrap admin password, and narrow `KINGLET_TRUSTED_PROXIES` to only your
-  proxy. The [self-hosting guide](/self-hosting/) covers installation; this page
-  covers the security decisions.
+  At minimum: set `KINGLET_BASE_URL` to the public HTTPS origin, put Kinglet behind a TLS reverse
+  proxy, set a strong `BETTER_AUTH_SECRET`, set a strong bootstrap admin password, and narrow
+  `KINGLET_TRUSTED_PROXIES` to only your proxy. The [self-hosting guide](/self-hosting/) covers
+  installation; this page covers the security decisions.
 </Aside>
 
 ## Reverse proxy and client IPs
@@ -84,17 +83,17 @@ Start with the **last proxy directly in front of Kinglet**. Add Cloudflare only
 when you need visitor IP attribution and your proxy preserves the incoming
 `X-Forwarded-For` chain.
 
-| Setup | `KINGLET_TRUSTED_PROXIES` |
-| --- | --- |
-| Caddy in Docker | Caddy container IP `/32`, e.g. `172.30.0.10/32` |
-| Traefik in Docker | Traefik container IP `/32`, or the dedicated proxy network CIDR |
-| nginx on the host, proxying to `127.0.0.1:3000` | `127.0.0.1/32` |
-| nginx in Docker | nginx container IP `/32`, or its dedicated proxy network CIDR |
-| Cloudflare → Caddy | Caddy IP `/32`; add Cloudflare's current ranges only if Caddy preserves the visitor XFF |
-| Cloudflare → Traefik | Traefik IP `/32`; add Cloudflare's current ranges only if Traefik preserves the visitor XFF |
-| Cloudflare Tunnel → Caddy/Traefik | The `cloudflared` connector address `/32`; add Cloudflare ranges only if the visitor XFF survives |
-| Vercel → public HTTPS → Caddy/Traefik | The Caddy/Traefik address. Vercel is a client; never add Vercel to this list |
-| No reverse proxy | Leave empty; the socket address is used |
+| Setup                                           | `KINGLET_TRUSTED_PROXIES`                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Caddy in Docker                                 | Caddy container IP `/32`, e.g. `172.30.0.10/32`                                                   |
+| Traefik in Docker                               | Traefik container IP `/32`, or the dedicated proxy network CIDR                                   |
+| nginx on the host, proxying to `127.0.0.1:3000` | `127.0.0.1/32`                                                                                    |
+| nginx in Docker                                 | nginx container IP `/32`, or its dedicated proxy network CIDR                                     |
+| Cloudflare → Caddy                              | Caddy IP `/32`; add Cloudflare's current ranges only if Caddy preserves the visitor XFF           |
+| Cloudflare → Traefik                            | Traefik IP `/32`; add Cloudflare's current ranges only if Traefik preserves the visitor XFF       |
+| Cloudflare Tunnel → Caddy/Traefik               | The `cloudflared` connector address `/32`; add Cloudflare ranges only if the visitor XFF survives |
+| Vercel → public HTTPS → Caddy/Traefik           | The Caddy/Traefik address. Vercel is a client; never add Vercel to this list                      |
+| No reverse proxy                                | Leave empty; the socket address is used                                                           |
 
 Cloudflare's ranges are published at
 [cloudflare.com/ips](https://www.cloudflare.com/ips/) and change over time. Do not
@@ -142,11 +141,11 @@ Those are client networks, not proxies.
 
 Use the smallest role that works:
 
-| Role | Use it for |
-| --- | --- |
-| **admin** | one or two operators who manage projects, users, and keys |
+| Role       | Use it for                                                     |
+| ---------- | -------------------------------------------------------------- |
+| **admin**  | one or two operators who manage projects, users, and keys      |
 | **member** | people who send logs, manage monitors, and manage project keys |
-| **viewer** | people who only read logs and dashboards |
+| **viewer** | people who only read logs and dashboards                       |
 
 - Remove project members when they leave the team. Project membership is the
   boundary for members and viewers; admins can see every project.
@@ -176,10 +175,9 @@ Use the smallest role that works:
   that is sending more than expected.
 
 <Aside type="note" title="Offboarding a project member">
-  Removing a project member revokes the API keys that member created for that
-  project. A password reset or account disable revokes keys owned by the target.
-  Still review the project key list after offboarding, especially for keys that
-  were rotated or shared outside the workspace.
+  Removing a project member revokes the API keys that member created for that project. A password
+  reset or account disable revokes keys owned by the target. Still review the project key list after
+  offboarding, especially for keys that were rotated or shared outside the workspace.
 </Aside>
 
 ## Webhooks and alerts
@@ -244,17 +242,17 @@ starve the host. Do not mount the Docker socket or run the container privileged.
 
 ## Hardening checklist
 
-| Area | Check |
-| --- | --- |
-| TLS | `KINGLET_BASE_URL` is the public HTTPS origin; only the proxy publishes 80/443 |
-| Proxy trust | `KINGLET_TRUSTED_PROXIES` names only the proxy address or subnet |
-| Secrets | strong `BETTER_AUTH_SECRET` and admin password; `admin-password.txt` removed |
-| Accounts | admins are few; members and viewers are scoped to projects |
-| Keys | one key per service, least scopes, rotated on offboarding |
-| Webhooks | HTTPS receiver; private webhooks enabled only with egress controls |
-| Storage | retention and caps set; `/data` backed up and restore tested |
-| Updates | image pinned by tag or digest; changelog read before upgrading |
-| Runtime | non-root, `cap_drop: ALL`, `no-new-privileges`, resource limits |
+| Area        | Check                                                                          |
+| ----------- | ------------------------------------------------------------------------------ |
+| TLS         | `KINGLET_BASE_URL` is the public HTTPS origin; only the proxy publishes 80/443 |
+| Proxy trust | `KINGLET_TRUSTED_PROXIES` names only the proxy address or subnet               |
+| Secrets     | strong `BETTER_AUTH_SECRET` and admin password; `admin-password.txt` removed   |
+| Accounts    | admins are few; members and viewers are scoped to projects                     |
+| Keys        | one key per service, least scopes, rotated on offboarding                      |
+| Webhooks    | HTTPS receiver; private webhooks enabled only with egress controls             |
+| Storage     | retention and caps set; `/data` backed up and restore tested                   |
+| Updates     | image pinned by tag or digest; changelog read before upgrading                 |
+| Runtime     | non-root, `cap_drop: ALL`, `no-new-privileges`, resource limits                |
 
 ## Reporting a vulnerability
 

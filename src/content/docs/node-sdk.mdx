@@ -11,10 +11,9 @@ second, whichever comes first. A failed batch is re-queued (with a cap) and
 reported through `onError`, so your app never blocks on logging.
 
 <Aside type="note" title="Not on npm yet">
-  The package lives in the Kinglet monorepo at `packages/sdk-node` and is not
-  published to npm. From a checkout, build it with
-  `pnpm --filter @kinglet/sdk-node build` and use a workspace/file dependency
-  until the npm release.
+  The package lives in the Kinglet monorepo at `packages/sdk-node` and is not published to npm. From
+  a checkout, build it with `pnpm --filter @kinglet/sdk-node build` and use a workspace/file
+  dependency until the npm release.
 </Aside>
 
 ## Install
@@ -39,8 +38,8 @@ separate key for each project or environment.
 import { createLogger } from "@kinglet/sdk-node";
 
 const log = createLogger({
-  url: "http://localhost:8080",      // your Kinglet server
-  token: process.env.KINGLET_KEY!,   // project key with the ingest scope (kl_…)
+  url: "http://localhost:8080", // your Kinglet server
+  token: process.env.KINGLET_KEY!, // project key with the ingest scope (kl_…)
   service: "my-app",
   env: "prod",
 });
@@ -59,12 +58,7 @@ The SDK is written in TypeScript and builds with declaration output, so
 and `LogFields` are exported — no separate `@types` package is needed:
 
 ```ts
-import {
-  createLogger,
-  type Logger,
-  type LoggerOptions,
-  type LogFields,
-} from "@kinglet/sdk-node";
+import { createLogger, type Logger, type LoggerOptions, type LogFields } from "@kinglet/sdk-node";
 ```
 
 It is ESM-only (`"type": "module"`, with an `import` export) and requires
@@ -73,22 +67,22 @@ can resolve the `types` entry.
 
 ## Options
 
-| Option | Default | What it does |
-| --- | --- | --- |
-| `url` | — | Kinglet base URL (required) |
-| `token` | — | `kl_…` key with the ingest scope (required) — also selects the project |
-| `service` / `env` | — | tagged onto every event |
-| `batchSize` | `200` | flush after this many buffered events |
-| `flushMs` | `1000` | flush at least this often |
-| `onError` | — | called when a flush fails; the batch is re-queued |
+| Option            | Default | What it does                                                           |
+| ----------------- | ------- | ---------------------------------------------------------------------- |
+| `url`             | —       | Kinglet base URL (required)                                            |
+| `token`           | —       | `kl_…` key with the ingest scope (required) — also selects the project |
+| `service` / `env` | —       | tagged onto every event                                                |
+| `batchSize`       | `200`   | flush after this many buffered events                                  |
+| `flushMs`         | `1000`  | flush at least this often                                              |
+| `onError`         | —       | called when a flush fails; the batch is re-queued                      |
 
 ## Methods
 
-| Method | What it does |
-| --- | --- |
+| Method            | What it does                                    |
+| ----------------- | ----------------------------------------------- |
 | `trace` … `fatal` | buffer one event with an optional fields object |
-| `flush()` | send the current buffer now |
-| `close()` | stop the timer and perform a final flush |
+| `flush()`         | send the current buffer now                     |
+| `close()`         | stop the timer and perform a final flush        |
 
 <Aside type="note" title="Roadmap">
   A pino transport (`transport: { target: "@kinglet/pino" }`) and a zero-code

@@ -24,10 +24,10 @@ Drizzle adapter, tuned per its performance guide:
 When no administrator exists — first boot, or recovery from a database with no
 admin account — Kinglet creates or promotes one:
 
-| Env var | Default | Notes |
-| --- | --- | --- |
-| `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | login identifier |
-| `KINGLET_ADMIN_PASSWORD` | *(generated)* | printed once; written to `admin-password.txt` only for local databases |
+| Env var                  | Default               | Notes                                                                  |
+| ------------------------ | --------------------- | ---------------------------------------------------------------------- |
+| `KINGLET_ADMIN_EMAIL`    | `admin@kinglet.local` | login identifier                                                       |
+| `KINGLET_ADMIN_PASSWORD` | _(generated)_         | printed once; written to `admin-password.txt` only for local databases |
 
 These only apply when no administrator exists — changing them while an admin is
 present does nothing. If an account with the configured email already exists, it
@@ -61,20 +61,20 @@ account, or delete it from **Settings → Users**.
 
 ## Roles
 
-| Role | Can do |
-| --- | --- |
-| **admin** | everything: projects, users, keys, logs, monitors. Cannot be deleted or demoted while last |
-| **member** | read/write logs, manage monitors, manage API keys |
-| **viewer** | read logs, monitors, and project metadata |
+| Role       | Can do                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| **admin**  | everything: projects, users, keys, logs, monitors. Cannot be deleted or demoted while last |
+| **member** | read/write logs, manage monitors, manage API keys                                          |
+| **viewer** | read logs, monitors, and project metadata                                                  |
 
 Roles map to explicit permission keys (`logs.read`, `monitors.write`,
 `keys.write`, `users.read`, …) internally, so custom roles later are a data
 change rather than a refactor.
 
 <Aside type="note" title="Project access">
-  Roles set what a user can do; project membership sets where they can do it.
-  Admins see every project. Members and viewers see only the projects assigned
-  to them in **Settings → Projects → manage → members**.
+  Roles set what a user can do; project membership sets where they can do it. Admins see every
+  project. Members and viewers see only the projects assigned to them in **Settings → Projects →
+  manage → members**.
 </Aside>
 
 ## Project membership
@@ -118,10 +118,10 @@ default, and cannot be given to viewers.
 Machine credentials live per project with explicit **scopes** — a key never
 inherits a human role:
 
-| Scope | Allows |
-| --- | --- |
-| `ingest` | `POST /v1/events` |
-| `query` | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
+| Scope    | Allows                                                          |
+| -------- | --------------------------------------------------------------- |
+| `ingest` | `POST /v1/events`                                               |
+| `query`  | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
 
 Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
 in **Settings → Projects → manage**; the list keeps a short token prefix
@@ -159,7 +159,7 @@ delete the user's sessions and API keys; mutating requests always bypass the
 cookie cache, so a demoted user cannot keep writing.
 
 <Aside type="caution" title="Run behind TLS">
-  Session cookies are HttpOnly + SameSite=Lax and become `Secure` when
-  `KINGLET_BASE_URL` is an HTTPS URL. For anything beyond localhost, set
-  `KINGLET_BASE_URL` and put Kinglet behind Caddy/nginx TLS.
+  Session cookies are HttpOnly + SameSite=Lax and become `Secure` when `KINGLET_BASE_URL` is an
+  HTTPS URL. For anything beyond localhost, set `KINGLET_BASE_URL` and put Kinglet behind
+  Caddy/nginx TLS.
 </Aside>

@@ -10,9 +10,9 @@ no build. If you already run Coolify or Dokploy, jump to their guides in
 [Self-hosting](/self-hosting/#coolify).
 
 <Aside type="caution" title="Exposing this beyond localhost?">
-  Read [Security](/security/) first. It covers TLS, narrowing
-  `KINGLET_TRUSTED_PROXIES`, strong secrets, API-key offboarding, webhooks, and
-  image pinning. Do not use the all-private-ranges shortcut.
+  Read [Security](/security/) first. It covers TLS, narrowing `KINGLET_TRUSTED_PROXIES`, strong
+  secrets, API-key offboarding, webhooks, and image pinning. Do not use the all-private-ranges
+  shortcut.
 </Aside>
 
 ## Docker (one command)
@@ -39,9 +39,9 @@ Sign in with `admin@kinglet.local` (or the email you set through
 `KINGLET_ADMIN_EMAIL`) and that password.
 
 <Aside type="tip" title="Pin a version">
-  `:latest` is convenient for a trial. For production, pin a release tag such as
-  `:0.3.0`, or a digest for an immutable deployment. See
-  [Updates and image pinning](/security/#updates-and-image-pinning).
+  `:latest` is convenient for a trial. For production, pin a release tag such as `:0.3.0`, or a
+  digest for an immutable deployment. See [Updates and image
+  pinning](/security/#updates-and-image-pinning).
 </Aside>
 
 ## Docker Compose (single host)
@@ -80,10 +80,9 @@ docker compose exec kinglet cat /data/admin-password.txt
 ```
 
 <Aside type="tip" title="Coolify or Dokploy?">
-  The image is public, so neither platform needs registry credentials. Follow
-  the [Coolify](/self-hosting/#coolify) or
-  [Dokploy](/self-hosting/#dokploy) guide in Self-hosting. On those platforms,
-  remove the `ports:` mapping and use `expose: ["3000"]` — the platform proxy
+  The image is public, so neither platform needs registry credentials. Follow the
+  [Coolify](/self-hosting/#coolify) or [Dokploy](/self-hosting/#dokploy) guide in Self-hosting. On
+  those platforms, remove the `ports:` mapping and use `expose: ["3000"]` — the platform proxy
   handles routing, and `8080` may already be taken on the host.
 </Aside>
 
@@ -122,8 +121,7 @@ pnpm dev
 The API listens on `:3000` and the UI on `:5173`.
 
 <Aside type="note" title="Going to production">
-  Set `KINGLET_BASE_URL` to your public HTTPS origin, use a persistent volume at
-  `/data`, and pin a release tag or digest. The full checklist, TLS setup,
-  backups, and platform guides are in [Self-hosting](/self-hosting/); the
-  hardening checklist is in [Security](/security/).
+  Set `KINGLET_BASE_URL` to your public HTTPS origin, use a persistent volume at `/data`, and pin a
+  release tag or digest. The full checklist, TLS setup, backups, and platform guides are in
+  [Self-hosting](/self-hosting/); the hardening checklist is in [Security](/security/).
 </Aside>

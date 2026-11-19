@@ -13,8 +13,8 @@ import { fileURLToPath } from "node:url";
  * If GitHub is unreachable or rate-limits the build, the committed snapshot is
  * left in place so the site still builds.
  */
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname, "..");
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "..");
 const dataPath = path.join(root, "src/data/releases.json");
 const pagePath = path.join(root, "src/content/docs/changelog.md");
 const repo = "rushlightlab/kinglet";
@@ -74,7 +74,7 @@ async function refresh() {
       publishedAt: dateOnly(r.published_at || r.created_at),
       prerelease: Boolean(r.prerelease),
     }))
-    .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+    .toSorted((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 
   if (releases.length === 0) throw new Error("no published releases");
   return { latest: releases[0], releases };
@@ -108,7 +108,9 @@ ${sections}`;
 }
 
 const data = await refresh().catch((err) => {
-  console.warn(`[changelog] could not refresh from GitHub (${err.message}); using committed snapshot.`);
+  console.warn(
+    `[changelog] could not refresh from GitHub (${err.message}); using committed snapshot.`,
+  );
   return previous.latest && previous.releases.length > 0 ? previous : null;
 });
 

@@ -10,31 +10,30 @@ The Docker image is public, so no registry login is needed. Pick the path that
 matches your setup:
 
 <Aside type="caution" title="Security first">
-  Read [Security](/security/) before exposing Kinglet. It covers TLS, narrow
-  proxy trust, secrets, API-key offboarding, webhooks, storage limits, and image
-  pinning. The short version: put Kinglet behind TLS, trust only your proxy, and
-  do not use the all-private-ranges shortcut.
+  Read [Security](/security/) before exposing Kinglet. It covers TLS, narrow proxy trust, secrets,
+  API-key offboarding, webhooks, storage limits, and image pinning. The short version: put Kinglet
+  behind TLS, trust only your proxy, and do not use the all-private-ranges shortcut.
 </Aside>
 
-| Path | Best for |
-| --- | --- |
-| [Docker one command](#docker-one-command) | a quick trial on a single server |
-| [Docker Compose](#docker-compose) | a single server with explicit configuration |
-| [Coolify](#coolify) | an existing Coolify installation |
-| [Dokploy](#dokploy) | an existing Dokploy installation |
-| [From source](#from-source) | development or a custom build |
+| Path                                      | Best for                                    |
+| ----------------------------------------- | ------------------------------------------- |
+| [Docker one command](#docker-one-command) | a quick trial on a single server            |
+| [Docker Compose](#docker-compose)         | a single server with explicit configuration |
+| [Coolify](#coolify)                       | an existing Coolify installation            |
+| [Dokploy](#dokploy)                       | an existing Dokploy installation            |
+| [From source](#from-source)               | development or a custom build               |
 
 ## Before you deploy
 
 Set these for anything beyond localhost:
 
-| Variable | Why |
-| --- | --- |
-| `KINGLET_BASE_URL` | Public origin, e.g. `https://logs.example.com`. Required for secure cookies, origin checks, and alert links. It must match the browser URL. |
-| `BETTER_AUTH_SECRET` | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data/auth-secret.txt`), required when several instances share a database. |
-| `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only when no administrator exists. After that they are ignored. |
-| `KINGLET_TRUSTED_PROXIES` | Set to the proxy address or proxy network only. Otherwise all clients share the proxy's rate-limit bucket. See [Common deployments](/security/#common-deployments). |
-| `KINGLET_DB_PATH` | `/data/kinglet.db` in the image. Keep the volume mounted at `/data`. |
+| Variable                                         | Why                                                                                                                                                                 |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KINGLET_BASE_URL`                               | Public origin, e.g. `https://logs.example.com`. Required for secure cookies, origin checks, and alert links. It must match the browser URL.                         |
+| `BETTER_AUTH_SECRET`                             | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data/auth-secret.txt`), required when several instances share a database.     |
+| `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only when no administrator exists. After that they are ignored.                                                                                                |
+| `KINGLET_TRUSTED_PROXIES`                        | Set to the proxy address or proxy network only. Otherwise all clients share the proxy's rate-limit bucket. See [Common deployments](/security/#common-deployments). |
+| `KINGLET_DB_PATH`                                | `/data/kinglet.db` in the image. Keep the volume mounted at `/data`.                                                                                                |
 
 Generate a secret with:
 
@@ -88,8 +87,8 @@ For a public server, set `KINGLET_BASE_URL=https://logs.example.com` before the
 first boot.
 
 <Aside type="tip" title="Pin versions">
-  `:latest` moves with each release. Pin a version tag such as `:0.3.0` in
-  production, or use a digest for an immutable deployment.
+  `:latest` moves with each release. Pin a version tag such as `:0.3.0` in production, or use a
+  digest for an immutable deployment.
 </Aside>
 
 ## Docker Compose (single host)
@@ -103,7 +102,7 @@ services:
     image: ghcr.io/rushlightlab/kinglet:0.3.0
     restart: unless-stopped
     ports:
-      - "8080:3000"        # standalone only — remove behind Coolify/Dokploy
+      - "8080:3000" # standalone only — remove behind Coolify/Dokploy
     environment:
       KINGLET_DB_PATH: /data/kinglet.db
       KINGLET_BASE_URL: https://logs.example.com
@@ -120,11 +119,10 @@ volumes:
 ```
 
 <Aside type="caution" title="Coolify and Dokploy: no host port">
-  The `ports:` mapping is only for Compose running directly on a server. On
-  Coolify or Dokploy, remove it and use `expose: ["3000"]` instead — the
-  platform proxy reaches the container over the compose network. Publishing
-  `8080` is a common `address already in use` failure because the host usually
-  has something on it already.
+  The `ports:` mapping is only for Compose running directly on a server. On Coolify or Dokploy,
+  remove it and use `expose: ["3000"]` instead — the platform proxy reaches the container over the
+  compose network. Publishing `8080` is a common `address already in use` failure because the host
+  usually has something on it already.
 </Aside>
 
 Put `BETTER_AUTH_SECRET=...` in a `.env` file, then:
@@ -257,10 +255,9 @@ KINGLET_TRUSTED_PROXIES=172.30.0.0/24
 ```
 
 <Aside type="caution" title="Replace every placeholder">
-  Change `logs.example.com` to your actual host in both `KINGLET_BASE_URL` and
-  the domain below. `KINGLET_BASE_URL` must match the origin in the browser
-  exactly. If it still points at `logs.example.com`, the page loads but sign-in
-  fails with `403 INVALID_ORIGIN`.
+  Change `logs.example.com` to your actual host in both `KINGLET_BASE_URL` and the domain below.
+  `KINGLET_BASE_URL` must match the origin in the browser exactly. If it still points at
+  `logs.example.com`, the page loads but sign-in fails with `403 INVALID_ORIGIN`.
 </Aside>
 
 ### 4. Add the domain
@@ -289,7 +286,7 @@ docker pull ghcr.io/rushlightlab/kinglet:latest
 ```
 
 Then redeploy the compose service. If the host uses a credential helper, delete
-the `ghcr.io` entry from `~/.docker/config.json` instead. If you *want* private
+the `ghcr.io` entry from `~/.docker/config.json` instead. If you _want_ private
 authenticated pulls, create a classic GitHub token with `read:packages`, then add
 or update the GHCR registry under Dokploy's **Registry** settings with that
 token as the password.
@@ -307,24 +304,24 @@ UI details.
 
 ## Configuration
 
-| Env var | Default | What it does |
-| --- | --- | --- |
-| `KINGLET_PORT` | `3000` | HTTP port inside the container |
-| `KINGLET_STORAGE` | `auto` | `sqlite`, `libsql`, or `auto` (picks by db path scheme) |
-| `KINGLET_DB_PATH` | `/data/kinglet.db` | Local SQLite path; `libsql://`/`https://`/`file:` → libSQL |
-| `KINGLET_DB_AUTH_TOKEN` | — | Auth token for remote libSQL/Turso |
-| `KINGLET_BASE_URL` | — | Public HTTPS origin — secure cookies and alert deep links |
-| `BETTER_AUTH_SECRET` | *(generated in `/data`)* | Session signing secret; set explicitly for multi-instance installs |
-| `KINGLET_TRUSTED_PROXIES` | — | CIDRs allowed to set `X-Forwarded-For` |
-| `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | Bootstrap administrator email (when no administrator exists) |
-| `KINGLET_ADMIN_PASSWORD` | *(generated)* | Bootstrap administrator password (when no administrator exists) |
-| `KINGLET_SESSION_DAYS` | `30` | Web session lifetime |
-| `KINGLET_RETENTION_DAYS` | `14` | Delete events older than this |
-| `KINGLET_ALERT_RETENTION_DAYS` | `90` | Delete alert history older than this |
-| `KINGLET_MAX_EVENTS_PER_PROJECT` | `1000000` | Hard cap on retained events per project (`0` = unlimited) |
-| `KINGLET_MAX_PROJECT_DB_MB` | `1024` | Hard cap on retained event bytes per project (`0` = unlimited) |
-| `KINGLET_MAX_DB_MB` | `4096` | Hard cap on local database size in MB (`0` = unlimited) |
-| `KINGLET_ALLOW_PRIVATE_WEBHOOKS` | — | Allow private/internal webhook targets (SSRF escape hatch) |
+| Env var                          | Default                  | What it does                                                       |
+| -------------------------------- | ------------------------ | ------------------------------------------------------------------ |
+| `KINGLET_PORT`                   | `3000`                   | HTTP port inside the container                                     |
+| `KINGLET_STORAGE`                | `auto`                   | `sqlite`, `libsql`, or `auto` (picks by db path scheme)            |
+| `KINGLET_DB_PATH`                | `/data/kinglet.db`       | Local SQLite path; `libsql://`/`https://`/`file:` → libSQL         |
+| `KINGLET_DB_AUTH_TOKEN`          | —                        | Auth token for remote libSQL/Turso                                 |
+| `KINGLET_BASE_URL`               | —                        | Public HTTPS origin — secure cookies and alert deep links          |
+| `BETTER_AUTH_SECRET`             | _(generated in `/data`)_ | Session signing secret; set explicitly for multi-instance installs |
+| `KINGLET_TRUSTED_PROXIES`        | —                        | CIDRs allowed to set `X-Forwarded-For`                             |
+| `KINGLET_ADMIN_EMAIL`            | `admin@kinglet.local`    | Bootstrap administrator email (when no administrator exists)       |
+| `KINGLET_ADMIN_PASSWORD`         | _(generated)_            | Bootstrap administrator password (when no administrator exists)    |
+| `KINGLET_SESSION_DAYS`           | `30`                     | Web session lifetime                                               |
+| `KINGLET_RETENTION_DAYS`         | `14`                     | Delete events older than this                                      |
+| `KINGLET_ALERT_RETENTION_DAYS`   | `90`                     | Delete alert history older than this                               |
+| `KINGLET_MAX_EVENTS_PER_PROJECT` | `1000000`                | Hard cap on retained events per project (`0` = unlimited)          |
+| `KINGLET_MAX_PROJECT_DB_MB`      | `1024`                   | Hard cap on retained event bytes per project (`0` = unlimited)     |
+| `KINGLET_MAX_DB_MB`              | `4096`                   | Hard cap on local database size in MB (`0` = unlimited)            |
+| `KINGLET_ALLOW_PRIVATE_WEBHOOKS` | —                        | Allow private/internal webhook targets (SSRF escape hatch)         |
 
 ## Sizing
 
@@ -365,11 +362,10 @@ Pin a release tag in production; `:latest` moves with each release. Migrations
 run automatically on boot.
 
 <Aside type="caution" title="UUID v7 upgrade">
-  Databases created before this release are converted from integer ids to
-  UUID v7 text ids on first boot. The migration preserves rows and rewires every
-  project, key, monitor, alert, and member reference, but it rewrites tables, so
-  take a backup of `/data` first. Expect a one-time pause proportional to the
-  database size.
+  Databases created before this release are converted from integer ids to UUID v7 text ids on first
+  boot. The migration preserves rows and rewires every project, key, monitor, alert, and member
+  reference, but it rewrites tables, so take a backup of `/data` first. Expect a one-time pause
+  proportional to the database size.
 </Aside>
 
 ## Troubleshooting

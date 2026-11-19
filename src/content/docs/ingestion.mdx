@@ -9,9 +9,8 @@ Everything speaks HTTP, so everything can log to Kinglet. One endpoint accepts
 batches of events, authenticated with a project API key.
 
 <Aside type="tip" title="Using Node.js?">
-  [`@kinglet/sdk-node`](/node-sdk/) wraps the same endpoint with buffering and
-  retries, but it is not on npm yet. The dependency-free client below is the
-  fastest way to start today.
+  [`@kinglet/sdk-node`](/node-sdk/) wraps the same endpoint with buffering and retries, but it is
+  not on npm yet. The dependency-free client below is the fastest way to start today.
 </Aside>
 
 ## Endpoint
@@ -62,14 +61,14 @@ than a handful of events.
 
 ### Event fields
 
-| Field | Required | Notes |
-| --- | --- | --- |
-| `message` (or `msg`) | yes | the log line, up to 8,000 characters |
-| `level` | no | `trace`…`fatal`, or a number 0–5; unknown values default to `info` |
-| `ts` (or `time`/`timestamp`) | no | epoch ms, epoch seconds (auto-detected), or ISO string; defaults to now, clamped to the last 31 days and 5 minutes of future skew |
-| `service` | no | lowercased automatically (max 128 chars), shown and filterable in the UI |
-| `env` | no | lowercased automatically (max 64 chars), e.g. `prod`, `staging` |
-| `fields` | no | arbitrary JSON object up to 32 KB serialized; larger values are stored as `{"_kinglet_truncated":true}` |
+| Field                        | Required | Notes                                                                                                                             |
+| ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `message` (or `msg`)         | yes      | the log line, up to 8,000 characters                                                                                              |
+| `level`                      | no       | `trace`…`fatal`, or a number 0–5; unknown values default to `info`                                                                |
+| `ts` (or `time`/`timestamp`) | no       | epoch ms, epoch seconds (auto-detected), or ISO string; defaults to now, clamped to the last 31 days and 5 minutes of future skew |
+| `service`                    | no       | lowercased automatically (max 128 chars), shown and filterable in the UI                                                          |
+| `env`                        | no       | lowercased automatically (max 64 chars), e.g. `prod`, `staging`                                                                   |
+| `fields`                     | no       | arbitrary JSON object up to 32 KB serialized; larger values are stored as `{"_kinglet_truncated":true}`                           |
 
 Anything else is ignored, so you can spread a log record into the event without
 cleaning it first.
@@ -84,14 +83,14 @@ Invalid events don't fail the batch. Partial failures return `200` with
 `rejected` set and up to three messages in `errors`. If **every** event is
 invalid, the response is `422` with the same shape.
 
-| Status | Meaning |
-| --- | --- |
-| `401` | missing, malformed, or revoked API key |
-| `403` | key is valid but lacks the `ingest` scope |
-| `413` | body over 8 MB |
-| `422` | every event in the batch was rejected — read `errors` |
-| `429` | rate limit (600 batches/minute) or the project's event cap |
-| `507` | local database size cap reached |
+| Status | Meaning                                                    |
+| ------ | ---------------------------------------------------------- |
+| `401`  | missing, malformed, or revoked API key                     |
+| `403`  | key is valid but lacks the `ingest` scope                  |
+| `413`  | body over 8 MB                                             |
+| `422`  | every event in the batch was rejected — read `errors`      |
+| `429`  | rate limit (600 batches/minute) or the project's event cap |
+| `507`  | local database size cap reached                            |
 
 Retry `429` and `5xx` with backoff; don't retry other `4xx`.
 
@@ -457,9 +456,9 @@ the same way: use its HTTP output with `Format json_lines` and a
 carry a `message` (or `msg`) key.
 
 <Aside type="note" title="Roadmap">
-  Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so
-  OpenTelemetry pipelines and rsyslog ship with zero glue code. Until then,
-  Vector/Fluent Bit bridging gets you the same result.
+  Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so OpenTelemetry
+  pipelines and rsyslog ship with zero glue code. Until then, Vector/Fluent Bit bridging gets you
+  the same result.
 </Aside>
 
 ## Limits and troubleshooting
@@ -473,11 +472,11 @@ carry a `message` (or `msg`) key.
 
 Common causes of an empty live tail:
 
-| Symptom | Check |
-| --- | --- |
-| `401` | the key was revoked, or `KINGLET_KEY` is empty in the process that sends |
-| `403` | the key was created without the `ingest` scope |
-| `422` with `missing message` | the event used `msg` with an empty string, or the body shape isn't NDJSON/JSON |
-| `429` | you are sending per log line instead of batching; also check the project event cap |
-| events land in the wrong project | each key is bound to its project — use one key per app/environment |
-| events disappeared | timestamps older than 31 days are clamped, and retention deletes old rows |
+| Symptom                          | Check                                                                              |
+| -------------------------------- | ---------------------------------------------------------------------------------- |
+| `401`                            | the key was revoked, or `KINGLET_KEY` is empty in the process that sends           |
+| `403`                            | the key was created without the `ingest` scope                                     |
+| `422` with `missing message`     | the event used `msg` with an empty string, or the body shape isn't NDJSON/JSON     |
+| `429`                            | you are sending per log line instead of batching; also check the project event cap |
+| events land in the wrong project | each key is bound to its project — use one key per app/environment                 |
+| events disappeared               | timestamps older than 31 days are clamped, and retention deletes old rows          |

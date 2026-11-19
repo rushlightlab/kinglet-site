@@ -7,16 +7,16 @@ import { Aside } from "@astrojs/starlight/components";
 
 The filter bar accepts a small, composable grammar:
 
-| Syntax | Matches |
-| --- | --- |
-| `level:error` | events at exactly error level |
-| `level>=warn` | level comparisons (`>`, `>=`, `<`, `<=`) |
-| `service:api` | a specific service |
-| `env:prod` | a specific environment |
-| `key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30` | events ingested by that API key (UUID v7) |
-| `"conn refused"` | message contains the phrase |
-| `connection` | message contains the word — substring search, any position |
-| `-healthcheck` | message must **not** contain this |
+| Syntax                                     | Matches                                                    |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| `level:error`                              | events at exactly error level                              |
+| `level>=warn`                              | level comparisons (`>`, `>=`, `<`, `<=`)                   |
+| `service:api`                              | a specific service                                         |
+| `env:prod`                                 | a specific environment                                     |
+| `key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30` | events ingested by that API key (UUID v7)                  |
+| `"conn refused"`                           | message contains the phrase                                |
+| `connection`                               | message contains the word — substring search, any position |
+| `-healthcheck`                             | message must **not** contain this                          |
 
 Combine freely:
 
@@ -55,6 +55,6 @@ filters follow you into the live view.
 </Aside>
 
 <Aside type="tip">
-  Search is substring-based (FTS5 trigram), so `timeout` finds
-  `connectiontimeouterror` — not just exact words.
+  Search is substring-based (FTS5 trigram), so `timeout` finds `connectiontimeouterror` — not just
+  exact words.
 </Aside>

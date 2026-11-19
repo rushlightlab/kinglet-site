@@ -12,8 +12,11 @@ Production URL: **https://kinglet.rushlightlab.com** (set as the canonical
 
 ```bash
 pnpm install
-pnpm dev       # http://localhost:4321
-pnpm build     # static output in dist/
+pnpm dev          # http://localhost:4321
+pnpm build        # static output in dist/
+pnpm lint         # oxlint (fails on warnings)
+pnpm format       # oxfmt, writes files
+pnpm format:check
 ```
 
 ## Deploy
