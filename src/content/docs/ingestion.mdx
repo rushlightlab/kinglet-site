@@ -1,29 +1,52 @@
 ---
 title: HTTP ingestion
-description: Ship logs to Kinglet from any language, shipper, or container.
+description: Send logs from Node.js, Python, Go, PHP, or any HTTP client.
 ---
 
 import { Aside } from "@astrojs/starlight/components";
 
-Everything speaks HTTP, so everything can log to Kinglet. The ingest endpoint
-accepts two shapes:
+Everything speaks HTTP, so everything can log to Kinglet. One endpoint accepts
+batches of events, authenticated with a project API key.
 
-## NDJSON (recommended)
+<Aside type="tip" title="Using Node.js?">
+  [`@kinglet/sdk-node`](/node-sdk/) wraps the same endpoint with buffering and
+  retries, but it is not on npm yet. The dependency-free client below is the
+  fastest way to start today.
+</Aside>
 
-One JSON object per line — cheap to stream, trivial to produce:
+## Endpoint
 
 ```http
-POST /v1/events
+POST https://logs.example.com/v1/events
 Authorization: Bearer kl_…
 Content-Type: application/x-ndjson
+```
 
+- Create the key in **Settings → projects & keys** with the **ingest** scope.
+  Query-only keys get `403`.
+- A key is bound to one project, so there is no project id in the URL. Use a
+  separate key per app and environment.
+- Send the body uncompressed. Kinglet does not decompress `gzip` request bodies.
+
+## Request body
+
+### NDJSON (recommended)
+
+One JSON object per line. It streams naturally, and a broken line can't take
+down the rest of the batch:
+
+```http
 {"level":"error","message":"payment failed","service":"billing","fields":{"order":1234}}
 {"level":"info","message":"retry scheduled","service":"billing"}
 ```
 
-## JSON batch
+The `Content-Type` must include `ndjson` — `application/x-ndjson` is the
+convention. A string body sent without that header is parsed as one JSON
+document and fails.
 
-A single object with an `events` array, or a bare array:
+### JSON
+
+A single object, a bare array, or an object with an `events` array:
 
 ```json
 {
@@ -34,7 +57,10 @@ A single object with an `events` array, or a bare array:
 }
 ```
 
-## Event fields
+Use `Content-Type: application/json`. NDJSON is preferable for anything larger
+than a handful of events.
+
+### Event fields
 
 | Field | Required | Notes |
 | --- | --- | --- |
@@ -45,38 +71,413 @@ A single object with an `events` array, or a bare array:
 | `env` | no | lowercased automatically (max 64 chars), e.g. `prod`, `staging` |
 | `fields` | no | arbitrary JSON object up to 32 KB serialized; larger values are stored as `{"_kinglet_truncated":true}` |
 
-## Limits
+Anything else is ignored, so you can spread a log record into the event without
+cleaning it first.
 
-- Request body: 8 MB
-- Events per batch: 10,000 (extras are dropped and reported in the response)
-- Rate limit: 600 batches/minute per identity (API key or user)
-- Default caps: 1,000,000 retained events per project and 4 GB for a local
-  database (`KINGLET_MAX_EVENTS_PER_PROJECT`, `KINGLET_MAX_DB_MB`; `0` disables)
-- Retention: `KINGLET_RETENTION_DAYS`, default 14
+## Responses
 
-Invalid events don't fail the batch — Kinglet returns
-`{ "accepted": n, "rejected": m }` so one bad line never blocks your pipeline.
-If every event in a batch is rejected, the response is `422` with the first
-errors.
+```json
+{ "accepted": 2, "rejected": 0 }
+```
+
+Invalid events don't fail the batch. Partial failures return `200` with
+`rejected` set and up to three messages in `errors`. If **every** event is
+invalid, the response is `422` with the same shape.
+
+| Status | Meaning |
+| --- | --- |
+| `401` | missing, malformed, or revoked API key |
+| `403` | key is valid but lacks the `ingest` scope |
+| `413` | body over 8 MB |
+| `422` | every event in the batch was rejected — read `errors` |
+| `429` | rate limit (600 batches/minute) or the project's event cap |
+| `507` | local database size cap reached |
+
+Retry `429` and `5xx` with backoff; don't retry other `4xx`.
+
+## TypeScript / Node.js
+
+Node 18+ has `fetch`, so no dependency is needed.
+
+### Send one event
+
+```ts title="send.ts"
+const url = process.env.KINGLET_URL ?? "http://localhost:8080";
+const key = process.env.KINGLET_KEY;
+if (!key) throw new Error("Set KINGLET_KEY to a kl_… key with the ingest scope");
+
+const response = await fetch(`${url}/v1/events`, {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${key}`,
+    "content-type": "application/x-ndjson",
+  },
+  body:
+    JSON.stringify({
+      level: "info",
+      message: "hello from Node",
+      service: "my-app",
+      fields: { pid: process.pid },
+    }) + "\n",
+});
+
+if (!response.ok) throw new Error(`Kinglet ${response.status}: ${await response.text()}`);
+console.log(await response.json()); // { accepted: 1, rejected: 0 }
+```
+
+### Batching logger
+
+Sending one request per log line will rate-limit you and add latency to every
+call. Buffer instead: flush at 200 events or once a second, whichever comes
+first.
+
+```ts title="kinglet-logger.ts"
+type Level = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+
+export interface KingletEvent {
+  message: string;
+  level?: Level;
+  ts?: number;
+  service?: string;
+  env?: string;
+  fields?: Record<string, unknown>;
+}
+
+interface KingletOptions {
+  url: string;
+  key: string;
+  service?: string;
+  env?: string;
+  batchSize?: number;
+  flushMs?: number;
+  onError?: (error: unknown) => void;
+}
+
+export class KingletLogger {
+  private readonly options: KingletOptions;
+  private readonly endpoint: string;
+  private readonly batchSize: number;
+  private readonly maxQueue: number;
+  private readonly timer: ReturnType<typeof setInterval>;
+  private queue: KingletEvent[] = [];
+  private inFlight: Promise<void> | null = null;
+
+  constructor(options: KingletOptions) {
+    this.options = options;
+    this.endpoint = `${options.url.replace(/\/+$/, "")}/v1/events`;
+    this.batchSize = options.batchSize ?? 200;
+    this.maxQueue = this.batchSize * 50; // drop oldest if the server is unreachable
+    this.timer = setInterval(() => void this.flush(), options.flushMs ?? 1000);
+    (this.timer as { unref?: () => void }).unref?.();
+  }
+
+  info(message: string, fields?: Record<string, unknown>) {
+    this.push("info", message, fields);
+  }
+
+  warn(message: string, fields?: Record<string, unknown>) {
+    this.push("warn", message, fields);
+  }
+
+  error(message: string, fields?: Record<string, unknown>) {
+    this.push("error", message, fields);
+  }
+
+  private push(level: Level, message: string, fields?: Record<string, unknown>) {
+    this.queue.push({
+      level,
+      message,
+      ts: Date.now(),
+      service: this.options.service,
+      env: this.options.env,
+      ...(fields ? { fields } : {}),
+    });
+    if (this.queue.length > this.maxQueue) {
+      this.queue.splice(0, this.queue.length - this.maxQueue);
+    }
+    if (this.queue.length >= this.batchSize) void this.flush();
+  }
+
+  flush(): Promise<void> {
+    if (this.inFlight) return this.inFlight;
+    if (this.queue.length === 0) return Promise.resolve();
+    this.inFlight = this.send().finally(() => {
+      this.inFlight = null;
+    });
+    return this.inFlight;
+  }
+
+  private async send(): Promise<void> {
+    const batch = this.queue.splice(0, this.batchSize);
+    try {
+      const response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${this.options.key}`,
+          "content-type": "application/x-ndjson",
+        },
+        body: batch.map((event) => JSON.stringify(event)).join("\n"),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) {
+        throw new Error(`Kinglet ${response.status}: ${await response.text()}`);
+      }
+    } catch (error) {
+      this.queue.unshift(...batch); // retry on the next flush
+      if (this.queue.length > this.maxQueue) this.queue.length = this.maxQueue;
+      this.options.onError?.(error);
+    }
+  }
+
+  async close(): Promise<void> {
+    clearInterval(this.timer);
+    await this.flush();
+    if (this.queue.length > 0) await this.flush();
+  }
+}
+```
+
+```ts title="app.ts"
+import { KingletLogger } from "./kinglet-logger";
+
+const log = new KingletLogger({
+  url: process.env.KINGLET_URL ?? "http://localhost:8080",
+  key: process.env.KINGLET_KEY!,
+  service: "checkout",
+  env: process.env.NODE_ENV,
+  onError: (error) => console.error("kinglet flush failed:", error),
+});
+
+log.info("checkout started", { cartId: 42 });
+log.error("payment declined", { orderId: 1234, code: "card_declined" });
+
+// Flush the queue before the process exits.
+process.on("SIGTERM", async () => {
+  await log.close();
+  process.exit(0);
+});
+```
+
+In Express, log requests from the `finish` event so the status code is final:
+
+```ts title="server.ts"
+app.use((req, res, next) => {
+  const started = performance.now();
+  res.on("finish", () => {
+    log.info(`${req.method} ${req.originalUrl}`, {
+      status: res.statusCode,
+      ms: Math.round(performance.now() - started),
+    });
+  });
+  next();
+});
+```
+
+## Python
+
+`urllib.request` is in the standard library, so this needs no packages. Swap it
+for `requests` if your project already uses it.
+
+```python title="kinglet.py"
+import json
+import os
+import urllib.request
+
+
+def ship(*events: dict) -> dict:
+    body = "\n".join(json.dumps(event) for event in events).encode()
+    request = urllib.request.Request(
+        f"{os.environ['KINGLET_URL']}/v1/events",
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {os.environ['KINGLET_KEY']}",
+            "Content-Type": "application/x-ndjson",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=5) as response:
+        return json.load(response)
+
+
+ship(
+    {"level": "info", "message": "worker started", "service": "worker"},
+    {"level": "error", "message": "job failed", "service": "worker", "fields": {"job": 42}},
+)
+```
+
+For Django or Flask, call `ship` from a `logging.Handler.emit` and buffer in a
+list instead of sending per record.
+
+## Go
+
+`json.Encoder` already writes one object per line, so the request body is NDJSON
+without extra work.
+
+```go title="kinglet.go"
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"time"
+)
+
+type Event struct {
+	Level   string         `json:"level,omitempty"`
+	Message string         `json:"message"`
+	TS      int64          `json:"ts,omitempty"`
+	Service string         `json:"service,omitempty"`
+	Fields  map[string]any `json:"fields,omitempty"`
+}
+
+func ship(events []Event) error {
+	var body bytes.Buffer
+	encoder := json.NewEncoder(&body)
+	for _, event := range events {
+		if event.TS == 0 {
+			event.TS = time.Now().UnixMilli()
+		}
+		if err := encoder.Encode(event); err != nil {
+			return err
+		}
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		os.Getenv("KINGLET_URL")+"/v1/events",
+		&body,
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("KINGLET_KEY"))
+	req.Header.Set("Content-Type", "application/x-ndjson")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	response, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode >= 300 {
+		return fmt.Errorf("kinglet: %s", response.Status)
+	}
+	return nil
+}
+```
+
+## PHP
+
+```php title="kinglet.php"
+<?php
+
+function kinglet_ship(array $events): array
+{
+    $body = implode("\n", array_map(
+        fn (array $event): string => json_encode($event, JSON_UNESCAPED_SLASHES),
+        $events
+    ));
+
+    $ch = curl_init(rtrim(getenv('KINGLET_URL'), '/') . '/v1/events');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $body,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . getenv('KINGLET_KEY'),
+            'Content-Type: application/x-ndjson',
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 5,
+    ]);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        throw new RuntimeException(curl_error($ch));
+    }
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+    if ($status >= 300) {
+        throw new RuntimeException("Kinglet responded {$status}: {$response}");
+    }
+    return json_decode($response, true);
+}
+
+kinglet_ship([
+    ['level' => 'info', 'message' => 'hello from PHP', 'service' => 'web'],
+]);
+```
+
+Laravel and Symfony users can call the same function from a Monolog handler.
+
+## curl
+
+Useful for smoke tests and CI one-liners:
+
+```bash
+curl -sS "$KINGLET_URL/v1/events" \
+  -H "Authorization: Bearer $KINGLET_KEY" \
+  -H "Content-Type: application/x-ndjson" \
+  --data-binary @- <<'EOF'
+{"level":"info","message":"deploy finished","service":"ci","fields":{"commit":"abc123"}}
+{"level":"warn","message":"retry budget at 80%","service":"ci"}
+EOF
+```
 
 ## Ship without changing your app
 
-Anything that can POST NDJSON with a bearer token works today. For example,
-[Vector](https://vector.dev):
+Anything that can POST NDJSON with a bearer token works. With
+[Vector](https://vector.dev), point an HTTP sink at Kinglet:
 
-```toml
+```toml title="vector.toml"
 [sinks.kinglet]
-type     = "http"
-inputs   = ["my_source_transform"]
-uri      = "http://kinglet:8080/v1/events"
-encoding.codec = "ndjson"
+type = "http"
+inputs = ["app_logs"]
+uri = "https://logs.example.com/v1/events"
+encoding.codec = "json"
+framing.method = "newline_delimited"
 
-[sinks.kinglet.request]
-headers.Authorization = "Bearer kl_…"
+[sinks.kinglet.auth]
+strategy = "bearer"
+token = "${KINGLET_KEY}"
+
+[sinks.kinglet.request.headers]
+Content-Type = "application/x-ndjson"
+
+[sinks.kinglet.batch]
+max_events = 500
+timeout_secs = 1
 ```
+
+[Fluent Bit](https://docs.fluentbit.io/manual/data-pipeline/outputs/http) works
+the same way: use its HTTP output with `Format json_lines` and a
+`Header Authorization Bearer kl_…`. Keep compression off, and make sure records
+carry a `message` (or `msg`) key.
 
 <Aside type="note" title="Roadmap">
   Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so
   OpenTelemetry pipelines and rsyslog ship with zero glue code. Until then,
   Vector/Fluent Bit bridging gets you the same result.
 </Aside>
+
+## Limits and troubleshooting
+
+- Request body: 8 MB
+- Events per batch: 10,000 (extras are dropped and reported with `truncated`)
+- Rate limit: 600 batches/minute per API key
+- Default caps: 1,000,000 retained events per project and 4 GB for a local
+  database (`KINGLET_MAX_EVENTS_PER_PROJECT`, `KINGLET_MAX_DB_MB`; `0` disables)
+- Retention: `KINGLET_RETENTION_DAYS`, default 14
+
+Common causes of an empty live tail:
+
+| Symptom | Check |
+| --- | --- |
+| `401` | the key was revoked, or `KINGLET_KEY` is empty in the process that sends |
+| `403` | the key was created without the `ingest` scope |
+| `422` with `missing message` | the event used `msg` with an empty string, or the body shape isn't NDJSON/JSON |
+| `429` | you are sending per log line instead of batching; also check the project event cap |
+| events land in the wrong project | each key is bound to its project — use one key per app/environment |
+| events disappeared | timestamps older than 31 days are clamped, and retention deletes old rows |

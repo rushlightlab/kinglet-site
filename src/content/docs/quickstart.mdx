@@ -37,7 +37,10 @@ Sign in with `admin@kinglet.local` (or the email you set through
   `:0.3.0`.
 </Aside>
 
-## Docker Compose (no clone)
+## Docker Compose (single host)
+
+Use this when Docker runs directly on the server. Coolify and Dokploy have their
+own compose definitions below — don't publish a host port there.
 
 Create `docker-compose.yml`:
 
@@ -72,7 +75,9 @@ docker compose exec kinglet cat /data/admin-password.txt
 <Aside type="tip" title="Coolify or Dokploy?">
   The image is public, so neither platform needs registry credentials. Follow
   the [Coolify](/self-hosting/#coolify) or
-  [Dokploy](/self-hosting/#dokploy) guide in Self-hosting.
+  [Dokploy](/self-hosting/#dokploy) guide in Self-hosting. On those platforms,
+  remove the `ports:` mapping and use `expose: ["3000"]` — the platform proxy
+  handles routing, and `8080` may already be taken on the host.
 </Aside>
 
 ## Create your first API key
@@ -90,6 +95,9 @@ curl -X POST http://localhost:8080/v1/events \
 
 The event appears in the live tail immediately. If the project is empty, use
 **spray demo** to seed the histogram.
+
+More clients — TypeScript, Python, Go, PHP, curl, Vector — are in
+[HTTP ingestion](/ingestion/).
 
 ## From source
 

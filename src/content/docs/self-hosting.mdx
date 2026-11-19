@@ -69,7 +69,10 @@ first boot.
   production, or use a digest for an immutable deployment.
 </Aside>
 
-## Docker Compose
+## Docker Compose (single host)
+
+Use this when Docker runs directly on the server. On Coolify or Dokploy, use
+the platform sections below instead.
 
 ```yaml
 services:
@@ -77,7 +80,7 @@ services:
     image: ghcr.io/rushlightlab/kinglet:0.3.0
     restart: unless-stopped
     ports:
-      - "8080:3000"        # use "127.0.0.1:8080:3000" behind a TLS proxy
+      - "8080:3000"        # standalone only — remove behind Coolify/Dokploy
     environment:
       KINGLET_DB_PATH: /data/kinglet.db
       KINGLET_BASE_URL: https://logs.example.com
@@ -91,6 +94,14 @@ services:
 volumes:
   kinglet-data:
 ```
+
+<Aside type="caution" title="Coolify and Dokploy: no host port">
+  The `ports:` mapping is only for Compose running directly on a server. On
+  Coolify or Dokploy, remove it and use `expose: ["3000"]` instead — the
+  platform proxy reaches the container over the compose network. Publishing
+  `8080` is a common `address already in use` failure because the host usually
+  has something on it already.
+</Aside>
 
 Put `BETTER_AUTH_SECRET=...` in a `.env` file, then:
 
@@ -192,6 +203,10 @@ volumes:
   kinglet-data:
 ```
 
+Don't add a `ports:` mapping here. Dokploy routes the domain through Traefik to
+the compose network; `expose` is enough, and a host port can collide with
+Dokploy itself or another app.
+
 ### 3. Add environment variables
 
 Use the **Environment** tab. Dokploy writes these to `.env`; the
@@ -235,6 +250,13 @@ the `ghcr.io` entry from `~/.docker/config.json` instead. If you *want* private
 authenticated pulls, create a classic GitHub token with `read:packages`, then add
 or update the GHCR registry under Dokploy's **Registry** settings with that
 token as the password.
+
+### `address already in use` on port 8080
+
+The compose file publishes a host port. Dokploy doesn't need one: remove
+`ports:` and keep `expose: ["3000"]`, then add the domain in **Domains** with
+container port `3000`. If you only need temporary host access, map a free port
+such as `18080:3000` instead of `8080`.
 
 See Dokploy's [Docker Compose guide](https://docs.dokploy.com/docs/core/docker-compose)
 and [Domains guide](https://docs.dokploy.com/docs/core/domains) for the current
