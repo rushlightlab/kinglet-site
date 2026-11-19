@@ -18,19 +18,22 @@ pnpm build     # static output in dist/
 
 ## Deploy
 
-Production is **Cloudflare Pages** at
-[kinglet.rushlightlab.com](https://kinglet.rushlightlab.com): framework preset
-**Astro**, build command `pnpm build`, output directory `dist`, and an **empty
-deploy command** — Pages publishes `dist` itself. A deploy command of
-`npx wrangler deploy` makes Wrangler auto-add the Cloudflare Astro adapter,
-which is unnecessary for this static site and currently breaks on Astro 7's
-Markdown pipeline.
+Production is a **Cloudflare Worker with static assets** at
+[kinglet.rushlightlab.com](https://kinglet.rushlightlab.com), deployed from
+this repo by Workers Builds:
+
+- Build command: `pnpm build`
+- Deploy command: `npx wrangler deploy`
+- Root directory: `/`
+- `wrangler.jsonc` publishes `dist` as static assets and prevents Wrangler
+  from adding the Cloudflare Astro adapter (unnecessary for a fully static
+  site, and currently incompatible with Astro 7's Markdown pipeline).
+
+An actual Cloudflare **Pages** project also works: framework preset Astro,
+build `pnpm build`, output directory `dist`, and an empty deploy command.
 
 Other static hosts work too:
 
-- **Cloudflare Workers (static assets)** — if you prefer
-  `npx wrangler deploy`, the checked-in `wrangler.jsonc` publishes `dist` as
-  static assets and disables framework auto-configuration.
 - **Vercel / Netlify** — point at this repo, build command `pnpm build`,
   output directory `dist/`.
 - **Docker** — `docker build -t kinglet-site .` (nginx serves the static
