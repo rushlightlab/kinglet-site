@@ -193,6 +193,8 @@ docker run --rm -p 8080:8080 kinglet-site:local
 ```
 
 - Runtime: `nginxinc/nginx-unprivileged` on port **8080**.
+- The build stage uses Node 24.22.1 to match Cloudflare Workers Builds' current
+  Node image; the site does not require Node 26.
 - `nginx.conf` provides gzip, immutable `/_astro/` caching, security headers,
   `/healthz`, and the Starlight 404 page.
 - `public/_headers` is the Cloudflare equivalent; keep the security headers and
