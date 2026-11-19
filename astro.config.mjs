@@ -38,7 +38,6 @@ export default defineConfig({
       title: "Kinglet",
       description: "Small. Light. King. — the tiny self-hostable log platform.",
       logo: { src: "./src/assets/logo.svg" },
-      // TODO: point at the real repository.
       social: [
         {
           label: "GitHub",
@@ -72,6 +71,10 @@ export default defineConfig({
             { label: "Storage backends", link: "/storage/" },
             { label: "Self-hosting", link: "/self-hosting/" },
           ],
+        },
+        {
+          label: "Project",
+          items: [{ label: "Changelog", link: "/changelog/" }],
         },
       ],
     }),

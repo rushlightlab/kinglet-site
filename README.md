@@ -42,3 +42,18 @@ Other static hosts work too:
 The build needs Node 24+ (`engines`), which is what Cloudflare's image
 provides. All GitHub and GHCR links already point at
 [`rushlightlab`](https://github.com/rushlightlab).
+
+## Changelog and releases
+
+`pnpm build` runs `scripts/fetch-releases.mjs` before Astro. It reads the
+[GitHub Releases](https://github.com/rushlightlab/kinglet/releases) for
+`rushlightlab/kinglet` and regenerates:
+
+- `src/content/docs/changelog.md` — the static `/changelog/` page
+- `src/data/releases.json` — the latest version for the landing badge
+
+If GitHub is unavailable or rate-limiting the build, the committed snapshot is
+used. Set a `GITHUB_TOKEN` build variable for a higher GitHub API rate limit.
+Publishing a release updates both on the next site build; the Kinglet repo's
+`docs-release` workflow can trigger a Cloudflare deploy hook immediately when
+`CLOUDFLARE_DOCS_DEPLOY_HOOK` is configured.

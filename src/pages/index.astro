@@ -4,6 +4,9 @@ import "@fontsource/chakra-petch/400.css";
 import "@fontsource/chakra-petch/600.css";
 import "@fontsource/chakra-petch/700.css";
 import "../styles/landing.css";
+import releases from "../data/releases.json";
+
+const latestVersion = releases.latest?.version ?? "0.3.0";
 ---
 
 <!doctype html>
@@ -58,11 +61,17 @@ import "../styles/landing.css";
             <!-- hero copy -->
             <div style="position: relative; z-index: 10;">
               <div class="hero-reveal" style="--d:.05s; display: inline-flex;">
-                <div class="eyebrow" style="display: inline-flex; align-items: center; gap: 10px;">
+                <a
+                  href="/changelog/"
+                  class="eyebrow"
+                  aria-label="View the changelog"
+                  title="Changelog"
+                  style="display: inline-flex; align-items: center; gap: 10px;"
+                >
                   <span class="live-dot" aria-hidden="true"></span>
-                  <span>v0.3</span><span style="color: var(--faint)">/</span><span>alerts are live</span>
+                  <span>v{latestVersion}</span><span style="color: var(--faint)">/</span><span>changelog</span>
                   <span class="eyebrow-arrow" aria-hidden="true">→</span>
-                </div>
+                </a>
               </div>
 
               <h1

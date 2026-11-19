@@ -10,6 +10,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node scripts/fetch-releases.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
