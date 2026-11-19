@@ -88,6 +88,15 @@ UUID v7 that is stable and safe to share; fetch one event with
 | `/v1/monitors/test-channel` | `POST` | Test an unsaved channel — body `{ "type": "webhook", "url": "…" }` |
 | `/v1/alerts` | `GET` | Alert history, latest first |
 
+## Notifications
+
+- `webhook` channels receive JSON with the structured alert plus a ready-to-post
+  `text` summary.
+- `discord` channels receive a rich embed with a state color, project, service,
+  env, monitor, level, query, count/threshold/window, a code block for the sample
+  event, a link back to Kinglet, and a timestamp.
+- `slack` channels receive the same information as an attachment.
+
 ## Limits
 
 - Ingest: 8 MB / 10,000 events per request, 600 batches/minute per identity.
