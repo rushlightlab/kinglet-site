@@ -35,8 +35,9 @@ filters follow you into the live view.
   picker and enter exact start and end times. Dragging the histogram creates a
   custom range you can clear from the same picker.
 - **Live** — subscribes over SSE; new events appear at the top as they're
-  ingested. The periodic refresh adapts to the selected window — seconds for
-  short ranges, minutes for long ones — so wide views do not poll needlessly.
+  ingested. The time picker's refresh rate defaults by window — 15 seconds for
+  short ranges, 1 minute for hours, 5 minutes for day-scale views — and can be
+  set to 15 secs, 1 min, 5 mins, or off. Off pauses live updates.
 - **Follow** — keeps you pinned to the newest event while live.
 - **Services** — shows how many services reported events in this project; open
   it to toggle a `service:<name>` filter.
