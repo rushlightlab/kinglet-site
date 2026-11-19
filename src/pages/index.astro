@@ -738,7 +738,9 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
       // header scroll state
       const header = document.getElementById("siteHeader");
       const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 24);
+
       onScroll();
+
       window.addEventListener("scroll", onScroll, { passive: true });
 
       // code tab switcher (keyboard accessible)
@@ -755,6 +757,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           t.tabIndex = active ? 0 : -1;
         });
         panels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== name));
+
         if (codeCopyBtn) codeCopyBtn.dataset.copyTarget = name;
       }
 
@@ -763,8 +766,10 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
         tab.addEventListener("click", () => activateTab(tab));
         tab.addEventListener("keydown", (e) => {
           let next = null;
+
           if (e.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
           else if (e.key === "ArrowLeft") next = tabs[(index - 1 + tabs.length) % tabs.length];
+
           if (next) {
             e.preventDefault();
             activateTab(next);
@@ -777,6 +782,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
       function copyText(text) {
         if (navigator.clipboard && window.isSecureContext)
           return navigator.clipboard.writeText(text);
+
         return new Promise((resolve, reject) => {
           const ta = document.createElement("textarea");
           ta.value = text;
@@ -785,6 +791,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           document.body.appendChild(ta);
           ta.focus();
           ta.select();
+
           try {
             document.execCommand("copy");
             resolve();
@@ -799,15 +806,19 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
       document.querySelectorAll(".copy-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           let text = btn.dataset.copy;
+
           if (!text && btn.dataset.copyTarget) {
             const panel = panels.find((p) => p.dataset.panel === btn.dataset.copyTarget);
+
             if (panel) text = panel.innerText.trim();
           }
+
           if (!text) return;
           const label = btn.querySelector(".copy-label");
           copyText(text)
             .then(() => {
               btn.classList.add("copied");
+
               if (label) label.textContent = "copied!";
             })
             .catch(() => {
@@ -816,6 +827,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             .finally(() => {
               setTimeout(() => {
                 btn.classList.remove("copied");
+
                 if (label) label.textContent = "copy";
               }, 1800);
             });
@@ -824,24 +836,29 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
 
       // animated counters
       const counters = Array.from(document.querySelectorAll(".counter"));
+
       function animateCounter(el) {
         if (el.dataset.done) return;
         el.dataset.done = "1";
         const target = parseFloat(el.dataset.target) || 0;
         const duration = 1600;
         const start = performance.now();
+
         function frame(now) {
           const p = Math.min((now - start) / duration, 1);
           const eased = 1 - Math.pow(1 - p, 3);
           el.textContent = String(Math.round(target * eased));
+
           if (p < 1) requestAnimationFrame(frame);
           else el.textContent = String(target);
         }
+
         requestAnimationFrame(frame);
       }
 
       // scroll reveal
       const revealEls = Array.from(document.querySelectorAll(".reveal"));
+
       if ("IntersectionObserver" in window) {
         const revealObserver = new IntersectionObserver(
           (entries, obs) => {
@@ -854,7 +871,9 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           },
           { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
         );
+
         revealEls.forEach((el) => revealObserver.observe(el));
+
         const counterObserver = new IntersectionObserver(
           (entries, obs) => {
             entries.forEach((entry) => {
@@ -866,6 +885,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           },
           { threshold: 0.5 },
         );
+
         counters.forEach((el) => counterObserver.observe(el));
       } else {
         revealEls.forEach((el) => el.classList.add("in-view"));

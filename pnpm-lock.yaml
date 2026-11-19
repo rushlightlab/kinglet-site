@@ -27,6 +27,9 @@ importers:
       '@astrojs/compiler-rs':
         specifier: ^0.5.3
         version: 0.5.3
+      '@oxlint/plugins':
+        specifier: 1.94.0
+        version: 1.94.0
       oxfmt:
         specifier: 0.79.0
         version: 0.79.0(@astrojs/compiler-rs@0.5.3)
@@ -722,6 +725,10 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
+
+  '@oxlint/plugins@1.94.0':
+    resolution: {integrity: sha512-YT6htikBOBQ00XDxZpRZLZ0anEDo7h9s4+YvjRU0/Ng/cLd0D6SZQ3tsms4g/GDer/z8UKlegC5iptEfyRXJcw==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@pagefind/darwin-arm64@1.6.0':
     resolution: {integrity: sha512-611gl64aqN12UcMyKPtZ8+vRWBKlJFSh2JgO8uScxa1Eyjo1dXz9r4wZuRno0yCUE/KN0FauEoKZ3KEwUYHCCg==}
@@ -2448,6 +2455,8 @@ snapshots:
 
   '@oxlint/binding-win32-x64-msvc@1.94.0':
     optional: true
+
+  '@oxlint/plugins@1.94.0': {}
 
   '@pagefind/darwin-arm64@1.6.0':
     optional: true
