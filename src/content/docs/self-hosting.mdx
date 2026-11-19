@@ -336,6 +336,22 @@ Don't copy only the `.db` file from a live WAL store.
 Pin a release tag in production; `:latest` moves with each release. Migrations
 run automatically on boot.
 
+## Troubleshooting
+
+### The page loads but sign-in returns `403 INVALID_ORIGIN`
+
+`KINGLET_BASE_URL` doesn't match the origin in the browser. Set it to the exact
+public URL — scheme and host — then restart the container.
+
+### HTTPS shows a 526 or Traefik's default certificate
+
+The domain probably has no certificate attached. In Dokploy, set the
+certificate provider to **Let's Encrypt**; Coolify provisions one automatically
+when the domain is verified. Redeploy after changing a Compose domain — Docker
+Compose domains only pick up changes on redeploy. Behind Cloudflare, use
+**Full (strict)** once the origin has a valid certificate; a 526 means Cloudflare
+could not validate the origin certificate.
+
 ## From source
 
 For development or a custom build, use the repository's
