@@ -39,8 +39,9 @@ Other static hosts work too:
 
 - **Vercel / Netlify** — point at this repo, build command `pnpm build`,
   output directory `dist/`.
-- **Docker** — `docker build -t kinglet-site .` (nginx serves the static
-  output behind your TLS proxy).
+- **Docker** — `docker build -t kinglet-site .`, then
+  `docker run --rm -p 8080:8080 kinglet-site` (a non-root nginx serves the
+  static output behind your TLS proxy).
 
 The build needs Node 24+ (`engines`), which is what Cloudflare's image
 provides. All GitHub and GHCR links already point at
