@@ -33,6 +33,17 @@ These only apply when no administrator exists — changing them while an admin i
 present does nothing. If an account with the configured email already exists, it
 is promoted and keeps its current password. The administrator cannot be deleted.
 
+## Passwords
+
+New and changed passwords set through the UI or the admin user API must be at
+least **12 characters** and include a lowercase letter, an uppercase letter, and
+a number. The UI shows a live checklist and a show/hide toggle on every password
+field. Existing shorter passwords still sign in; the policy applies when a
+password is set or changed.
+
+Administrators can leave the password blank when creating a user — Kinglet
+generates a 16-character password and shows it once.
+
 ## Roles
 
 | Role | Can do |
@@ -59,12 +70,16 @@ Admins always have access to every project. Everyone else needs a
 - **Members** get their role's write capabilities (logs, monitors, keys)
   inside assigned projects.
 - **Viewers** get read-only access inside assigned projects.
+- **Clear logs** is a separate per-project grant. Admins always have it;
+  members can be granted it from the member list; viewers cannot. It is off by
+  default.
 - Assign or remove people in **/settings → projects & keys** while the project
   is selected.
 - Upgrading from an older Kinglet backfills every user into every existing
   project, so nobody loses access; prune assignments afterwards.
 
-The API exposes this as `GET`/`POST /v1/projects/:id/members` and
+The API exposes this as `GET`/`POST /v1/projects/:id/members`,
+`PATCH /v1/projects/:id/members/:userId` (`{ "canClearLogs": true|false }`), and
 `DELETE /v1/projects/:id/members/:userId` (admin only). A non-member requesting
 another project's data gets a `404`, so project ids cannot be probed.
 
@@ -73,6 +88,14 @@ another project's data gets a `404`, so project ids cannot be probed.
 Every project owns its events, monitors, alert history, and API keys. Switch
 projects from the header dropdown; the logs, histogram, live tail, monitors,
 and alerts all follow. Admins create and delete projects in **/settings**.
+
+### Clearing logs
+
+Admins, and members granted **clear logs**, can delete a project's events from
+**/settings → projects & keys → Clear logs**. Pick a preset range (last hour,
+6 hours, 24 hours, 7 days, 30 days), all time, or a custom start/end. Keys,
+monitors, and alert history are left alone. The grant is per project, off by
+default, and cannot be given to viewers.
 
 ## API keys
 

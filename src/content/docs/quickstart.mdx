@@ -93,8 +93,8 @@ curl -X POST http://localhost:8080/v1/events \
   --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
 ```
 
-The event appears in the live tail immediately. If the project is empty, use
-**spray demo** to seed the histogram.
+The event appears in the live tail immediately. If the project is empty, that
+first event also seeds the histogram.
 
 More clients — TypeScript, Python, Go, PHP, curl, Vector — are in
 [HTTP ingestion](/ingestion/).

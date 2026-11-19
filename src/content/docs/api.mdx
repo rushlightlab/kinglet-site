@@ -36,7 +36,7 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/v1/projects/:id/keys` | `GET`/`POST` | List / create API keys for a project |
 | `/v1/keys/:id` | `DELETE` | Revoke a key (requires `?project=`) |
 | `/v1/projects/:id/members` | `GET`/`POST` | List / assign project members (admin) — POST body `{ "userId": "…" }` |
-| `/v1/projects/:id/members/:userId` | `DELETE` | Remove a project member (admin) |
+| `/v1/projects/:id/members/:userId` | `PATCH`/`DELETE` | Grant/revoke `canClearLogs` / remove a member (admin) |
 | `/v1/system/status` | `GET` | Operational diagnostics — retention, monitors, counts (admin) |
 
 ## Logs
@@ -48,6 +48,7 @@ Go, and PHP.
 | --- | --- | --- |
 | `/v1/events` | `POST` | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events |
 | `/v1/events` | `GET` | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor` |
+| `/v1/events` | `DELETE` | Clear a project's events. Optional `from`/`to` epoch ms; omit both for all. Admin or a member granted **clear logs** |
 | `/v1/histogram` | `GET` | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240) |
 | `/v1/services` | `GET` | Known services with event counts |
 | `/v1/stream` | `GET` | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients |
