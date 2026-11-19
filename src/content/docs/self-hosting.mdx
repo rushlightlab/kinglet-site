@@ -24,7 +24,7 @@ Set these for anything beyond localhost:
 | Variable | Why |
 | --- | --- |
 | `KINGLET_BASE_URL` | Public origin, e.g. `https://logs.example.com`. Required for secure cookies, origin checks, and alert links. It must match the browser URL. |
-| `BETTER_AUTH_SECRET` | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data`), required when several instances share a database. |
+| `BETTER_AUTH_SECRET` | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data/auth-secret.txt`), required when several instances share a database. |
 | `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only when no administrator exists. After that they are ignored. |
 | `KINGLET_TRUSTED_PROXIES` | Set to your proxy networks when running behind Caddy, Traefik, Coolify, or Dokploy. Otherwise all clients share the proxy's rate-limit bucket. |
 | `KINGLET_DB_PATH` | `/data/kinglet.db` in the image. Keep the volume mounted at `/data`. |
@@ -34,6 +34,16 @@ Generate a secret with:
 ```bash
 openssl rand -base64 32
 ```
+
+No OpenSSL (Windows, slim images)? Node works too:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+If you leave it unset, Kinglet generates one on first boot and stores it at
+`/data/auth-secret.txt`. Set a new value later only if you accept that every
+existing session is signed out.
 
 For a platform proxy, the private Docker ranges are a safe starting point:
 
