@@ -1,58 +1,112 @@
 ---
 title: Quickstart
-description: Kinglet up and running in five minutes.
+description: Run Kinglet on your own server in a few minutes.
 ---
 
-import { Steps, Aside } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
-<Steps>
+Kinglet is self-hosted. The fastest path is the public Docker image — no clone,
+no build. If you already run Coolify or Dokploy, jump to their guides in
+[Self-hosting](/self-hosting/#coolify).
 
-1. **Start the server**
+## Docker (one command)
 
-   From a clone of this repository:
+```bash
+docker run -d --name kinglet \
+  --restart unless-stopped \
+  -p 8080:3000 \
+  -v kinglet-data:/data \
+  -e KINGLET_BASE_URL=http://localhost:8080 \
+  ghcr.io/rushlightlab/kinglet:latest
+```
 
-   ```bash
-   docker compose up -d --build
-   ```
+Open `http://localhost:8080`.
 
-   Kinglet is a single container backed by a volume — no Redis, no Kafka,
-   no Postgres.
+If you didn't set an admin password, the generated one is printed in the logs
+and saved in `/data/admin-password.txt`:
 
-2. **Sign in as the administrator**
+```bash
+docker exec kinglet cat /data/admin-password.txt
+```
 
-   The first boot (or a database with no administrator) creates one. If you
-   didn't set `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD`, the generated
-   password is in the container logs and, for the default local database, in
-   `admin-password.txt`:
+Sign in with `admin@kinglet.local` (or the email you set through
+`KINGLET_ADMIN_EMAIL`) and that password.
 
-   ```bash
-   docker compose exec kinglet cat /data/admin-password.txt
-   ```
+<Aside type="tip" title="Pin a version">
+  `:latest` is convenient for a trial. For production, pin a release tag such as
+  `:0.3.0`.
+</Aside>
 
-3. **Open the UI and sign in**
+## Docker Compose (no clone)
 
-   Visit `http://localhost:8080` and sign in with the admin email (default
-   `admin@kinglet.local`) and that password. Hit **spray demo** to watch
-   the live tail, histogram, and filter bar do their thing.
+Create `docker-compose.yml`:
 
-4. **Create an API key and send a real event**
+```yaml
+services:
+  kinglet:
+    image: ghcr.io/rushlightlab/kinglet:0.3.0
+    restart: unless-stopped
+    ports:
+      - "8080:3000"
+    environment:
+      KINGLET_BASE_URL: http://localhost:8080
+      # KINGLET_ADMIN_EMAIL: you@example.com
+      # KINGLET_ADMIN_PASSWORD: choose-a-strong-password
+    volumes:
+      - kinglet-data:/data
 
-   In **/settings → projects & keys**, create a key with the `ingest` scope,
-   then:
+volumes:
+  kinglet-data:
+```
 
-   ```bash
-   curl -X POST http://localhost:8080/v1/events \
-     -H "Authorization: Bearer kl_…" \
-     -H "Content-Type: application/x-ndjson" \
-     --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
-   ```
+```bash
+docker compose up -d
+```
 
-   It appears instantly — the UI subscribes over SSE while it's live.
+If you leave the admin password unset, read the generated one with:
 
-</Steps>
+```bash
+docker compose exec kinglet cat /data/admin-password.txt
+```
 
-<Aside type="tip" title="No Docker yet?">
-  Kinglet runs from source too: clone the repo, then
-  `pnpm install && pnpm dev`. The API listens on `:3000`, the UI on `:5173`
-  and proxies to it.
+<Aside type="tip" title="Coolify or Dokploy?">
+  The image is public, so neither platform needs registry credentials. Follow
+  the [Coolify](/self-hosting/#coolify) or
+  [Dokploy](/self-hosting/#dokploy) guide in Self-hosting.
+</Aside>
+
+## Create your first API key
+
+1. Open **/settings → projects & keys**.
+2. Create a key with **ingest** (and **query** if scripts should read logs).
+3. Copy it now — it is shown once.
+
+```bash
+curl -X POST http://localhost:8080/v1/events \
+  -H "Authorization: Bearer kl_…" \
+  -H "Content-Type: application/x-ndjson" \
+  --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
+```
+
+The event appears in the live tail immediately. If the project is empty, use
+**spray demo** to seed the histogram.
+
+## From source
+
+For development or a custom build, clone the repository and run both dev
+servers (Node 26+ and pnpm 10+):
+
+```bash
+git clone https://github.com/rushlightlab/kinglet.git
+cd kinglet
+pnpm install
+pnpm dev
+```
+
+The API listens on `:3000` and the UI on `:5173`.
+
+<Aside type="note" title="Going to production">
+  Set `KINGLET_BASE_URL` to your public HTTPS origin, use a persistent volume at
+  `/data`, and pin a release tag. The full checklist, TLS setup, backups, and
+  platform guides are in [Self-hosting](/self-hosting/).
 </Aside>
