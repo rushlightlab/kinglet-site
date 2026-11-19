@@ -5,15 +5,23 @@ description: Buffer, batch, and ship logs from Node.js without blocking your app
 
 import { Aside } from "@astrojs/starlight/components";
 
-`@kinglet/sdk-node` is a zero-dependency batching client. Events buffer
-in-process and ship as a single NDJSON batch — 200 events or every second,
-whichever comes first. A failed batch is re-queued (with a cap) and reported
-through `onError`, so your app never blocks on logging.
+`@kinglet/sdk-node` is a zero-dependency batching client for Node 26+. Events
+buffer in-process and ship as a single NDJSON batch — 200 events or every
+second, whichever comes first. A failed batch is re-queued (with a cap) and
+reported through `onError`, so your app never blocks on logging.
+
+<Aside type="note" title="Not on npm yet">
+  The package lives in the Kinglet monorepo at `packages/sdk-node` and is not
+  published to npm. From a checkout, build it with
+  `pnpm --filter @kinglet/sdk-node build` and use a workspace/file dependency
+  until the npm release.
+</Aside>
 
 ## Install
 
 ```bash
-npm install @kinglet/sdk-node
+# not published yet — from the Kinglet repo:
+pnpm --filter @kinglet/sdk-node build
 ```
 
 ## Use

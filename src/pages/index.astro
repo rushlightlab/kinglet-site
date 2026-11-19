@@ -60,7 +60,7 @@ import "../styles/landing.css";
               <div class="hero-reveal" style="--d:.05s; display: inline-flex;">
                 <div class="eyebrow" style="display: inline-flex; align-items: center; gap: 10px;">
                   <span class="live-dot" aria-hidden="true"></span>
-                  <span>v0.1</span><span style="color: var(--faint)">/</span><span>alerts are live</span>
+                  <span>v0.3</span><span style="color: var(--faint)">/</span><span>alerts are live</span>
                   <span class="eyebrow-arrow" aria-hidden="true">→</span>
                 </div>
               </div>
@@ -100,8 +100,8 @@ import "../styles/landing.css";
               </div>
 
               <div class="hero-reveal" style="--d:.44s; display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 32px; font-size: 11px; color: var(--faint);">
-                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> one container, one file</span>
-                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> ~150 MB RAM</span>
+                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> one container, one database</span>
+                <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> ~170 MB RAM</span>
                 <span style="display: flex; align-items: center; gap: 8px;"><span class="tick">✓</span> MIT licensed</span>
               </div>
             </div>
@@ -134,7 +134,7 @@ import "../styles/landing.css";
                 <div class="mini-stats">
                   <div><span class="mini-label">EVENTS</span><span class="mini-val">1.2M</span></div>
                   <div><span class="mini-label">ERRORS</span><span class="mini-val" style="color: var(--coral)">0.3%</span></div>
-                  <div><span class="mini-label">RAM</span><span class="mini-val">148MB</span></div>
+                  <div><span class="mini-label">RAM</span><span class="mini-val">170MB</span></div>
                   <div><span class="mini-label">RETENTION</span><span class="mini-val">14d</span></div>
                 </div>
 
@@ -184,7 +184,7 @@ import "../styles/landing.css";
               </h2>
             </div>
             <p style="font-size: 13px; color: var(--muted); max-width: 22rem; line-height: 1.7; margin: 0;">
-              Not another heavy observability stack. Kinglet is the single binary
+              Not another heavy observability stack. Kinglet is the single container
               that catches everything your apps throw — and makes it searchable.
             </p>
           </div>
@@ -234,7 +234,7 @@ import "../styles/landing.css";
             <article class="bento-card reveal" style="--d:.18s">
               <div class="feature-icon" aria-hidden="true">&#123; &#125;</div>
               <div class="feature-tag" style="margin-top: 24px;">STORAGE YOU CHOOSE</div>
-              <h3 style="font-family: var(--display); font-size: 20px; font-weight: 600; margin: 12px 0 0;">One file, or Turso.</h3>
+              <h3 style="font-family: var(--display); font-size: 20px; font-weight: 600; margin: 12px 0 0;">One database, or Turso.</h3>
               <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
                 SQLite by default, libSQL for scale-out, ClickHouse on the roadmap —
                 same interface, same app, your call.
@@ -328,20 +328,22 @@ import "../styles/landing.css";
 <span class="c-ok">✓</span> <span class="c-dim">&#123;"accepted":1,"rejected":0&#125;</span></code></pre>
               </div>
               <div role="tabpanel" id="panel-node" data-panel="node" class="code-panel hidden">
-                <pre><code><span class="c-kw">import</span> &#123; createLogger &#125; <span class="c-kw">from</span> <span class="c-str">'@kinglet/sdk-node'</span>;
-
-<span class="c-kw">const</span> log = <span class="c-key">createLogger</span>(&#123;
-  <span class="c-prop">url</span>: <span class="c-str">'http://localhost:8080'</span>,
-  <span class="c-prop">token</span>: process.env.<span class="c-prop">KINGLET_TOKEN</span>,
-  <span class="c-prop">service</span>: <span class="c-str">'my-app'</span>,
-&#125;);
-
-log.<span class="c-key">info</span>(<span class="c-str">'user signed in'</span>, &#123; <span class="c-prop">userId</span>: <span class="c-num">42</span> &#125;);</code></pre>
+                <pre><code><span class="c-com">// send a batch with fetch — no agent, no dependencies</span>
+<span class="c-kw">await</span> fetch(<span class="c-str">'http://localhost:8080/v1/events'</span>, &#123;
+  method: <span class="c-str">'POST'</span>,
+  headers: &#123;
+    authorization: <span class="c-str">'Bearer kl_…'</span>,
+    <span class="c-str">'content-type'</span>: <span class="c-str">'application/x-ndjson'</span>,
+  &#125;,
+  body: [
+    JSON.stringify(&#123; level: <span class="c-str">'info'</span>, message: <span class="c-str">'user signed in'</span>, service: <span class="c-str">'my-app'</span> &#125;),
+  ].join(<span class="c-str">'\n'</span>),
+&#125;);</code></pre>
               </div>
             </div>
 
             <div class="code-footbar">
-              <span><span style="color: var(--gold)">↳</span> buffers in-process, ships as one batch — your app never blocks</span>
+              <span><span style="color: var(--gold)">↳</span> one NDJSON request per batch — no agent, no sidecar</span>
               <span class="hidden-sm" style="color: var(--faint)">MIT licensed core</span>
             </div>
           </div>
@@ -356,7 +358,7 @@ log.<span class="c-key">info</span>(<span class="c-str">'user signed in'</span>,
           </div>
           <div class="stats-grid">
             <div class="stat-cell reveal" style="--d:.05s">
-              <div class="stat-num"><span class="counter" data-target="150">0</span><span class="stat-unit">MB</span></div>
+              <div class="stat-num"><span class="counter" data-target="170">0</span><span class="stat-unit">MB</span></div>
               <div class="stat-label">steady-state ram</div>
             </div>
             <div class="stat-cell reveal" style="--d:.11s">
@@ -415,7 +417,7 @@ log.<span class="c-key">info</span>(<span class="c-str">'user signed in'</span>,
               Small. Light. King. Self-hosted logs for apps that ship.
             </p>
             <div class="status-pill" style="margin-top: 20px;">
-              <span class="live-dot" aria-hidden="true"></span> single binary · always up
+              <span class="live-dot" aria-hidden="true"></span> single container · always up
             </div>
           </div>
           <div>

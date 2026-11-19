@@ -11,7 +11,7 @@ database with the same code. Schema and queries are defined once with
 [Drizzle ORM](https://orm.drizzle.team); migrations live in
 `apps/api/drizzle` and are applied automatically on boot.
 
-**sqlite (default)** — a single local file, zero config, zero services:
+**sqlite (default)** — a single local database (plus WAL/SHM sidecars while running), zero config, zero services:
 
 ```bash
 KINGLET_DB_PATH=/data/kinglet.db
@@ -47,9 +47,8 @@ docker run -d --name kinglet -p 8080:3000 \
 ```
 
 - **One Kinglet instance per database.** Ingest assumes a single writer.
-- **Every query is a network round trip.** Keep ingest batched (the SDK does
-  this by default); each enabled monitor's count check costs one round trip per
-  interval.
+- **Every query is a network round trip.** Keep ingest batched; each enabled
+  monitor's count check costs one round trip per interval.
 - **Backups are Turso's job.** Litestream applies to local SQLite files only.
 - Schema and migrations run automatically on first boot, same as a local file.
 

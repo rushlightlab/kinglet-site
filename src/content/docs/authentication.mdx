@@ -13,7 +13,7 @@ Authentication is powered by [Better Auth](https://better-auth.com) with the
 Drizzle adapter, tuned per its performance guide:
 
 - `better-auth/minimal` — Kysely is not bundled (Drizzle handles the database).
-- **Session cookie cache** (`5 min`) — `getSession` reads a signed cookie
+- **Session cookie cache** (`60s`) — `getSession` reads a signed cookie
   instead of hitting the database on every request.
 - **Indexes** on `user.email`, `session.userId`/`token`, `account.userId`, and
   `verification.identifier`.
@@ -21,15 +21,17 @@ Drizzle adapter, tuned per its performance guide:
 
 ## First boot
 
-When the users table is empty, Kinglet creates the administrator:
+When no administrator exists — first boot, or recovery from a database with no
+admin account — Kinglet creates or promotes one:
 
 | Env var | Default | Notes |
 | --- | --- | --- |
 | `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | login identifier |
-| `KINGLET_ADMIN_PASSWORD` | *(generated)* | printed once + written to `admin-password.txt` |
+| `KINGLET_ADMIN_PASSWORD` | *(generated)* | printed once; written to `admin-password.txt` only for local databases |
 
-These only apply on the **first** boot — changing them later does nothing. The
-administrator cannot be deleted.
+These only apply when no administrator exists — changing them while an admin is
+present does nothing. If an account with the configured email already exists, it
+is promoted and keeps its current password. The administrator cannot be deleted.
 
 ## Roles
 
@@ -37,7 +39,7 @@ administrator cannot be deleted.
 | --- | --- |
 | **admin** | everything: projects, users, keys, logs, monitors. Cannot be deleted or demoted while last |
 | **member** | read/write logs, manage monitors, manage API keys |
-| **viewer** | read logs and monitors only |
+| **viewer** | read logs, monitors, and project metadata |
 
 Roles map to explicit permission keys (`logs.read`, `monitors.write`,
 `keys.write`, `users.read`, …) internally, so custom roles later are a data

@@ -9,6 +9,8 @@ import { Steps, Aside } from "@astrojs/starlight/components";
 
 1. **Start the server**
 
+   From a clone of this repository:
+
    ```bash
    docker compose up -d --build
    ```
@@ -18,9 +20,10 @@ import { Steps, Aside } from "@astrojs/starlight/components";
 
 2. **Sign in as the administrator**
 
-   The first boot creates an admin account. If you didn't set
-   `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD`, the generated password is
-   in the container logs and in `admin-password.txt`:
+   The first boot (or a database with no administrator) creates one. If you
+   didn't set `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD`, the generated
+   password is in the container logs and, for the default local database, in
+   `admin-password.txt`:
 
    ```bash
    docker compose exec kinglet cat /data/admin-password.txt
@@ -29,7 +32,7 @@ import { Steps, Aside } from "@astrojs/starlight/components";
 3. **Open the UI and sign in**
 
    Visit `http://localhost:8080` and sign in with the admin email (default
-   `admin@kinglet.local`) and that password. Hit **Spray demo logs** to watch
+   `admin@kinglet.local`) and that password. Hit **spray demo** to watch
    the live tail, histogram, and filter bar do their thing.
 
 4. **Create an API key and send a real event**

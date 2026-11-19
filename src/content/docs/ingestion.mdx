@@ -40,18 +40,24 @@ A single object with an `events` array, or a bare array:
 | --- | --- | --- |
 | `message` (or `msg`) | yes | the log line, up to 8,000 characters |
 | `level` | no | `trace`…`fatal`, or a number 0–5; unknown values default to `info` |
-| `ts` (or `time`/`timestamp`) | no | epoch ms, epoch seconds (auto-detected), or ISO string; defaults to now |
-| `service` | no | lowercase identifier, shown and filterable in the UI |
-| `env` | no | e.g. `prod`, `staging` |
-| `fields` | no | arbitrary JSON object up to 32 KB serialized |
+| `ts` (or `time`/`timestamp`) | no | epoch ms, epoch seconds (auto-detected), or ISO string; defaults to now, clamped to the last 31 days and 5 minutes of future skew |
+| `service` | no | lowercased automatically (max 128 chars), shown and filterable in the UI |
+| `env` | no | lowercased automatically (max 64 chars), e.g. `prod`, `staging` |
+| `fields` | no | arbitrary JSON object up to 32 KB serialized; larger values are stored as `{"_kinglet_truncated":true}` |
 
 ## Limits
 
 - Request body: 8 MB
 - Events per batch: 10,000 (extras are dropped and reported in the response)
+- Rate limit: 600 batches/minute per identity (API key, user, or legacy token)
+- Default caps: 1,000,000 retained events per project and 4 GB for a local
+  database (`KINGLET_MAX_EVENTS_PER_PROJECT`, `KINGLET_MAX_DB_MB`; `0` disables)
+- Retention: `KINGLET_RETENTION_DAYS`, default 14
 
 Invalid events don't fail the batch — Kinglet returns
 `{ "accepted": n, "rejected": m }` so one bad line never blocks your pipeline.
+If every event in a batch is rejected, the response is `422` with the first
+errors.
 
 ## Ship without changing your app
 

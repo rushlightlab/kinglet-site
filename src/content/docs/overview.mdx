@@ -11,12 +11,12 @@ substring search — all on one small container.
 
 <CardGrid>
   <Card title="Tiny by default">
-    One process, one file, zero external services. ~150–250 MB of RAM, and
-    millions of events a day fit comfortably on a 2 vCPU VPS.
+    One process, one database, zero external services. ~150–250 MB of RAM —
+    sized for a small VPS.
   </Card>
   <Card title="Log from anything">
-    NDJSON or JSON over HTTP. curl, Vector, Fluent Bit, the Node SDK — if it
-    can POST, it can log to Kinglet.
+    NDJSON or JSON over HTTP. curl, Vector, Fluent Bit, or the in-repo Node
+    SDK — if it can POST, it can log to Kinglet.
   </Card>
   <Card title="Fast to search">
     SQLite FTS5 trigram indexing means substring matches (`"timeout"`) just
@@ -38,8 +38,9 @@ substring search — all on one small container.
 
 ## Where it's going
 
-- **Node/PHP SDKs** — a pino transport, a zero-code console preload, and a
-  Monolog handler for Laravel/Symfony/WordPress.
+- **Node SDK extensions** — a pino transport and a zero-code console preload
+  for the existing in-repo SDK.
+- **PHP** — a Monolog handler for Laravel, Symfony, and WordPress.
 - **More receivers** — OTLP for OpenTelemetry pipelines, and syslog so
   nginx/php-fpm ship with zero code changes.
 - **ClickHouse driver** — the same storage interface, for when a single node
