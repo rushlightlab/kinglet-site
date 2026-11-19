@@ -121,10 +121,11 @@ inherits a human role:
 | `query` | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
 
 Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
-in **/settings → projects & keys**; the list keeps a display prefix, scopes,
-creator, and last-used time. A key created without an explicit `scopes` array
-defaults to `["ingest"]`; unknown scopes are rejected with a 400. When a user is
-demoted or deleted, keys they created are revoked.
+in **/settings → projects & keys**; the list keeps a short token prefix
+(`kl_XXXXXXXX…`), scopes, creator, created date, and last-used time. A key
+created without an explicit `scopes` array defaults to `["ingest"]`; unknown
+scopes are rejected with a 400. When a user is demoted or deleted, keys they
+created are revoked.
 
 The key actions menu can also **edit permissions** (change `ingest`/`query`
 scopes without replacing the key) and **reroll** it. Rerolling immediately
