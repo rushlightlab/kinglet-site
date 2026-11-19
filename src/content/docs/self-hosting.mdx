@@ -219,6 +219,23 @@ The named volume keeps the SQLite database and auth secret across deployments;
 Dokploy's volume backups can target named volumes. If you didn't set an admin
 password, the generated one appears in the service logs on first boot.
 
+### Pull fails with `denied: denied`
+
+The image is public, so this is almost always a stale registry login on the
+Dokploy server. Docker sends the saved `ghcr.io` token and GHCR rejects it
+instead of falling back to anonymous access. Remove the login on the host:
+
+```bash
+docker logout ghcr.io
+docker pull ghcr.io/rushlightlab/kinglet:latest
+```
+
+Then redeploy the compose service. If the host uses a credential helper, delete
+the `ghcr.io` entry from `~/.docker/config.json` instead. If you *want* private
+authenticated pulls, create a classic GitHub token with `read:packages`, then add
+or update the GHCR registry under Dokploy's **Registry** settings with that
+token as the password.
+
 See Dokploy's [Docker Compose guide](https://docs.dokploy.com/docs/core/docker-compose)
 and [Domains guide](https://docs.dokploy.com/docs/core/domains) for the current
 UI details.
