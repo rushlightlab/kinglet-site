@@ -85,6 +85,7 @@ UUID v7 that is stable and safe to share; fetch one event with
 | `/v1/monitors` | `GET`/`POST` | List / create monitors (session cookie only — `kl_` keys can't manage them) |
 | `/v1/monitors/:id` | `PATCH`/`DELETE` | Update / delete a monitor |
 | `/v1/monitors/:id/test` | `POST` | Send a test notification through every channel |
+| `/v1/monitors/test-channel` | `POST` | Test an unsaved channel — body `{ "type": "webhook", "url": "…" }` |
 | `/v1/alerts` | `GET` | Alert history, latest first |
 
 ## Limits
