@@ -30,7 +30,8 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/api/auth/change-password` | `POST` | Change your password |
 | `/v1/me` | `GET` | Current user + permissions |
 | `/v1/projects` | `GET`/`POST` | List assigned projects / create a project (admin) |
-| `/v1/projects/:id` | `DELETE` | Delete a project and all its data (admin) |
+| `/v1/projects/:id` | `PATCH` | Rename a project (admin) — body `{ "name": "…" }` |
+| `/v1/projects/:id` | `DELETE` | Delete a project and all its data (admin). The last project cannot be deleted |
 | `/v1/users` | `GET`/`POST` | List / create users (admin) |
 | `/v1/users/:id` | `PATCH`/`DELETE` | Change role, name, or disabled status / delete user (admin) |
 | `/v1/users/:id/reset-password` | `POST` | Generate a new password and revoke sessions (admin) |

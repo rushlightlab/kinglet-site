@@ -43,11 +43,12 @@ password is set or changed.
 
 Administrators can leave the password blank when creating a user — Kinglet
 generates a 16-character password that meets the same policy and shows it once.
+Your own password lives in **Account settings** in the user menu.
 
 ## User actions
 
 Admins can reset a user's password, change their role, disable or enable the
-account, or delete it from the user actions menu.
+account, or delete it from **Settings → Users**.
 
 - **Change role** switches a user between member and viewer.
 - **Reset password** generates a compliant password, shows it once, and signs
@@ -72,7 +73,7 @@ change rather than a refactor.
 <Aside type="note" title="Project access">
   Roles set what a user can do; project membership sets where they can do it.
   Admins see every project. Members and viewers see only the projects assigned
-  to them in **/settings → projects & keys**.
+  to them in **Settings → Projects → manage → members**.
 </Aside>
 
 ## Project membership
@@ -86,8 +87,8 @@ Admins always have access to every project. Everyone else needs a
 - **Clear logs** is a separate per-project grant. Admins always have it;
   members can be granted it from the member list; viewers cannot. It is off by
   default.
-- Assign or remove people in **/settings → projects & keys** while the project
-  is selected.
+- Assign or remove people in **Settings → Projects → manage → members** while the
+  project is selected.
 - Upgrading from an older Kinglet backfills every user into every existing
   project, so nobody loses access; prune assignments afterwards.
 
@@ -100,12 +101,13 @@ another project's data gets a `404`, so project ids cannot be probed.
 
 Every project owns its events, monitors, alert history, and API keys. Switch
 projects from the header dropdown; the logs, histogram, live tail, monitors,
-and alerts all follow. Admins create and delete projects in **/settings**.
+and alerts all follow. Admins manage projects in **Settings → Projects**; open a
+project to rename or delete it.
 
 ### Clearing logs
 
 Admins, and members granted **clear logs**, can delete a project's events from
-**/settings → projects & keys → Clear logs**. Pick a preset range (last hour,
+**Settings → Projects → manage → Clear logs**. Pick a preset range (last hour,
 6 hours, 24 hours, 7 days, 30 days), all time, or a custom start/end. Keys,
 monitors, and alert history are left alone. The grant is per project, off by
 default, and cannot be given to viewers.
@@ -121,7 +123,7 @@ inherits a human role:
 | `query` | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
 
 Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
-in **/settings → projects & keys**; the list keeps a short token prefix
+in **Settings → Projects → manage**; the list keeps a short token prefix
 (`kl_XXXXXXXX…`), scopes, creator, created date, and last-used time. A key
 created without an explicit `scopes` array defaults to `["ingest"]`; unknown
 scopes are rejected with a 400. When a user is demoted or deleted, keys they

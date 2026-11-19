@@ -82,9 +82,10 @@ docker compose exec kinglet cat /data/admin-password.txt
 
 ## Create your first API key
 
-1. Open **/settings → projects & keys**.
-2. Create a key with **ingest** (and **query** if scripts should read logs).
-3. Copy it now — it is shown once.
+1. Open **Settings → Projects**.
+2. Choose **manage** next to the project.
+3. Create a key with **ingest** (and **query** if scripts should read logs).
+4. Copy it now — it is shown once.
 
 ```bash
 curl -X POST http://localhost:8080/v1/events \
