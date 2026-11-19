@@ -27,7 +27,6 @@ Small. Light. King. — the first tagged release of Kinglet: a tiny self-hostabl
 - Storage is one libSQL client for local SQLite or hosted Turso, with Drizzle ORM migrations.
 - The production image is built from a production-only dependency tree and no longer carries dev tooling or source.
 - Browser sessions use a short signed cookie cache; mutations revalidate against the database.
-- Legacy `tok_` tokens remain available and can be disabled with `KINGLET_DISABLE_LEGACY_TOKENS=1`.
 
 #### Security
 

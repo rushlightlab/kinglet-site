@@ -66,10 +66,8 @@ docker compose up -d       # pulls the right architecture automatically
 | `BETTER_AUTH_SECRET` | *(generated, persisted)* | Session signing secret — set explicitly for multi-instance installs |
 | `KINGLET_TRUSTED_PROXIES` | — | CIDRs allowed to set `X-Forwarded-For` |
 | `KINGLET_ALLOW_PRIVATE_WEBHOOKS` | — | Allow private/internal webhook targets (SSRF escape hatch) |
-| `KINGLET_DISABLE_LEGACY_TOKENS` | — | Disable workspace-wide `tok_…` superuser tokens |
 | `KINGLET_SESSION_DAYS` | `30` | Web session lifetime |
 | `KINGLET_BASE_URL` | — | Public HTTPS origin — secure cookies and alert deep links |
-| `KINGLET_TOKENS` | *(auto-generate)* | Legacy global tokens — all projects, full access |
 | `KINGLET_RETENTION_DAYS` | `14` | Delete events older than this |
 | `KINGLET_MAX_EVENTS_PER_PROJECT` | `1000000` | Hard cap on retained events per project (`0` = unlimited) |
 | `KINGLET_MAX_DB_MB` | `4096` | Hard cap on local database size in MB (`0` = unlimited) |

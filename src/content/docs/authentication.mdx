@@ -103,16 +103,13 @@ list projects, manage monitors, or touch users.
 ## How auth is resolved
 
 1. `Authorization: Bearer kl_…` → project-scoped API key
-2. `Authorization: Bearer tok_…` → **legacy** global token (`KINGLET_TOKENS`):
-   all projects, full access — meant for quick tests and old automation. Set
-   `KINGLET_DISABLE_LEGACY_TOKENS=1` to turn this path off entirely.
-3. `better-auth.session_token` cookie → signed-in user, with role permissions
+2. `better-auth.session_token` cookie → signed-in user, with role permissions
 
 Browser routes accept the cookie; project-scoped calls use `?project=<id>`.
-SSE accepts `?key=`/`?token=` for shipper-style clients that cannot send
-headers. Sessions last `KINGLET_SESSION_DAYS` (default 30). Role changes and
-account deletion delete the user's sessions and API keys; mutating requests
-always bypass the cookie cache, so a demoted user cannot keep writing.
+SSE accepts `?key=` for shipper-style clients that cannot send headers. Sessions
+last `KINGLET_SESSION_DAYS` (default 30). Role changes and account deletion
+delete the user's sessions and API keys; mutating requests always bypass the
+cookie cache, so a demoted user cannot keep writing.
 
 <Aside type="caution" title="Run behind TLS">
   Session cookies are HttpOnly + SameSite=Lax and become `Secure` when

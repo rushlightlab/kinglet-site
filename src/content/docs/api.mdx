@@ -47,14 +47,14 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/v1/events` | `GET` | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor` |
 | `/v1/histogram` | `GET` | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240) |
 | `/v1/services` | `GET` | Known services with event counts |
-| `/v1/stream` | `GET` | SSE live tail. Params: `q` — cookie auth, plus `key`/`token` for headerless clients |
+| `/v1/stream` | `GET` | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients |
 | `/healthz` | `GET` | Health check (no auth) |
 
 ## Monitors & alerts
 
 | Route | Method | What it does |
 | --- | --- | --- |
-| `/v1/monitors` | `GET`/`POST` | List / create monitors (session or legacy token — `kl_` keys can't manage them) |
+| `/v1/monitors` | `GET`/`POST` | List / create monitors (session cookie only — `kl_` keys can't manage them) |
 | `/v1/monitors/:id` | `PATCH`/`DELETE` | Update / delete a monitor |
 | `/v1/monitors/:id/test` | `POST` | Send a test notification through every channel |
 | `/v1/alerts` | `GET` | Alert history, latest first |
@@ -92,5 +92,5 @@ still lands.
 
 <Aside type="tip" title="Live tail auth">
   Browsers use the session cookie. Shippers that cannot send headers can use
-  `?key=kl_…` (API key) or `?token=tok_…` (legacy token) on `/v1/stream`.
+  `?key=kl_…` (API key) on `/v1/stream`.
 </Aside>
