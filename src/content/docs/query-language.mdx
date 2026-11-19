@@ -31,9 +31,15 @@ filters follow you into the live view.
 
 ## In the UI
 
+- **Time window** — pick a quick range from 5 minutes to 30 days, or open the
+  picker and enter exact start and end times. Dragging the histogram creates a
+  custom range you can clear from the same picker.
 - **Live** — subscribes over SSE; new events appear at the top as they're
-  ingested.
+  ingested. The periodic refresh adapts to the selected window — seconds for
+  short ranges, minutes for long ones — so wide views do not poll needlessly.
 - **Follow** — keeps you pinned to the newest event while live.
+- **Services** — shows how many services reported events in this project; open
+  it to toggle a `service:<name>` filter.
 - **Histogram** — drag across any time range to zoom in; each bucket stacks
   by level.
 - **Event drawer** — click any row for the full message, pretty-printed fields,
