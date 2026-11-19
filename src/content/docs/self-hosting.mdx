@@ -9,6 +9,13 @@ Kinglet is self-hosted today: this page covers running your own instance.
 The Docker image is public, so no registry login is needed. Pick the path that
 matches your setup:
 
+<Aside type="caution" title="Security first">
+  Read [Security](/security/) before exposing Kinglet. It covers TLS, narrow
+  proxy trust, secrets, API-key offboarding, webhooks, storage limits, and image
+  pinning. The short version: put Kinglet behind TLS, trust only your proxy, and
+  do not use the all-private-ranges shortcut.
+</Aside>
+
 | Path | Best for |
 | --- | --- |
 | [Docker one command](#docker-one-command) | a quick trial on a single server |
@@ -26,7 +33,7 @@ Set these for anything beyond localhost:
 | `KINGLET_BASE_URL` | Public origin, e.g. `https://logs.example.com`. Required for secure cookies, origin checks, and alert links. It must match the browser URL. |
 | `BETTER_AUTH_SECRET` | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data/auth-secret.txt`), required when several instances share a database. |
 | `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only when no administrator exists. After that they are ignored. |
-| `KINGLET_TRUSTED_PROXIES` | Set to your proxy networks when running behind Caddy, Traefik, Coolify, or Dokploy. Otherwise all clients share the proxy's rate-limit bucket. |
+| `KINGLET_TRUSTED_PROXIES` | Set to the proxy address or proxy network only. Otherwise all clients share the proxy's rate-limit bucket. See [Common deployments](/security/#common-deployments). |
 | `KINGLET_DB_PATH` | `/data/kinglet.db` in the image. Keep the volume mounted at `/data`. |
 
 Generate a secret with:
@@ -45,11 +52,17 @@ If you leave it unset, Kinglet generates one on first boot and stores it at
 `/data/auth-secret.txt`. Set a new value later only if you accept that every
 existing session is signed out.
 
-For a platform proxy, the private Docker ranges are a safe starting point:
+`KINGLET_TRUSTED_PROXIES` is for proxies, not client networks. Set it to the
+proxy's address or Docker network, for example:
 
 ```dotenv
-KINGLET_TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+KINGLET_TRUSTED_PROXIES=172.30.0.10/32
 ```
+
+Do not use `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`; those ranges include LAN,
+VPN, and Tailscale clients, so private-range clients can be stripped to no IP or
+spoofed. If Kinglet is reached directly, leave the variable empty. See
+[Reverse proxy and client IPs](/security/#reverse-proxy-and-client-ips).
 
 ## Docker one command
 
@@ -97,7 +110,8 @@ services:
       KINGLET_ADMIN_EMAIL: you@example.com
       KINGLET_ADMIN_PASSWORD: change-me-please
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
-      KINGLET_TRUSTED_PROXIES: 172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+      # Only when behind a proxy; trust the proxy network, not client ranges.
+      # KINGLET_TRUSTED_PROXIES: 172.30.0.10/32
     volumes:
       - kinglet-data:/data
 
@@ -151,12 +165,18 @@ Open **General** and set **Ports Exposes** to `3000`.
 
 Add these under **Environment Variables** (runtime):
 
+Behind Cloudflare, start with the Coolify proxy address; add Cloudflare's
+current ranges only if the proxy preserves the client XFF. See
+[Common deployments](/security/#common-deployments).
+
 ```dotenv
 KINGLET_BASE_URL=https://logs.example.com
 KINGLET_ADMIN_EMAIL=you@example.com
 KINGLET_ADMIN_PASSWORD=change-me-please
 BETTER_AUTH_SECRET=<32+ random bytes>
-KINGLET_TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+# Replace with the Coolify proxy network (Traefik by default), not all private ranges.
+# Find it with: docker network inspect <coolify-proxy-network>
+KINGLET_TRUSTED_PROXIES=172.30.0.0/24
 ```
 
 ### 5. Add persistent storage
@@ -222,12 +242,18 @@ Dokploy itself or another app.
 Use the **Environment** tab. Dokploy writes these to `.env`; the
 `env_file: .env` line loads them into the container.
 
+Behind Cloudflare, start with the Dokploy proxy address; add Cloudflare's
+current ranges only if the proxy preserves the client XFF. See
+[Common deployments](/security/#common-deployments).
+
 ```dotenv
 KINGLET_BASE_URL=https://logs.example.com
 KINGLET_ADMIN_EMAIL=you@example.com
 KINGLET_ADMIN_PASSWORD=change-me-please
 BETTER_AUTH_SECRET=<32+ random bytes>
-KINGLET_TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+# Replace with the Traefik network used by Dokploy, not all private ranges.
+# Find it with: docker network inspect dokploy-network
+KINGLET_TRUSTED_PROXIES=172.30.0.0/24
 ```
 
 <Aside type="caution" title="Replace every placeholder">

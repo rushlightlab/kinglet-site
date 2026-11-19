@@ -70,6 +70,7 @@ export default defineConfig({
             { label: "Authentication & projects", link: "/authentication/" },
             { label: "Storage backends", link: "/storage/" },
             { label: "Self-hosting", link: "/self-hosting/" },
+            { label: "Security", link: "/security/" },
           ],
         },
         {

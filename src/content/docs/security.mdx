@@ -1,0 +1,265 @@
+---
+title: Security
+description: Harden a self-hosted Kinglet instance with TLS, narrow proxy trust, least-privilege accounts, scoped keys, and safe updates.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet is built for a small, trusted team rather than an open multi-tenant
+service. Most of the security work is deployment hygiene: terminate TLS, trust
+only your proxy, keep secrets out of logs, use least-privilege accounts and
+scoped keys, and keep the image and database healthy.
+
+<Aside type="caution" title="Before you expose Kinglet">
+  At minimum: set `KINGLET_BASE_URL` to the public HTTPS origin, put Kinglet
+  behind a TLS reverse proxy, set a strong `BETTER_AUTH_SECRET`, set a strong
+  bootstrap admin password, and narrow `KINGLET_TRUSTED_PROXIES` to only your
+  proxy. The [self-hosting guide](/self-hosting/) covers installation; this page
+  covers the security decisions.
+</Aside>
+
+## Reverse proxy and client IPs
+
+`KINGLET_TRUSTED_PROXIES` is a list of **proxies** allowed to set
+`X-Forwarded-For`. It is not a list of client networks. Kinglet uses the resolved
+client IP for the sign-in rate limit and the stored session IP.
+
+Do:
+
+- Set it to the proxy address or the proxy's Docker network. For a Caddy
+  container on a dedicated network, `172.30.0.10/32` is enough.
+- Leave it empty when Kinglet is reached directly. The socket address is used.
+- Make the proxy set or sanitize `X-Forwarded-For`; do not accept a
+  client-supplied chain from an untrusted hop.
+
+Don't:
+
+- Use `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`. Those ranges contain your users
+  (LAN, VPN, Tailscale), so Kinglet treats their addresses as proxy hops. A
+  private-range client can be stripped to no IP, and a forged public prefix can
+  become the recorded client IP.
+- Treat a private network as automatically trusted. Trust the proxy process, not
+  the network it happens to share with clients.
+
+Example Caddy network (direct Compose):
+
+```yaml
+networks:
+  kinglet:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+services:
+  caddy:
+    networks:
+      kinglet:
+        ipv4_address: 172.30.0.10
+
+  kinglet:
+    environment:
+      KINGLET_TRUSTED_PROXIES: 172.30.0.10/32
+```
+
+### Traefik and platform proxies
+
+Dokploy and Coolify put a platform proxy in front of Kinglet (Traefik in the
+default setups; check your instance). The variable is still the proxy address,
+not a fixed IP. Find the proxy container and the network it shares with Kinglet:
+
+```bash
+docker ps --format '{{.Names}}' | grep -Ei 'traefik|caddy'
+docker inspect <proxy-container> --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'
+docker network inspect <proxy-network> --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+```
+
+Set `KINGLET_TRUSTED_PROXIES` to the proxy's address with `/32` if it is stable,
+or to the dedicated Docker network CIDR if that network contains only proxy and
+application containers. A host LAN/VPN range is not a proxy network. On Dokploy,
+the network is commonly `dokploy-network`; inspect it rather than guessing.
+
+## Common deployments
+
+Start with the **last proxy directly in front of Kinglet**. Add Cloudflare only
+when you need visitor IP attribution and your proxy preserves the incoming
+`X-Forwarded-For` chain.
+
+| Setup | `KINGLET_TRUSTED_PROXIES` |
+| --- | --- |
+| Caddy in Docker | Caddy container IP `/32`, e.g. `172.30.0.10/32` |
+| Traefik in Docker | Traefik container IP `/32`, or the dedicated proxy network CIDR |
+| nginx on the host, proxying to `127.0.0.1:3000` | `127.0.0.1/32` |
+| nginx in Docker | nginx container IP `/32`, or its dedicated proxy network CIDR |
+| Cloudflare → Caddy | Caddy IP `/32`; add Cloudflare's current ranges only if Caddy preserves the visitor XFF |
+| Cloudflare → Traefik | Traefik IP `/32`; add Cloudflare's current ranges only if Traefik preserves the visitor XFF |
+| Cloudflare Tunnel → Caddy/Traefik | The `cloudflared` connector address `/32`; add Cloudflare ranges only if the visitor XFF survives |
+| Vercel → public HTTPS → Caddy/Traefik | The Caddy/Traefik address. Vercel is a client; never add Vercel to this list |
+| No reverse proxy | Leave empty; the socket address is used |
+
+Cloudflare's ranges are published at
+[cloudflare.com/ips](https://www.cloudflare.com/ips/) and change over time. Do not
+paste a stale copied list. Adding them only helps if the XFF chain still contains
+the visitor: if your proxy overwrites `X-Forwarded-For` with the immediate peer,
+Kinglet sees Cloudflare's address instead. That still works for rate limiting,
+but it is not visitor-level attribution. Kinglet currently reads
+`X-Forwarded-For`; Cloudflare's `CF-Connecting-IP` is not used unless you add a
+custom header policy in the app.
+
+Do not use `10.0.0.0/8`, `172.16.0.0/12`, or `192.168.0.0/16` as a shortcut.
+Those are client networks, not proxies.
+
+## TLS and network exposure
+
+- Set `KINGLET_BASE_URL` to the exact public origin, including `https://`.
+  Session cookies become `Secure` only when the base URL is HTTPS.
+- Terminate TLS at Caddy, nginx, or your platform proxy. Publish only 80/443 on
+  the proxy and keep Kinglet's `3000` port internal.
+- The one-command Docker example publishes `8080` on every interface. For a local
+  trial, bind it to loopback instead:
+
+  ```bash
+  -p 127.0.0.1:8080:3000
+  ```
+
+- Do not expose Kinglet directly to the internet without TLS. If you use the
+  Caddy sample in `deploy/`, keep the Kinglet service unpublished and route to
+  it over the Compose network.
+
+## Secrets and first boot
+
+- Generate `BETTER_AUTH_SECRET` with at least 32 random bytes. Set it explicitly
+  when more than one instance shares a database. Rotating it signs every session
+  out.
+- Set a strong `KINGLET_ADMIN_PASSWORD` before the first boot, or read the
+  generated password once and store it in a password manager.
+- Delete `/data/admin-password.txt` after the first successful sign-in. If the
+  password was printed to shared logs, rotate it.
+- Keep `.env` files at mode `600`, out of Git, and out of container images.
+- Restrict the `/data` volume to the container user. It holds the database, the
+  auth secret, and the bootstrap password.
+
+## Accounts and roles
+
+Use the smallest role that works:
+
+| Role | Use it for |
+| --- | --- |
+| **admin** | one or two operators who manage projects, users, and keys |
+| **member** | people who send logs, manage monitors, and manage project keys |
+| **viewer** | people who only read logs and dashboards |
+
+- Remove project members when they leave the team. Project membership is the
+  boundary for members and viewers; admins can see every project.
+- Disable an account before deleting it when you may need to restore access.
+  Disabling blocks sign-in and invalidates keys owned by that user; enabling it
+  again restores them, so delete or rotate keys if the account was compromised.
+- Role changes and account deletion delete sessions and keys owned by the user.
+  Mutating requests bypass the session cookie cache; read-only requests can use a
+  signed cache for up to 60 seconds. If you need immediate read revocation, sign
+  the user out or delete the sessions.
+- After a password reset, check the key list and revoke any keys that user
+  created. Treat account recovery as a full credential rotation.
+
+## API keys
+
+- Create one key per service, not one shared key for everything.
+- Grant only the scopes the service needs: `ingest` for producers, `query` for
+  readers. A key never inherits a human role.
+- Store keys in a secret manager or the platform's secret store. Do not paste
+  them into chat, tickets, URLs, or source code.
+- Rotate a key when a service is replaced, a laptop is lost, or a team member
+  leaves. Rerolling invalidates the old plaintext immediately.
+- The live tail accepts `?key=` for clients that cannot send headers. That value
+  can appear in reverse-proxy access logs. Disable or redact query strings in
+  proxy logs, or use the `Authorization` header where the client supports it.
+- Use **View usage** in the key menu to review `key:<id>` events and spot a key
+  that is sending more than expected.
+
+<Aside type="note" title="Offboarding a project member">
+  In current releases, removing a project member does not automatically revoke
+  API keys that member created. Open the project's key list and revoke those keys
+  as part of offboarding. The same applies after a password reset for a suspected
+  compromise.
+</Aside>
+
+## Webhooks and alerts
+
+- Treat event content as untrusted. Alert notifications can include event text,
+  and Discord or Slack may render links and mentions. Restrict `monitors.write`
+  to people you trust, and treat unexpected links in an alert channel as
+  suspicious.
+- Prefer HTTPS webhook URLs and a receiver you control. Do not put secrets in
+  event messages that may be forwarded to a chat channel.
+- `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1` is an explicit SSRF escape hatch. Enable it
+  only when every project member is trusted with internal network reachability,
+  and add egress rules at the container or host level.
+- Use a separate notification channel for production alerts, and review who can
+  edit monitors and channels.
+
+## Storage, retention, and backups
+
+- Set `KINGLET_RETENTION_DAYS` for your compliance and disk budget. The default
+  is 14 days.
+- Set `KINGLET_MAX_EVENTS_PER_PROJECT` and `KINGLET_MAX_DB_MB` so one project
+  cannot fill the shared database. A full database makes ingest fail for every
+  project.
+- Back up the whole `/data` volume, including `kinglet.db`, `-wal`, and `-shm`
+  while the service runs. Do not copy only the `.db` file from a live WAL store.
+  Litestream or the platform's volume snapshot is safer.
+- Test a restore before you need it. The auth secret and admin password live in
+  the same volume.
+
+## Updates and image pinning
+
+`:latest` is convenient for a trial, not a production contract. Pin a release
+tag, or better, a digest:
+
+```yaml
+services:
+  kinglet:
+    image: ghcr.io/rushlightlab/kinglet@sha256:<digest>
+```
+
+- Read the changelog before upgrading. Migrations run automatically on boot and
+  can rewrite tables; back up `/data` first.
+- Pull and redeploy deliberately. A pinned digest will not change under you.
+- Watch the repository's security advisories for release notes that affect your
+  deployment.
+
+## Container hardening
+
+The shipped image runs as the non-root `node` user. On a platform or Compose
+file you control, add:
+
+```yaml
+security_opt:
+  - no-new-privileges:true
+cap_drop:
+  - ALL
+```
+
+If your platform supports a read-only root filesystem, keep `/data` writable and
+mount `/tmp` as tmpfs. Set CPU, memory, and PID limits so one project cannot
+starve the host. Do not mount the Docker socket or run the container privileged.
+
+## Hardening checklist
+
+| Area | Check |
+| --- | --- |
+| TLS | `KINGLET_BASE_URL` is the public HTTPS origin; only the proxy publishes 80/443 |
+| Proxy trust | `KINGLET_TRUSTED_PROXIES` names only the proxy address or subnet |
+| Secrets | strong `BETTER_AUTH_SECRET` and admin password; `admin-password.txt` removed |
+| Accounts | admins are few; members and viewers are scoped to projects |
+| Keys | one key per service, least scopes, rotated on offboarding |
+| Webhooks | HTTPS receiver; private webhooks enabled only with egress controls |
+| Storage | retention and caps set; `/data` backed up and restore tested |
+| Updates | image pinned by tag or digest; changelog read before upgrading |
+| Runtime | non-root, `cap_drop: ALL`, `no-new-privileges`, resource limits |
+
+## Reporting a vulnerability
+
+Please report suspected vulnerabilities privately through the repository's
+[GitHub Security Advisories](https://github.com/rushlightlab/kinglet/security/advisories/new).
+Do not open a public issue with exploit details. Include the version or image
+digest, the deployment shape (proxy, storage backend, platform), and a minimal
+reproduction with dummy data.

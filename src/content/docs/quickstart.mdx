@@ -5,9 +5,15 @@ description: Run Kinglet on your own server in a few minutes.
 
 import { Aside } from "@astrojs/starlight/components";
 
-Kinglet is self-hosted. The fastest path is the public Docker image — no clone,
+Kinglet is self-hosted. The fastest path is the public Docker image - no clone,
 no build. If you already run Coolify or Dokploy, jump to their guides in
 [Self-hosting](/self-hosting/#coolify).
+
+<Aside type="caution" title="Exposing this beyond localhost?">
+  Read [Security](/security/) first. It covers TLS, narrowing
+  `KINGLET_TRUSTED_PROXIES`, strong secrets, API-key offboarding, webhooks, and
+  image pinning. Do not use the all-private-ranges shortcut.
+</Aside>
 
 ## Docker (one command)
 
@@ -34,7 +40,8 @@ Sign in with `admin@kinglet.local` (or the email you set through
 
 <Aside type="tip" title="Pin a version">
   `:latest` is convenient for a trial. For production, pin a release tag such as
-  `:0.3.0`.
+  `:0.3.0`, or a digest for an immutable deployment. See
+  [Updates and image pinning](/security/#updates-and-image-pinning).
 </Aside>
 
 ## Docker Compose (single host)
@@ -116,6 +123,7 @@ The API listens on `:3000` and the UI on `:5173`.
 
 <Aside type="note" title="Going to production">
   Set `KINGLET_BASE_URL` to your public HTTPS origin, use a persistent volume at
-  `/data`, and pin a release tag. The full checklist, TLS setup, backups, and
-  platform guides are in [Self-hosting](/self-hosting/).
+  `/data`, and pin a release tag or digest. The full checklist, TLS setup,
+  backups, and platform guides are in [Self-hosting](/self-hosting/); the
+  hardening checklist is in [Security](/security/).
 </Aside>
