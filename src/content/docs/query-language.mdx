@@ -13,6 +13,7 @@ The filter bar accepts a small, composable grammar:
 | `level>=warn` | level comparisons (`>`, `>=`, `<`, `<=`) |
 | `service:api` | a specific service |
 | `env:prod` | a specific environment |
+| `key:12` | events ingested by API key #12 |
 | `"conn refused"` | message contains the phrase |
 | `connection` | message contains the word — substring search, any position |
 | `-healthcheck` | message must **not** contain this |
@@ -35,8 +36,15 @@ filters follow you into the live view.
 - **Follow** — keeps you pinned to the newest event while live.
 - **Histogram** — drag across any time range to zoom in; each bucket stacks
   by level.
-- **Event drawer** — click any row for the full message and pretty-printed
-  fields.
+- **Event drawer** — click any row for the full message, pretty-printed fields,
+  and the API key that ingested it.
+
+<Aside type="note" title="API key usage">
+  `key:<id>` matches events ingested by that key. Open a key's actions in
+  **Settings → projects & keys** and choose **View usage** to apply it from the
+  UI. Attribution starts with events ingested after upgrading; older rows have
+  no key id.
+</Aside>
 
 <Aside type="tip">
   Search is substring-based (FTS5 trigram), so `timeout` finds

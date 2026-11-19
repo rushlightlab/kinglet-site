@@ -127,7 +127,8 @@ demoted or deleted, keys they created are revoked.
 
 The key actions menu can also **edit permissions** (change `ingest`/`query`
 scopes without replacing the key) and **reroll** it. Rerolling immediately
-invalidates the old plaintext and shows the new one once.
+invalidates the old plaintext and shows the new one once. **View usage** filters
+the logs to `key:<id>`, so you can see what each key has been sending.
 
 ```bash
 curl -X POST http://localhost:8080/v1/events \
