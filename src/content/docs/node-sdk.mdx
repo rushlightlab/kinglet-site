@@ -24,6 +24,15 @@ reported through `onError`, so your app never blocks on logging.
 pnpm --filter @kinglet/sdk-node build
 ```
 
+## Projects and keys
+
+There is no `project` option. A Kinglet API key is bound to one project on the
+server, so the key you pass as `token` selects where the events go. Create a
+key with the **ingest** scope in **Settings → projects & keys**, and use a
+separate key for each project or environment.
+
+`service` and `env` only tag events for filtering — they don't route them.
+
 ## Use
 
 ```ts
@@ -31,7 +40,7 @@ import { createLogger } from "@kinglet/sdk-node";
 
 const log = createLogger({
   url: "http://localhost:8080",      // your Kinglet server
-  token: process.env.KINGLET_KEY!, // API key with the ingest scope (kl_…)
+  token: process.env.KINGLET_KEY!,   // project key with the ingest scope (kl_…)
   service: "my-app",
   env: "prod",
 });
@@ -43,16 +52,43 @@ log.error("payment failed", { orderId: 1234, code: "card_declined" });
 await log.close();
 ```
 
+## TypeScript
+
+The SDK is written in TypeScript and builds with declaration output, so
+`dist/index.d.ts` ships alongside the JavaScript. `Logger`, `LoggerOptions`,
+and `LogFields` are exported — no separate `@types` package is needed:
+
+```ts
+import {
+  createLogger,
+  type Logger,
+  type LoggerOptions,
+  type LogFields,
+} from "@kinglet/sdk-node";
+```
+
+It is ESM-only (`"type": "module"`, with an `import` export) and requires
+Node 26+. With a local file dependency, build the package first so TypeScript
+can resolve the `types` entry.
+
 ## Options
 
 | Option | Default | What it does |
 | --- | --- | --- |
 | `url` | — | Kinglet base URL (required) |
-| `token` | — | ingest token (required) |
+| `token` | — | `kl_…` key with the ingest scope (required) — also selects the project |
 | `service` / `env` | — | tagged onto every event |
 | `batchSize` | `200` | flush after this many buffered events |
 | `flushMs` | `1000` | flush at least this often |
 | `onError` | — | called when a flush fails; the batch is re-queued |
+
+## Methods
+
+| Method | What it does |
+| --- | --- |
+| `trace` … `fatal` | buffer one event with an optional fields object |
+| `flush()` | send the current buffer now |
+| `close()` | stop the timer and perform a final flush |
 
 <Aside type="note" title="Roadmap">
   A pino transport (`transport: { target: "@kinglet/pino" }`) and a zero-code
