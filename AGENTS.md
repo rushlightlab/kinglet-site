@@ -7,7 +7,8 @@ request from the user, ask first.
 
 ## TL;DR
 
-- Node **24+**, pnpm **12.21.0** (see `package.json`).
+- Node **26+**, pnpm **12.21.0** (see `package.json`; Node is pinned in
+  `.nvmrc`).
 - Never push, merge, deploy, change Cloudflare/Wrangler settings, or rotate
   secrets without explicit user approval.
 - Never invent product behavior. Verify claims against the `rushlightlab/kinglet`
@@ -193,8 +194,9 @@ docker run --rm -p 8080:8080 kinglet-site:local
 ```
 
 - Runtime: `nginxinc/nginx-unprivileged` on port **8080**.
-- The build stage uses Node 24.22.1 to match Cloudflare Workers Builds' current
-  Node image; the site does not require Node 26.
+- The build stage uses Node 26.13.1, matching `.nvmrc` and the Kinglet API
+  toolchain. Cloudflare Workers Builds needs the version file to override its
+  current default.
 - `nginx.conf` provides gzip, immutable `/_astro/` caching, security headers,
   `/healthz`, and the Starlight 404 page.
 - `public/_headers` is the Cloudflare equivalent; keep the security headers and

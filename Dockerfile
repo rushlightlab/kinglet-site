@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # ---- build: render the static site ----
-# Build with the same Node line Cloudflare Workers Builds uses by default.
-# The site does not require Node 26; the API in the Kinglet repo does.
-FROM node:24.22.1-bookworm-slim AS build
+# Keep this aligned with .nvmrc. Cloudflare Workers Builds defaults to an older
+# Node line, so the version file is what makes the deployed build use Node 26.
+FROM node:26.13.1-bookworm-slim AS build
 WORKDIR /site
 RUN npm install -g pnpm@12.21.0
 COPY package.json pnpm-lock.yaml ./

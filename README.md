@@ -43,8 +43,9 @@ Other static hosts work too:
   `docker run --rm -p 8080:8080 kinglet-site` (a non-root nginx serves the
   static output behind your TLS proxy).
 
-The build needs Node 24+ (`engines`), which is what Cloudflare's image
-provides. All GitHub and GHCR links already point at
+The build needs Node 26+ (`engines`, also pinned in `.nvmrc`). Cloudflare
+Workers Builds defaults to Node 24, so the version file makes its build image
+download and use Node 26. All GitHub and GHCR links already point at
 [`rushlightlab`](https://github.com/rushlightlab).
 
 ## Changelog and releases
