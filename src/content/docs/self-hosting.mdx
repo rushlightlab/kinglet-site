@@ -336,6 +336,14 @@ Don't copy only the `.db` file from a live WAL store.
 Pin a release tag in production; `:latest` moves with each release. Migrations
 run automatically on boot.
 
+<Aside type="caution" title="UUID v7 upgrade">
+  Databases created before this release are converted from integer ids to
+  UUID v7 text ids on first boot. The migration preserves rows and rewires every
+  project, key, monitor, alert, and member reference, but it rewrites tables, so
+  take a backup of `/data` first. Expect a one-time pause proportional to the
+  database size.
+</Aside>
+
 ## Troubleshooting
 
 ### The page loads but sign-in returns `403 INVALID_ORIGIN`

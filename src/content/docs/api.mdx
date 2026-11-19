@@ -7,7 +7,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 Auth is either the Better Auth session cookie (web UI) or
 `Authorization: Bearer kl_…` (project API keys). Session requests to
-project-scoped routes pass `?project=<id>`; API keys are bound to their project
+project-scoped routes pass `?project=<uuid>`; API keys are bound to their project
 and enforce their `ingest` / `query` scopes.
 
 Browser sign-in, sign-out, and password changes are served by Better Auth under
@@ -57,6 +57,26 @@ Go, and PHP.
 | `/v1/stream` | `GET` | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients |
 | `/healthz` | `GET` | Health check (no auth) |
 
+Every event has two identifiers:
+
+```json
+{
+  "id": 84021,
+  "uid": "0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30",
+  "apiKeyId": "0190f3a2-8d10-7f3b-9c4a-1e2d3f4a5b6c",
+  "ts": 1795076053357,
+  "level": 4,
+  "service": "api",
+  "env": "prod",
+  "message": "upstream timed out",
+  "fields": { "requestId": "req_9f2" }
+}
+```
+
+`id` is the integer row id used for pagination and full-text search. `uid` is a
+UUID v7 that is stable and safe to share; fetch one event with
+`GET /v1/events/<uid>`.
+
 ## Monitors & alerts
 
 | Route | Method | What it does |
@@ -79,12 +99,13 @@ Go, and PHP.
 
 ## Pagination
 
-`GET /v1/events` returns events newest-first plus a `nextCursor` (the id of
-the last row returned) when more may exist. Request the next page with
-`cursor=<nextCursor>`:
+`GET /v1/events` returns events newest-first plus a `nextCursor` (the numeric
+row id of the last row returned) when more may exist. Request the next page
+with `cursor=<nextCursor>`. Project ids are UUID v7; the cursor is deliberately
+still the integer row id so pagination stays stable while logs are written.
 
 ```bash
-curl "http://localhost:8080/v1/events?project=1&q=level:error&limit=500&cursor=84021" \
+curl "http://localhost:8080/v1/events?project=0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30&q=level:error&limit=500&cursor=84021" \
   -H "Authorization: Bearer kl_…"
 ```
 
