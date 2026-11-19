@@ -230,6 +230,13 @@ BETTER_AUTH_SECRET=<32+ random bytes>
 KINGLET_TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
 ```
 
+<Aside type="caution" title="Replace every placeholder">
+  Change `logs.example.com` to your actual host in both `KINGLET_BASE_URL` and
+  the domain below. `KINGLET_BASE_URL` must match the origin in the browser
+  exactly. If it still points at `logs.example.com`, the page loads but sign-in
+  fails with `403 INVALID_ORIGIN`.
+</Aside>
+
 ### 4. Add the domain
 
 Open **Domains → Add Domain**: host `logs.example.com`, container port `3000`,
