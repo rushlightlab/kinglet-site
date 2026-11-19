@@ -151,8 +151,8 @@ Use the smallest role that works:
 - Remove project members when they leave the team. Project membership is the
   boundary for members and viewers; admins can see every project.
 - Disable an account before deleting it when you may need to restore access.
-  Disabling blocks sign-in and invalidates keys owned by that user; enabling it
-  again restores them, so delete or rotate keys if the account was compromised.
+  Disabling blocks sign-in and revokes keys owned by that user; enabling the
+  account does not restore them.
 - Role changes and account deletion delete sessions and keys owned by the user.
   Mutating requests bypass the session cookie cache; read-only requests can use a
   signed cache for up to 60 seconds. If you need immediate read revocation, sign
@@ -176,10 +176,10 @@ Use the smallest role that works:
   that is sending more than expected.
 
 <Aside type="note" title="Offboarding a project member">
-  In current releases, removing a project member does not automatically revoke
-  API keys that member created. Open the project's key list and revoke those keys
-  as part of offboarding. The same applies after a password reset for a suspected
-  compromise.
+  Removing a project member revokes the API keys that member created for that
+  project. A password reset or account disable revokes keys owned by the target.
+  Still review the project key list after offboarding, especially for keys that
+  were rotated or shared outside the workspace.
 </Aside>
 
 ## Webhooks and alerts

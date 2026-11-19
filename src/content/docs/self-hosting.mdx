@@ -320,7 +320,9 @@ UI details.
 | `KINGLET_ADMIN_PASSWORD` | *(generated)* | Bootstrap administrator password (when no administrator exists) |
 | `KINGLET_SESSION_DAYS` | `30` | Web session lifetime |
 | `KINGLET_RETENTION_DAYS` | `14` | Delete events older than this |
+| `KINGLET_ALERT_RETENTION_DAYS` | `90` | Delete alert history older than this |
 | `KINGLET_MAX_EVENTS_PER_PROJECT` | `1000000` | Hard cap on retained events per project (`0` = unlimited) |
+| `KINGLET_MAX_PROJECT_DB_MB` | `1024` | Hard cap on retained event bytes per project (`0` = unlimited) |
 | `KINGLET_MAX_DB_MB` | `4096` | Hard cap on local database size in MB (`0` = unlimited) |
 | `KINGLET_ALLOW_PRIVATE_WEBHOOKS` | — | Allow private/internal webhook targets (SSRF escape hatch) |
 

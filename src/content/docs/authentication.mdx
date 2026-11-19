@@ -51,12 +51,13 @@ Admins can reset a user's password, change their role, disable or enable the
 account, or delete it from **Settings → Users**.
 
 - **Change role** switches a user between member and viewer.
-- **Reset password** generates a compliant password, shows it once, and signs
-  the user out everywhere.
-- **Disable** blocks sign-in and invalidates keys minted by that user until the
-  account is enabled again.
-- **Delete** removes the account and its sessions; administrators cannot be
-  deleted or disabled, and you cannot disable or delete your own account.
+- **Reset password** generates a compliant password, shows it once, signs the
+  user out everywhere, and revokes keys they created.
+- **Disable** blocks sign-in and revokes keys minted by that user. Enabling the
+  account does not restore those keys.
+- **Delete** removes the account, its sessions, and its keys; administrators
+  cannot be deleted or disabled, and you cannot disable or delete your own
+  account.
 
 ## Roles
 
@@ -126,13 +127,15 @@ Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
 in **Settings → Projects → manage**; the list keeps a short token prefix
 (`kl_XXXXXXXX…`), scopes, creator, created date, and last-used time. A key
 created without an explicit `scopes` array defaults to `["ingest"]`; unknown
-scopes are rejected with a 400. When a user is demoted or deleted, keys they
-created are revoked.
+scopes are rejected with a 400. When a user is demoted, disabled, deleted, or
+removed from a project, keys they created are revoked (project removal revokes
+the keys for that project). A password reset also revokes the target's keys.
 
 The key actions menu can also **edit permissions** (change `ingest`/`query`
 scopes without replacing the key) and **reroll** it. Rerolling immediately
 invalidates the old plaintext and shows the new one once. **View usage** filters
-the logs to `key:<id>`, so you can see what each key has been sending.
+the logs to `key:<id>`, so you can see what each key has been sending. Only the
+key's creator or an administrator can change or revoke it.
 
 ```bash
 curl -X POST http://localhost:8080/v1/events \
