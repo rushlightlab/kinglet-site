@@ -3,7 +3,7 @@
   // framework auto-configuration (which would add @astrojs/cloudflare — not
   // needed for a fully static Starlight site and currently incompatible with
   // Astro 7's Markdown pipeline).
-  "name": "kinglet-site",
+  "name": "kinglet",
   "compatibility_date": "2026-11-18",
   "assets": {
     "directory": "./dist",
