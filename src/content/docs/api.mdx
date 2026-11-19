@@ -32,9 +32,11 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/v1/projects` | `GET`/`POST` | List assigned projects / create a project (admin) |
 | `/v1/projects/:id` | `DELETE` | Delete a project and all its data (admin) |
 | `/v1/users` | `GET`/`POST` | List / create users (admin) |
-| `/v1/users/:id` | `PATCH`/`DELETE` | Change role / delete user (admin) |
+| `/v1/users/:id` | `PATCH`/`DELETE` | Change role, name, or disabled status / delete user (admin) |
+| `/v1/users/:id/reset-password` | `POST` | Generate a new password and revoke sessions (admin) |
 | `/v1/projects/:id/keys` | `GET`/`POST` | List / create API keys for a project |
-| `/v1/keys/:id` | `DELETE` | Revoke a key (requires `?project=`) |
+| `/v1/keys/:id` | `PATCH`/`DELETE` | Edit scopes / revoke a key (requires `?project=`) |
+| `/v1/keys/:id/rotate` | `POST` | Replace key material; the old key stops working (requires `?project=`) |
 | `/v1/projects/:id/members` | `GET`/`POST` | List / assign project members (admin) — POST body `{ "userId": "…" }` |
 | `/v1/projects/:id/members/:userId` | `PATCH`/`DELETE` | Grant/revoke `canClearLogs` / remove a member (admin) |
 | `/v1/system/status` | `GET` | Operational diagnostics — retention, monitors, counts (admin) |

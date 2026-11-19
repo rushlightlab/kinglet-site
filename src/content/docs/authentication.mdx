@@ -44,6 +44,18 @@ password is set or changed.
 Administrators can leave the password blank when creating a user — Kinglet
 generates a 16-character password that meets the same policy and shows it once.
 
+## User actions
+
+Admins can reset a user's password, disable or enable the account, or delete it
+from the user actions menu.
+
+- **Reset password** generates a compliant password, shows it once, and signs
+  the user out everywhere.
+- **Disable** blocks sign-in and invalidates keys minted by that user until the
+  account is enabled again.
+- **Delete** removes the account and its sessions; administrators cannot be
+  deleted or disabled, and you cannot disable or delete your own account.
+
 ## Roles
 
 | Role | Can do |
@@ -112,6 +124,10 @@ in **/settings → projects & keys**; the list keeps a display prefix, scopes,
 creator, and last-used time. A key created without an explicit `scopes` array
 defaults to `["ingest"]`; unknown scopes are rejected with a 400. When a user is
 demoted or deleted, keys they created are revoked.
+
+The key actions menu can also **edit permissions** (change `ingest`/`query`
+scopes without replacing the key) and **reroll** it. Rerolling immediately
+invalidates the old plaintext and shows the new one once.
 
 ```bash
 curl -X POST http://localhost:8080/v1/events \
