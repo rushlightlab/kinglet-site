@@ -3,7 +3,7 @@
 # ---- build: render the static site ----
 FROM node:26-bookworm-slim AS build
 WORKDIR /site
-RUN npm install -g pnpm@10.15.0
+RUN npm install -g pnpm@12.21.0
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
