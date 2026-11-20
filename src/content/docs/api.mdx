@@ -46,17 +46,18 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 See [HTTP ingestion](/ingestion/) for copy-paste clients in TypeScript, Python,
 Go, and PHP.
 
-| Route             | Method   | What it does                                                                                                         |
-| ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `/v1/events`      | `POST`   | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events                                                             |
-| `/v1/events`      | `GET`    | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor`                                       |
-| `/v1/events/:uid` | `GET`    | Fetch one event by its UUID v7 (project-scoped)                                                                      |
-| `/v1/events`      | `DELETE` | Clear a project's events. Optional `from`/`to` epoch ms; omit both for all. Admin or a member granted **clear logs** |
-| `/v1/histogram`   | `GET`    | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240)                                                 |
-| `/v1/services`    | `GET`    | Known services with event counts                                                                                     |
-| `/v1/aggregate`   | `GET`    | Totals for a filter; optional `groupBy=service\|level\|env`, `limit` ≤ 200                                           |
-| `/v1/stream`      | `GET`    | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients                                          |
-| `/healthz`        | `GET`    | Health check (no auth)                                                                                               |
+| Route                     | Method   | What it does                                                                                                         |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/v1/events`              | `POST`   | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events                                                             |
+| `/v1/events`              | `GET`    | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor`                                       |
+| `/v1/events/:uid`         | `GET`    | Fetch one event by its UUID v7 (project-scoped)                                                                      |
+| `/v1/events/:uid/context` | `GET`    | Neighbouring events. Params: `before`, `after` (0–20, default 5)                                                     |
+| `/v1/events`              | `DELETE` | Clear a project's events. Optional `from`/`to` epoch ms; omit both for all. Admin or a member granted **clear logs** |
+| `/v1/histogram`           | `GET`    | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240)                                                 |
+| `/v1/services`            | `GET`    | Known services with event counts                                                                                     |
+| `/v1/aggregate`           | `GET`    | Totals for a filter; optional `groupBy=service\|level\|env`, `limit` ≤ 200                                           |
+| `/v1/stream`              | `GET`    | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients                                          |
+| `/healthz`                | `GET`    | Health check (no auth)                                                                                               |
 
 Every event has two identifiers:
 
@@ -77,6 +78,14 @@ Every event has two identifiers:
 `id` is the integer row id used for pagination and full-text search. `uid` is a
 UUID v7 that is stable and safe to share; fetch one event with
 `GET /v1/events/<uid>`.
+
+## Event context
+
+`GET /v1/events/<uid>/context?before=5&after=5` returns one event plus its
+immediate neighbours as `{ event, before, after }`. `before` and `after` default
+to 5 and accept 0–20. Each list is chronological and ordered by `(ts, id)`, so
+equal timestamps are stable. The event and both lists are restricted to the
+resolved project; an unknown or cross-project `uid` is a `404`.
 
 ## Aggregation
 
