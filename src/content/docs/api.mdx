@@ -121,9 +121,12 @@ Callers without `logs.read` also receive the placeholder summary
 
 `GET /v1/alerts` accepts `monitorId` (UUID, must belong to the resolved
 project), `state` (`fired` or `resolved`), and `from`/`to` epoch milliseconds on
-`firedAt`. An inverted range is rejected; any provided range is clamped to the
-same 31-day window as events. `GET /v1/alerts/:id` applies the same project and
-masking rules and returns `404` for an alert outside the project.
+`firedAt`. An inverted range is rejected; when `from`/`to` are supplied, the
+window is clamped to the same 31 days as events. With no bounds, history remains
+all-time and is capped by `limit`. A `monitorId` outside the resolved project
+returns `404` rather than an empty list. `GET /v1/alerts/:id` applies the same
+project and masking rules and also returns `404` for an alert outside the
+project.
 
 ## Notifications
 
