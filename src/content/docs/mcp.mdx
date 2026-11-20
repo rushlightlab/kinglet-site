@@ -18,8 +18,9 @@ client work with the configuration below.
 
 <Aside type="note" title="Not on npm yet">
   The package is prepared for npm as `@kinglet/mcp`, but it is not published yet. The snippets below
-  use `npx -y @kinglet/mcp`; until publication, [build it from a checkout](#run-from-a-checkout) and
-  replace the command with `node` plus the absolute path to `packages/mcp/dist/cli.js`.
+  use `npx -y @kinglet/mcp@0.3.0`; until publication, [build it from a
+  checkout](#run-from-a-checkout) and replace the command with `node` plus the absolute path to
+  `packages/mcp/dist/cli.js`.
 </Aside>
 
 ## Create an MCP key
@@ -65,8 +66,8 @@ development.
 
 <Aside type="note" title="Windows: wrap npx with cmd /c">
   Desktop clients often start without your shell `PATH`. If `npx` is not found, use `"command":
-  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp"]` in JSON clients. On Codex CLI, set
-  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp"]`.
+  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp@0.3.0"]` in JSON clients. On Codex CLI, set
+  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.3.0"]`.
 </Aside>
 
 ### Claude Desktop
@@ -78,7 +79,7 @@ Edit `claude_desktop_config.json` (Settings → Developer → Edit Config):
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp"],
+      "args": ["-y", "@kinglet/mcp@0.3.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -96,7 +97,7 @@ Add the server from a terminal:
 claude mcp add kinglet \
   --env KINGLET_URL=https://logs.example.com \
   --env KINGLET_MCP_KEY=km_... \
-  -- npx -y @kinglet/mcp
+  -- npx -y @kinglet/mcp@0.3.0
 ```
 
 A project-scoped `.mcp.json` uses the same `mcpServers` shape as Claude Desktop.
@@ -113,7 +114,7 @@ project:
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp"],
+      "args": ["-y", "@kinglet/mcp@0.3.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -133,7 +134,7 @@ Edit `.vscode/mcp.json`:
     "kinglet": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp"],
+      "args": ["-y", "@kinglet/mcp@0.3.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -153,7 +154,7 @@ Edit `~/.codex/config.toml`:
 ```toml
 [mcp_servers.kinglet]
 command = "npx"
-args = ["-y", "@kinglet/mcp"]
+args = ["-y", "@kinglet/mcp@0.3.0"]
 env = { KINGLET_URL = "https://logs.example.com", KINGLET_MCP_KEY = "km_..." }
 ```
 
@@ -166,7 +167,7 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp"],
+      "args": ["-y", "@kinglet/mcp@0.3.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -186,7 +187,7 @@ writes the same entry:
   "context_servers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp"],
+      "args": ["-y", "@kinglet/mcp@0.3.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -207,7 +208,7 @@ Add a local server to `opencode.json` or `opencode.jsonc`:
     "servers": {
       "kinglet": {
         "type": "local",
-        "command": ["npx", "-y", "@kinglet/mcp"],
+        "command": ["npx", "-y", "@kinglet/mcp@0.3.0"],
         "environment": {
           "KINGLET_URL": "https://logs.example.com",
           "KINGLET_MCP_KEY": "km_...",
@@ -304,7 +305,9 @@ change access.
 ## Limits
 
 - **Requests:** 60 per minute per key, with a burst of 10. A `429` means back
-  off; there are no automatic retries.
+  off; there are no automatic retries. The bucket is enforced in the API
+  process; if you run multiple API instances, add a shared limit at the reverse
+  proxy or edge because each instance enforces its own bucket.
 - **Rows:** 50 by default, 200 maximum. `search_events` returns a `nextCursor`
   when more rows are available.
 - **Response size:** 256 KiB per result. Large list responses are trimmed and
