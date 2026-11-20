@@ -316,7 +316,8 @@ change access.
   `level`, `service`, `env`, `message`, `fields`; max 8, unique) projects each
   event without changing the cursor.
 - **Context:** `get_event_context` returns the event plus chronological
-  `before`/`after` lists; both default to 5 and cap at 20.
+  `before`/`after` lists; both default to 5 and cap at 20. If the result exceeds
+  the 256 KiB cap, retry with smaller `before`/`after`.
 - **Groups:** `count_events` returns 50 groups by default, 200 maximum, ordered
   by count. `truncated: true` means more groups exist. The group limit does not
   cap `count_events.total`, which is the full match count; the response also
