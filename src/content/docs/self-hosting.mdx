@@ -359,12 +359,13 @@ the database or an image layer.
 
 ## Sizing
 
-- **RAM**: ~150–250 MB steady state.
+- **RAM**: ~200 MB idle; ~400 MB under sustained batch ingest. Leave 512 MB–1 GB
+  of headroom for query, retention, and backup jobs.
 - **CPU**: 2 vCPUs are enough for a busy small app; throughput depends on event
   size and query volume. Ingest is batched SQLite writes, not per-request round
   trips.
-- **Disk**: roughly a few hundred MB per million retained events, depending on
-  payload size. With the default 14-day retention, a small app stays in
+- **Disk**: roughly 0.5–1 GB per million small events, depending on payload size
+  and indexes. With the default 14-day retention, a small app stays in
   single-digit gigabytes.
 
 ## Backups

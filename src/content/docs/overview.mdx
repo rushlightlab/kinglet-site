@@ -11,7 +11,8 @@ substring search — all on one small container.
 
 <CardGrid>
   <Card title="Tiny by default">
-    One process, one database, zero external services. ~150–250 MB of RAM — sized for a small VPS.
+    One process, one database, zero external services. ~200 MB idle, ~400 MB under sustained batch
+    load — sized for a small VPS.
   </Card>
   <Card title="Log from anything">
     NDJSON or JSON over HTTP. curl, Vector, Fluent Bit, or the in-repo Node SDK — if it can POST, it
@@ -26,7 +27,7 @@ substring search — all on one small container.
     webhook, Discord, or Slack with cooldowns and auto-resolve.
   </Card>
   <Card title="Yours to run">
-    Docker Compose in, Litestream backups out. MIT licensed, no phone-home, no telemetry.
+    One Docker image in, optional S3 snapshots out. MIT licensed, no phone-home, no telemetry.
   </Card>
   <Card title="Storage you choose">
     SQLite by default, libSQL for local files or hosted Turso, ClickHouse on the roadmap — one small

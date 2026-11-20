@@ -5,6 +5,7 @@ import "@fontsource/chakra-petch/600.css";
 import "@fontsource/chakra-petch/700.css";
 import "../styles/landing.css";
 import releases from "../data/releases.json";
+import dashboardPreview from "../assets/dashboard-preview.png";
 
 const latestVersion = releases.latest?.version ?? "0.3.0";
 ---
@@ -16,7 +17,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Kinglet — the tiny self-hostable log platform. One container, one SQLite file, a live-tailing UI, and alerts that don't cry wolf. Small. Light. King."
+      content="Kinglet — the tiny self-hostable log platform. One container, one SQLite database, a live-tailing UI, and alerts that don't cry wolf. Small. Light. King."
     />
     <meta name="theme-color" content="#07080a" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -129,7 +130,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 style="--d:.2s; margin: 28px 0 0; max-width: 36ch; font-size: 15px; line-height: 1.7; color: var(--muted);"
               >
                 Kinglet collects logs from anything that can POST, keeps them in a single SQLite
-                file, and gives you a live-tailing UI with substring search — on one small
+                database, and gives you a live-tailing UI with substring search — on one small
                 container. <span style="color: var(--text)">MIT licensed.</span>
               </p>
 
@@ -145,17 +146,22 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 </a>
               </div>
 
-              <div class="hero-reveal" style="--d:.36s; margin-top: 40px; max-width: 440px;">
+              <div class="hero-reveal" style="--d:.36s; margin-top: 40px; max-width: 460px;">
                 <div style="display: flex; align-items: center; gap: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em; color: var(--faint); margin-bottom: 8px;">
-                  <span style="color: var(--gold)">$</span> one command, no dependencies
+                  <span style="color: var(--gold)">$</span> one container, no services to wire
                 </div>
-                <div class="cmd-bar">
-                  <code class="cmd-text">
-                    <span style="color: var(--gold)">$</span> docker compose up -d
+                <div class="cmd-bar cmd-bar-stack">
+                  <code class="cmd-text cmd-text-stack">
+                    <span class="cmd-line">
+                      <span style="color: var(--gold)">$</span> docker run -d --name kinglet \
+                    </span>
+                    <span class="cmd-line"> -p 8080:3000 -v kinglet-data:/data \</span>
+                    <span class="cmd-line"> -e KINGLET_BASE_URL=http://localhost:8080 \</span>
+                    <span class="cmd-line"> ghcr.io/rushlightlab/kinglet:latest</span>
                   </code>
                   <button
                     class="copy-btn"
-                    data-copy="docker compose up -d"
+                    data-copy="docker run -d --name kinglet -p 8080:3000 -v kinglet-data:/data -e KINGLET_BASE_URL=http://localhost:8080 ghcr.io/rushlightlab/kinglet:latest"
                     aria-label="Copy install command"
                   >
                     <span class="copy-label">copy</span>
@@ -171,7 +177,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                   <span class="tick">✓</span> one container, one database
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
-                  <span class="tick">✓</span> ~170 MB RAM
+                  <span class="tick">✓</span> ~200 MB idle RAM
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
                   <span class="tick">✓</span> MIT licensed
@@ -193,84 +199,24 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
               </div>
 
               <div class="window" style="position: relative; z-index: 10;">
-                <div class="window-bar">
-                  <div class="window-dots" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                  <div class="window-title">
-                    kinglet <span style="color: var(--faint)">/</span> stream{" "}
-                    <span style="color: var(--faint)">/</span>{" "}
-                    <span style="color: var(--gold)">all services</span>
-                  </div>
-                  <div class="window-live">
-                    <span class="live-dot" aria-hidden="true"></span> live
-                  </div>
-                </div>
-
-                <div class="dash-toolbar">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="toolbar-tab active">Logs</span>
-                    <span class="toolbar-tab">Monitors</span>
-                  </div>
-                  <div class="toolbar-search">⌕ &nbsp;level&gt;=error service:api</div>
-                </div>
-
-                <div class="mini-stats">
-                  <div>
-                    <span class="mini-label">EVENTS</span>
-                    <span class="mini-val">1.2M</span>
-                  </div>
-                  <div>
-                    <span class="mini-label">ERRORS</span>
-                    <span class="mini-val" style="color: var(--coral)">
-                      0.3%
-                    </span>
-                  </div>
-                  <div>
-                    <span class="mini-label">RAM</span>
-                    <span class="mini-val">170MB</span>
-                  </div>
-                  <div>
-                    <span class="mini-label">RETENTION</span>
-                    <span class="mini-val">14d</span>
-                  </div>
-                </div>
-
-                <div class="stream">
-                  <div class="log-row">
-                    <span class="log-time">14:32:05.114</span>
-                    <span class="lvl lvl-info">info</span>
-                    <span class="log-svc">web</span>
-                    <span>user signed in</span>
-                  </div>
-                  <div class="log-row">
-                    <span class="log-time">14:32:05.230</span>
-                    <span class="lvl lvl-info">info</span>
-                    <span class="log-svc">api</span>
-                    <span>request served in 42ms</span>
-                  </div>
-                  <div class="log-row">
-                    <span class="log-time">14:32:05.412</span>
-                    <span class="lvl lvl-warn">warn</span>
-                    <span class="log-svc">api</span>
-                    <span>slow query detected (812ms)</span>
-                  </div>
-                  <div class="log-row">
-                    <span class="log-time">14:32:05.507</span>
-                    <span class="lvl lvl-error">error</span>
-                    <span class="log-svc">billing</span>
-                    <span>payment failed: card_declined</span>
-                    <span class="log-errtag">FIRED → DISCORD</span>
-                  </div>
-                  <div class="log-row">
-                    <span class="log-time">14:32:06.001</span>
-                    <span class="lvl lvl-info">info</span>
-                    <span class="log-svc">worker</span>
-                    <span>job completed</span>
-                  </div>
-                </div>
+                <a
+                  class="dashboard-link"
+                  href={dashboardPreview.src}
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Open a full-size Kinglet dashboard screenshot"
+                  title="Open full-size screenshot"
+                >
+                  <img
+                    class="dashboard-preview"
+                    src={dashboardPreview.src}
+                    width={dashboardPreview.width}
+                    height={dashboardPreview.height}
+                    alt="Kinglet dashboard showing the live log stream, histogram, service filters, and project controls"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </a>
               </div>
 
               <div
@@ -369,11 +315,11 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 STORAGE YOU CHOOSE
               </div>
               <h3 style="font-family: var(--display); font-size: 20px; font-weight: 600; margin: 12px 0 0;">
-                One database, or Turso.
+                One database, multiple flavours.
               </h3>
               <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
-                SQLite by default, libSQL for scale-out, ClickHouse on the roadmap — same interface,
-                same app, your call.
+                SQLite on your own box, or Turso/libSQL as a managed remote replica. Same schema,
+                same queries, same app — pick what fits.
               </p>
             </article>
 
@@ -399,7 +345,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                   <span class="tick">✓</span> one volume
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
-                  <span class="tick">✓</span> Litestream-ready
+                  <span class="tick">✓</span> optional S3 snapshots
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
                   <span class="tick">✓</span> no telemetry
@@ -517,17 +463,22 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             <div class="code-body">
               <div role="tabpanel" id="panel-docker" data-panel="docker" class="code-panel">
                 <pre><code><span class="c-com"># start kinglet — one container, one volume</span>
-<span class="c-punc">$</span> docker compose up -d
+<span class="c-punc">$</span> docker run -d --name kinglet \
+    --restart unless-stopped \
+    -p 8080:3000 \
+    -v kinglet-data:/data \
+    -e KINGLET_BASE_URL=http://localhost:8080 \
+    ghcr.io/rushlightlab/kinglet:latest
 
-<span class="c-com"># grab your ingest token</span>
-<span class="c-punc">$</span> docker compose exec kinglet cat /data/kinglet.token
+<span class="c-com"># first boot: read the generated admin password</span>
+<span class="c-punc">$</span> docker exec kinglet cat /data/admin-password.txt
 
-<span class="c-ok">✓</span> <span class="c-dim">ui listening on http://localhost:8080</span></code></pre>
+<span class="c-ok">✓</span> <span class="c-dim">open http://localhost:8080, then create an ingest key in Settings → Projects</span></code></pre>
               </div>
               <div role="tabpanel" id="panel-curl" data-panel="curl" class="code-panel hidden">
-                <pre><code><span class="c-com"># send your first log — any app, any language</span>
+                <pre><code><span class="c-com"># create an ingest key in Settings → Projects first</span>
 <span class="c-punc">$</span> curl -X POST http://localhost:8080/v1/events \
-    -H <span class="c-str">"Authorization: Bearer $KINGLET_TOKEN"</span> \
+    -H <span class="c-str">"Authorization: Bearer kl_…"</span> \
     -H <span class="c-str">"Content-Type: application/x-ndjson"</span> \
     --data-binary <span class="c-str">'&#123;"level":"info","message":"hello from my app","service":"my-app"&#125;'</span>
 
@@ -576,12 +527,12 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           <div class="stats-grid">
             <div class="stat-cell reveal" style="--d:.05s">
               <div class="stat-num">
-                <span class="counter" data-target="170">
+                <span class="counter" data-target="200">
                   0
                 </span>
                 <span class="stat-unit">MB</span>
               </div>
-              <div class="stat-label">steady-state ram</div>
+              <div class="stat-label">idle memory</div>
             </div>
             <div class="stat-cell reveal" style="--d:.11s">
               <div class="stat-num">
@@ -606,9 +557,17 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 </span>
                 <span class="stat-unit">k</span>
               </div>
-              <div class="stat-label">events per ingest batch</div>
+              <div class="stat-label">events per ingest request</div>
             </div>
           </div>
+          <p
+            class="reveal"
+            style="text-align: center; max-width: 40rem; margin: 28px auto 0; font-size: 11px; line-height: 1.8; color: var(--faint);"
+          >
+            Local Docker measurement: 197 MB idle, 375 MB under four concurrent 1k-event batches;
+            about 0.7 GB of database per million small events. Your payloads and retention will move
+            those numbers.
+          </p>
         </div>
       </section>
 
@@ -646,13 +605,18 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
               View on GitHub <span aria-hidden="true">→</span>
             </a>
           </div>
-          <div class="cmd-bar" style="margin: 40px auto 0; max-width: 28rem;">
-            <code class="cmd-text">
-              <span style="color: var(--gold)">$</span> docker compose up -d
+          <div class="cmd-bar cmd-bar-stack" style="margin: 40px auto 0; max-width: 34rem;">
+            <code class="cmd-text cmd-text-stack">
+              <span class="cmd-line">
+                <span style="color: var(--gold)">$</span> docker run -d --name kinglet \
+              </span>
+              <span class="cmd-line"> -p 8080:3000 -v kinglet-data:/data \</span>
+              <span class="cmd-line"> -e KINGLET_BASE_URL=http://localhost:8080 \</span>
+              <span class="cmd-line"> ghcr.io/rushlightlab/kinglet:latest</span>
             </code>
             <button
               class="copy-btn"
-              data-copy="docker compose up -d"
+              data-copy="docker run -d --name kinglet -p 8080:3000 -v kinglet-data:/data -e KINGLET_BASE_URL=http://localhost:8080 ghcr.io/rushlightlab/kinglet:latest"
               aria-label="Copy install command"
             >
               <span class="copy-label">copy</span>
@@ -684,9 +648,6 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             <p style="font-size: 12px; color: var(--faint); margin: 16px 0 0; max-width: 18rem; line-height: 1.7;">
               Small. Light. King. Self-hosted logs for apps that ship.
             </p>
-            <div class="status-pill" style="margin-top: 20px;">
-              <span class="live-dot" aria-hidden="true"></span> single container · always up
-            </div>
           </div>
           <div>
             <div class="footer-head">Docs</div>
