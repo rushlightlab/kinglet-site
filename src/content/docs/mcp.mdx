@@ -260,7 +260,12 @@ pnpm --filter @kinglet/mcp build
 ## Tools
 
 All tools are limited to the key's project. Read tools need their matching
-scope; `get_context` works with any valid MCP key.
+scope; `get_context` works with any valid MCP key. Monitor write tools
+(`create_monitor`, `update_monitor`, `delete_monitor`) are advertised only when
+the key has `monitors.write` **and** the server sets
+`KINGLET_MCP_ALLOW_MONITOR_WRITES=1`. A read-only key or a closed gate sees the
+12 read tools. Hiding tools is UX only; every write remains authorized by the
+API.
 
 | Tool                | Scope            | What it does                                                                          |
 | ------------------- | ---------------- | ------------------------------------------------------------------------------------- |
