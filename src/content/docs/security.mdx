@@ -180,6 +180,25 @@ Use the smallest role that works:
   offboarding, especially for keys that were rotated or shared outside the workspace.
 </Aside>
 
+## MCP keys
+
+MCP keys (`km_...`) are project-bound machine credentials for AI clients. They
+are separate from API keys: their scopes are `logs.read`, `monitors.read`, and
+`monitors.write`, they never inherit a human role, and they cannot reach
+projects, users, keys, settings, backups, or admin routes. Create and revoke
+them under **Settings → Projects → open a project → MCP keys**; revocation and
+scope changes apply on the next request.
+
+Log and monitor results from MCP tools leave your server and go to the AI
+provider configured in the client. Point the key at a project whose contents are
+appropriate for that provider, treat event text as untrusted input (prompt
+injection), and grant `monitors.write` only when the client should change
+monitors. MCP monitor writes are disabled by default; set
+`KINGLET_MCP_ALLOW_MONITOR_WRITES=1` only when the client requires an explicit
+approval policy for tool calls. Monitor reads return channel ids, names, types,
+and health only; webhook URLs are never returned, and monitor writes accept
+channel ids only. See [MCP server](/mcp/) for client setup.
+
 ## Webhooks and alerts
 
 - Treat event content as untrusted. Alert notifications can include event text,
@@ -191,6 +210,12 @@ Use the smallest role that works:
 - `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1` is an explicit SSRF escape hatch. Enable it
   only when every project member is trusted with internal network reachability,
   and add egress rules at the container or host level.
+- Shared notification-channel URLs are admin-only secrets. Legacy inline monitor
+  URLs are also admin-only: member monitor responses mask them, members cannot
+  create new inline webhook channels, and deleting or rotating a channel removes
+  the legacy copy. Notification text is sanitized before Discord, Slack, or
+  webhook delivery, including escaping existing backslashes before markdown
+  escapes.
 - Use a separate notification channel for production alerts, and review who can
   edit monitors and channels.
 
@@ -206,6 +231,16 @@ Use the smallest role that works:
   Litestream or the platform's volume snapshot is safer.
 - Test a restore before you need it. The auth secret and admin password live in
   the same volume.
+- S3 backup credentials and the optional backup passphrase are read from the
+  environment only; they are never stored in the database. Keep them in your
+  platform's secret store.
+- Snapshot manifests are HMAC-signed. Restore rejects unsigned or tampered
+  manifests, and when `KINGLET_BACKUP_PASSPHRASE` is set it also rejects an
+  unencrypted snapshot. The legacy compatibility flags are for old snapshots
+  only. `KINGLET_BACKUP_MAX_SNAPSHOT_MB` bounds restore download and decode size.
+- Restore clears sessions and verification rows fail-closed: if clearing fails,
+  the process refuses to serve the restored database. The newest three
+  pre-restore copies are retained and older ones are pruned.
 
 ## Updates and image pinning
 
@@ -248,7 +283,7 @@ starve the host. Do not mount the Docker socket or run the container privileged.
 | Proxy trust | `KINGLET_TRUSTED_PROXIES` names only the proxy address or subnet               |
 | Secrets     | strong `BETTER_AUTH_SECRET` and admin password; `admin-password.txt` removed   |
 | Accounts    | admins are few; members and viewers are scoped to projects                     |
-| Keys        | one key per service, least scopes, rotated on offboarding                      |
+| Keys        | one API or MCP key per service or client, least scopes, revoked on offboarding |
 | Webhooks    | HTTPS receiver; private webhooks enabled only with egress controls             |
 | Storage     | retention and caps set; `/data` backed up and restore tested                   |
 | Updates     | image pinned by tag or digest; changelog read before upgrading                 |

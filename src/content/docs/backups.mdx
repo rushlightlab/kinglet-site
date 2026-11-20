@@ -1,0 +1,485 @@
+---
+title: Backups & archive
+description: Configure S3 snapshots, staged restore, log archive, and Litestream for a self-hosted Kinglet instance.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet has two separate data-retention features that both use an
+S3-compatible bucket:
+
+- **Snapshots** are compressed full-database copies for disaster recovery. They
+  can be scheduled, downloaded, and restored from the admin UI.
+- **Log archive** exports expiring events as compressed NDJSON parts before
+  retention deletes them. It is not a backup and cannot restore a database.
+
+Both are optional and admin-only. Snapshots and restore require a **local
+SQLite** database; remote libSQL/Turso deployments should use the provider's
+point-in-time recovery for database backups. Log archive works with either
+storage backend.
+
+## Enable S3 storage
+
+Backups use one private S3-compatible bucket (Cloudflare R2, AWS S3, Backblaze
+B2, MinIO, or similar). Set these four values in the server environment:
+
+```dotenv
+KINGLET_BACKUP_S3_BUCKET=kinglet-backups
+KINGLET_BACKUP_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+KINGLET_BACKUP_S3_ACCESS_KEY_ID=<access-key-id>
+KINGLET_BACKUP_S3_SECRET_ACCESS_KEY=<secret-access-key>
+```
+
+The four required values are `KINGLET_BACKUP_S3_BUCKET`,
+`KINGLET_BACKUP_S3_ENDPOINT`, `KINGLET_BACKUP_S3_ACCESS_KEY_ID`, and
+`KINGLET_BACKUP_S3_SECRET_ACCESS_KEY`. Everything below is optional.
+
+Optional values:
+
+```dotenv
+KINGLET_BACKUP_S3_REGION=auto
+KINGLET_BACKUP_S3_PREFIX=kinglet
+KINGLET_BACKUP_S3_FORCE_PATH_STYLE=false
+KINGLET_BACKUP_S3_SSE=AES256
+# KINGLET_BACKUP_S3_KMS_KEY_ID=<kms-key-id>
+# KINGLET_BACKUP_S3_SESSION_TOKEN=<session-token>
+# KINGLET_BACKUP_PASSPHRASE=<long-random-passphrase>
+# KINGLET_BACKUP_MANIFEST_SECRET=<stable-manifest-hmac-secret>
+# KINGLET_BACKUP_MAX_SNAPSHOT_MB=8192
+# KINGLET_BACKUP_PART_SIZE_MB=8
+```
+
+`KINGLET_BACKUP_MANIFEST_SECRET` defaults to the S3 secret access key. Set a
+dedicated value if you rotate the S3 credential, because older manifests are
+signed with the key that was active when they were written. The two
+`ALLOW_UNSIGNED_MANIFESTS` and `ALLOW_UNENCRYPTED_SNAPSHOTS` compatibility flags
+are for legacy snapshots only; leave them unset for new deployments.
+
+The bucket is the source of truth: the UI list is a cache that is reconciled
+from the bucket. Use a private bucket and a dedicated credential scoped to it.
+
+### Cloudflare R2
+
+Create an R2 API token with **Object Read & Write** on the one bucket, then set:
+
+```dotenv
+KINGLET_BACKUP_S3_BUCKET=kinglet-backups
+KINGLET_BACKUP_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+KINGLET_BACKUP_S3_REGION=auto
+KINGLET_BACKUP_S3_ACCESS_KEY_ID=<r2-access-key-id>
+KINGLET_BACKUP_S3_SECRET_ACCESS_KEY=<r2-secret-access-key>
+KINGLET_BACKUP_S3_FORCE_PATH_STYLE=false
+```
+
+R2 is the primary target for this feature; the same S3 client works with AWS S3,
+B2, and MinIO. Leave `KINGLET_BACKUP_S3_FORCE_PATH_STYLE` at `false`.
+
+### MinIO
+
+Use the endpoint and credentials for your MinIO deployment. Most MinIO setups
+need path-style addressing:
+
+```dotenv
+KINGLET_BACKUP_S3_ENDPOINT=https://minio.example.com
+KINGLET_BACKUP_S3_FORCE_PATH_STYLE=true
+# Set the region your deployment expects, often us-east-1.
+# KINGLET_BACKUP_S3_REGION=us-east-1
+```
+
+MinIO deployments vary; if signature errors mention a region mismatch, set
+`KINGLET_BACKUP_S3_REGION` to the region the server expects.
+
+### AWS S3 and Backblaze B2
+
+Use the S3-compatible endpoint and region from the provider. For AWS, that is
+usually `https://s3.<region>.amazonaws.com` with the matching region. For B2,
+use the S3 endpoint and region shown in the bucket's details, with an
+application key ID as the access key. Leave path style at `false` unless the
+provider requires it.
+
+### Before configuration
+
+The Backups tab is visible to administrators, but until the four required values
+are present it shows a **Connect a bucket** setup card. Backup status,
+scheduling, snapshots, and archive controls appear after configuration. If only
+some of the four required values are set, or a supplied value is invalid,
+Kinglet logs one warning at boot with the missing or invalid variable names —
+never their values — and leaves backups disabled.
+
+On remote libSQL/Turso, snapshots and restore are disabled; use the provider's
+point-in-time recovery instead. The panel surfaces the storage problem when S3 is
+configured, and log archive remains available.
+
+See the [self-hosting configuration reference](/self-hosting/#s3-backups-optional)
+for every backup variable.
+
+## Encryption
+
+Two independent layers are available:
+
+- **Server-side encryption** is controlled by `KINGLET_BACKUP_S3_SSE`:
+  - `AES256` (default) sends SSE-S3 headers.
+  - `aws:kms` requires `KINGLET_BACKUP_S3_KMS_KEY_ID`.
+  - `none` sends no encryption headers.
+- **Client-side encryption** is enabled by setting
+  `KINGLET_BACKUP_PASSPHRASE`. Kinglet age-encrypts the compressed snapshot
+  before upload; the object and download use the `.db.zst.age` suffix. Restore
+  and archive import need the same passphrase.
+
+<Aside type="caution" title="The passphrase is not recoverable">
+  Kinglet does not store the age passphrase and cannot decrypt a snapshot without it. If you lose
+  it, encrypted snapshots are unrecoverable. Store it in the same secret manager as the S3
+  credentials, and keep old values when you rotate it — existing snapshots still need the passphrase
+  that was active when they were written.
+</Aside>
+
+Age encryption and server-side encryption can be combined. Without a passphrase,
+downloads are `.db.zst`; with one, downloads are `.db.zst.age`. When a passphrase
+is configured, restore also refuses a snapshot that claims `encryption=none`
+unless `KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS=1` is set for a legacy
+snapshot.
+
+Snapshot manifests are signed with HMAC-SHA256. The signing key is
+`KINGLET_BACKUP_MANIFEST_SECRET`, falling back to the S3 secret access key.
+Restore rejects a missing or invalid signature unless
+`KINGLET_BACKUP_ALLOW_UNSIGNED_MANIFESTS=1` is set. The absolute restore cap is
+`KINGLET_BACKUP_MAX_SNAPSHOT_MB` (default 8192); a larger stored object or
+decoded database is rejected before it is downloaded.
+
+## Schedule and retention
+
+Open **Settings → Backups**. Scheduled snapshots are off by default; manual runs
+remain available when the schedule is off.
+
+- Choose a preset or enter a custom **5-field cron** expression
+  (`minute hour day month weekday`). Seconds fields are rejected.
+- Pick a timezone, or use **use my timezone**. The initial value comes from
+  `KINGLET_TIMEZONE`, then the server timezone.
+- Runs closer than 15 minutes apart are rejected.
+- The schedule preview shows a human description and the next three run times.
+- On boot, if the last successful run predates the previous scheduled slot,
+  Kinglet runs one catch-up snapshot. It does not replay every missed slot.
+
+Presets:
+
+| Preset               | Cron          |
+| -------------------- | ------------- |
+| Hourly               | `0 * * * *`   |
+| Every 6 hours        | `0 */6 * * *` |
+| Daily at 03:00       | `0 3 * * *`   |
+| Weekly, Monday 03:00 | `0 3 * * 1`   |
+| Monthly, 1st 03:00   | `0 3 1 * *`   |
+
+Retention keeps the last **N successful snapshots**, where N is **2–365**
+(default 7). The newest snapshot is always kept, even when you lower N. The
+panel estimates coverage from the gap between the next two runs, for example
+`7 snapshots × 6h ≈ 42h`, and estimates storage from the current database size
+times N; real snapshots are smaller because they are compressed.
+
+## Snapshots
+
+A run copies the database with `VACUUM INTO`, compresses it with zstd, optionally
+age-encrypts it, and streams a multipart upload using
+`KINGLET_BACKUP_PART_SIZE_MB` (default 8 MiB, minimum 5). It then verifies the
+uploaded object with `HEAD`, comparing its size and SHA-256 metadata before
+writing the manifest. **The manifest is written last**; a snapshot without one
+is not listed. Orphan snapshot objects without a manifest are cleaned up after
+24 hours.
+
+Bucket layout:
+
+```text
+<prefix>/manifests/<snapshot-id>.json
+<prefix>/snapshots/<snapshot-id>.db.zst
+<prefix>/snapshots/<snapshot-id>.db.zst.age
+```
+
+The Snapshots table shows the trigger, size, contents, encryption, and state.
+**Refresh from bucket** reconciles the cache; the server also does so when a
+list request finds the cache older than 60 seconds.
+
+- **Download** requests a presigned URL that expires after **5 minutes**. The
+  download is recorded on the snapshot. Encrypted snapshots download as `.age`.
+- **Delete** removes the manifest, the object, and the cache row. Retention
+  deletions are silent and do not send notifications.
+- **Progress** appears in the panel over the live system-event stream: snapshot,
+  compress, encrypt, upload, verify, and retention phases, with byte progress
+  during compress, encrypt, and upload. A failed run shows its error in the
+  status card.
+
+## Restore
+
+Restore is staged, not immediate. Select a snapshot and choose **Restore**; the
+confirmation dialog calls it **Stage restore**.
+
+1. Kinglet verifies the manifest signature, then checks the stored object
+   against the manifest's expected size. The manifest and decoded database must
+   be below `KINGLET_BACKUP_MAX_SNAPSHOT_MB`.
+2. It downloads the object, checks the download size and SHA-256, then decrypts
+   (if needed) and decompresses it.
+3. The staged database must pass `PRAGMA integrity_check`, and its schema must
+   not be newer than the running build.
+4. The verified database is written under `<data-dir>/restore/`, a
+   `pending.json` marker is written, and the server enters maintenance mode.
+   Non-`GET` requests under `/v1` return `503` with `Retry-After: 30` until the
+   restart.
+
+The restore is applied **at the next boot**, before the database opens. Kinglet
+copies the current database to `<data-dir>/pre-restore-<timestamp>.db`, removes
+stale WAL/SHM files, and swaps in the staged file. If the swap fails, it keeps
+or restores the pre-restore copy. The three newest pre-restore copies are
+retained; older ones are pruned because they contain the full database.
+
+After the swap, it clears all sessions and verification rows. Session clearing
+is fail-closed: if the delete fails, Kinglet refuses to serve the restored
+database and retries on the next boot. API keys are intentionally preserved.
+The pending marker records the requesting administrator; the CLI records no
+requester.
+
+<Aside type="note" title="Restart the process">
+  The restore API stops the Kinglet process after staging so a supervisor can restart it into the
+  swap. With Docker, set `restart: unless-stopped` (or another restart policy) so this happens
+  automatically. Without a restart policy, the container or process stays stopped until you start it
+  again.
+</Aside>
+
+```yaml
+services:
+  kinglet:
+    image: ghcr.io/rushlightlab/kinglet:0.3.0
+    restart: unless-stopped
+    volumes:
+      - kinglet-data:/data
+```
+
+If you staged a restore and nothing happens, the process was probably not
+restarted. Start the container or service; the staged database is still in
+`/data/restore/` and the marker still points at it.
+
+### Restore from the CLI
+
+A checkout or image also ships a restore CLI for fresh hosts and recovery when
+the UI is unavailable. It stages the snapshot exactly like the admin route; the
+next boot applies it.
+
+```bash
+# from a Kinglet checkout, after pnpm --filter @kinglet/api build
+node apps/api/dist/restore/cli.js --latest
+node apps/api/dist/restore/cli.js --id <snapshot-id>
+node apps/api/dist/restore/cli.js --key snapshots/<snapshot-id>.db.zst
+```
+
+Use `--key snapshots/<snapshot-id>.db.zst.age` for an encrypted snapshot. The
+CLI reads the same `KINGLET_BACKUP_S3_*` and `KINGLET_BACKUP_PASSPHRASE`
+environment variables as the server. In Docker:
+
+```bash
+docker compose run --rm --entrypoint node kinglet \
+  apps/api/dist/restore/cli.js --latest
+docker compose restart kinglet
+```
+
+Use `docker compose up -d kinglet` instead of `restart` if the container was
+already stopped. Restarting is what applies the staged snapshot; running the CLI
+alone only stages it.
+
+Replacing the live database with an older snapshot also restores the users and
+API keys that existed at snapshot time. Sessions are cleared on boot, but a key
+revoked after the snapshot becomes valid again — review the project's keys after
+restoring an old copy.
+
+## Log archive
+
+Log archive is not a backup. It writes whole events as re-importable NDJSON, not
+a database. Archived parts are not searchable until you import them.
+
+Enable it in **Settings → Backups → Log archive**: turn on the **global
+archive** switch, then opt in each project. Both are off by default. Archive
+requires the same S3 configuration as snapshots.
+
+When the global switch is on and a project is enabled:
+
+- The hourly retention job skips that project, so archive owns deletion.
+- The archive job selects events older than `KINGLET_RETENTION_DAYS`, oldest
+  first by internal id, up to 10,000 events per part, grouped by UTC date.
+- Each part is written as NDJSON, zstd-compressed, optionally age-encrypted,
+  uploaded to a deterministic key, verified with `HEAD` (size and SHA-256), and
+  recorded in `archive_parts`. The exported rows are deleted only after the
+  upload verifies.
+- A run stops after a 5-minute budget; a large backlog drains across runs. The
+  job has its own daily cron (default `0 3 * * *` in the server timezone) and can
+  also be triggered with `POST /v1/archive/run`. The current Backups panel does
+  not expose the archive schedule or a run-now button.
+
+If any step fails, the rows are kept and the project stays at its current size.
+An admin can opt into deleting the failed batch with `deleteOnFailure` through
+`PUT /v1/archive/settings`; it is off by default and is not exposed in the
+Backups panel.
+
+```text
+<prefix>/archive/events/project=<project-id>/date=<YYYY-MM-DD>/
+  part-<first-id>-<last-id>-<count>-<hash>.ndjson.zst[.age]
+```
+
+Project deletion and an all-time clear (`DELETE /v1/events?project=<id>` with no
+range) delete that project's archive objects as well as its live events. A
+range-limited clear leaves archive parts alone because deleting whole date parts
+for a partial window would remove events outside the range. Other expired
+archive objects are not deleted by the app; use S3 lifecycle rules on the
+archive prefix to expire them.
+
+### Import archived events
+
+Import is an admin API operation (`backups.restore`). It lists the project's
+parts, downloads each through a short-lived presigned URL, decrypts and
+decompresses it, verifies the uncompressed NDJSON checksum against the
+`archive_parts` cache (or the deterministic key suffix), and inserts events in
+chunks. Oversized messages/fields and far-future timestamps are skipped. Re-
+imports are idempotent on the event `uid`; duplicates are reported as skipped.
+Encrypted parts require `KINGLET_BACKUP_PASSPHRASE`.
+
+```bash
+curl -X POST https://logs.example.com/v1/archive/import \
+  -H "Content-Type: application/json" \
+  -H "X-Kinglet-Request: 1" \
+  -H "Cookie: <session-cookie>" \
+  -d '{"projectId":"<project-id>","from":"2026-11-01","to":"2026-11-20"}'
+```
+
+`from` and `to` are optional inclusive `YYYY-MM-DD` UTC bounds. The response
+reports `imported` and `skipped` counts. The command imports into an existing
+project; create the project first if you are recovering onto a fresh instance.
+
+There is also a CLI for a checkout or container. It runs the same import
+against the configured database and reads the same `KINGLET_BACKUP_S3_*` and
+`KINGLET_BACKUP_PASSPHRASE` variables:
+
+```bash
+pnpm --filter @kinglet/api build
+node apps/api/dist/archive/cli.js --project <project-id> --from 2026-11-01 --to 2026-11-20
+# or:
+pnpm --filter @kinglet/api archive:import \
+  --project <project-id> --from 2026-11-01 --to 2026-11-20
+```
+
+Run it with the API stopped. It writes events and updates FTS and usage through
+the normal triggers, so a concurrent API process would be writing the same
+database. In Docker:
+
+```bash
+docker compose stop kinglet
+docker compose run --rm --entrypoint node kinglet \
+  apps/api/dist/archive/cli.js --project <project-id> --from 2026-11-01 --to 2026-11-20
+docker compose up -d kinglet
+```
+
+## Litestream (advanced)
+
+[Litestream](https://litestream.io/) continuously replicates the SQLite database
+to object storage. It is an external tool: Kinglet does not configure, monitor,
+or restore Litestream replicas, and the Backups panel does not show their
+status. Use it when you need a much smaller recovery point objective than
+scheduled snapshots, or keep both for independent copies.
+
+```yaml
+services:
+  kinglet:
+    image: ghcr.io/rushlightlab/kinglet:0.3.0
+    restart: unless-stopped
+    environment:
+      KINGLET_DB_PATH: /data/kinglet.db
+      KINGLET_BASE_URL: https://logs.example.com
+    volumes:
+      - kinglet-data:/data
+
+  litestream:
+    image: litestream/litestream
+    restart: unless-stopped
+    volumes:
+      - kinglet-data:/data
+    command: replicate /data/kinglet.db s3://<bucket>/kinglet
+    environment:
+      LITESTREAM_ACCESS_KEY_ID: ${LITESTREAM_ACCESS_KEY_ID}
+      LITESTREAM_SECRET_ACCESS_KEY: ${LITESTREAM_SECRET_ACCESS_KEY}
+      # Add the endpoint and region settings your provider needs.
+
+volumes:
+  kinglet-data:
+```
+
+Restore with Litestream while Kinglet is stopped:
+
+```bash
+docker compose stop kinglet
+docker compose run --rm litestream restore -o /data/kinglet.db s3://<bucket>/kinglet
+docker compose up -d kinglet
+```
+
+Check Litestream's own documentation for the current image tag and the endpoint,
+region, and credential settings for your provider.
+
+## Security
+
+- S3 credentials and `KINGLET_BACKUP_PASSPHRASE` are read from the environment
+  only. They are never returned by the API, written to the database, stored in
+  manifests, or included in notifications.
+- Use a private bucket. Do not enable public bucket access; downloads use
+  presigned URLs that expire after 5 minutes.
+- Use HTTPS for the S3 endpoint outside local development.
+- Give the credential the smallest scope that works: one bucket and prefix, with
+  put, get, head, list, and delete permissions. Use separate credentials per
+  instance.
+- Snapshots contain the full database, including users, sessions, API keys, and
+  event contents. Archive parts contain raw events. Treat both as sensitive
+  data; enable age encryption when the bucket is not fully trusted.
+- Backups, restore, and archive routes are admin-only. MCP keys and project API
+  keys cannot reach them.
+- Restoring an older snapshot brings back the users and API keys that existed
+  at that time. Kinglet clears sessions on boot, but review project API keys
+  afterward.
+
+## Troubleshooting
+
+### The connection test fails
+
+Use **Test connection** on the Backups status card. It writes, reads, and
+deletes a small probe object under `<prefix>/_health/`, so it checks put, get,
+and delete access. Listing snapshots and refreshing the cache also need list
+permission. Check the endpoint URL, bucket name, region, access key, secret,
+path-style setting, and TLS certificate.
+
+### `409` backups are not configured
+
+The server has no complete `KINGLET_BACKUP_S3_*` configuration. Set all four
+required values and restart. If only some are set, the boot log names the
+missing variables (never values). `409` also appears when snapshots are
+attempted on remote libSQL/Turso, because snapshots require local SQLite.
+
+### Snapshots are disabled on remote libSQL/Turso
+
+This is expected. Use the provider's point-in-time recovery for the database.
+Log archive still works on remote libSQL.
+
+### A restore is staged but nothing happens
+
+The process was not restarted. The admin restore stops Kinglet after staging so
+a supervisor can restart it; without a restart policy it stays stopped. Start
+the container, or add `restart: unless-stopped`. The staged database and
+`pending.json` remain under `<data-dir>/restore/`.
+
+### Restore fails with a passphrase error
+
+The snapshot is age-encrypted and `KINGLET_BACKUP_PASSPHRASE` is missing or
+different from the one used to create it. Kinglet cannot recover or bypass the
+passphrase. Set the original value and stage the restore again.
+
+### Archive is stalled at the event cap
+
+Archive keeps rows when an upload or verification fails, so the project can
+remain at `KINGLET_MAX_EVENTS_PER_PROJECT` and ingest keeps returning `429`.
+Fix the S3 error, then run archive again with `POST /v1/archive/run` or wait for
+the next scheduled run, and check **Settings → Backups → Log archive** for the
+last error. Only events older than `KINGLET_RETENTION_DAYS` are eligible; events
+newer than the cutoff are not. If you need room immediately, raise the cap or
+shorten retention. Enabling `deleteOnFailure` can delete the failed batch,
+including rows that were never exported, and should be a deliberate last resort.
