@@ -39,7 +39,14 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/v1/keys/:id/rotate`              | `POST`           | Replace key material; the old key stops working (requires `?project=`)        |
 | `/v1/projects/:id/members`         | `GET`/`POST`     | List / assign project members (admin) — POST body `{ "userId": "…" }`         |
 | `/v1/projects/:id/members/:userId` | `PATCH`/`DELETE` | Grant/revoke `canClearLogs` / remove a member (admin)                         |
+| `/v1/context`                      | `GET`            | Machine-key project, scopes, capabilities, write gate, version, retention     |
 | `/v1/system/status`                | `GET`            | Operational diagnostics — retention, monitors, counts (admin)                 |
+
+`GET /v1/context` is the machine-credential view for `kl_` and `km_` keys. It
+returns the key's project, scopes, effective capabilities, server version and
+retention, and `monitorWritesEnabled`. That boolean reports whether this server
+allows MCP monitor writes; it is derived configuration state, never the raw
+environment value.
 
 ## Logs
 
