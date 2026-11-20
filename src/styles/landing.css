@@ -313,6 +313,7 @@ footer {
   line-height: 1.7;
   white-space: pre;
   overflow-x: auto;
+  text-align: left;
 }
 .dashboard-preview {
   display: block;
