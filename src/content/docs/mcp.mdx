@@ -272,7 +272,8 @@ scope; `get_context` works with any valid MCP key.
 | `count_events`   | `logs.read`      | Effective `from`/`to`, total, and optional `service`/`level`/`env` groups |
 | `list_monitors`  | `monitors.read`  | Monitors, state, last evaluation, and channel summaries                   |
 | `get_monitor`    | `monitors.read`  | One monitor by id                                                         |
-| `list_alerts`    | `monitors.read`  | Recent alerts, newest first                                               |
+| `list_alerts`    | `monitors.read`  | Recent alerts; optional monitor/state/time filters                        |
+| `get_alert`      | `monitors.read`  | One alert by id, with the same masking rules                              |
 | `list_channels`  | `monitors.read`  | Channel id, name, type, enabled, and health only                          |
 | `create_monitor` | `monitors.write` | Create a monitor; channels are attached with `channelIds`                 |
 | `update_monitor` | `monitors.write` | Partial update by id                                                      |
@@ -315,6 +316,9 @@ change access.
   by count. `truncated: true` means more groups exist. The group limit does not
   cap `count_events.total`, which is the full match count; the response also
   echoes the effective clamped `from`/`to` window.
+- **Alerts:** `list_alerts` filters by `monitorId`, `state`, and `from`/`to` on
+  `firedAt`; any alert window is clamped to 31 days. `get_alert` returns one
+  alert or a clean `alert not found`.
 - **Response size:** 256 KiB per result. Large list responses are trimmed and
   marked `truncated: true`; a single result that still exceeds the cap returns
   an error asking for a narrower query.

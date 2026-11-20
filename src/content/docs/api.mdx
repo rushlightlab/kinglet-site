@@ -111,10 +111,19 @@ and caps at 200. Null `service` or `env` keys are events that omitted the field;
 | `/v1/monitors/:id`          | `PATCH`/`DELETE` | Update / delete a monitor                                                   |
 | `/v1/monitors/:id/test`     | `POST`           | Send a test notification through every channel                              |
 | `/v1/monitors/test-channel` | `POST`           | Test an unsaved channel — body `{ "type": "webhook", "url": "…" }`          |
-| `/v1/alerts`                | `GET`            | Alert history, latest first                                                 |
+| `/v1/alerts`                | `GET`            | Alert history. Optional `monitorId`, `state`, `from`, `to`; newest first    |
+| `/v1/alerts/:id`            | `GET`            | One alert by id; 404 outside the project                                    |
 
 Alert delivery errors are sanitized and returned as `notifyError` only to
 administrators. Members, viewers, and MCP keys receive `null` for that field.
+Callers without `logs.read` also receive the placeholder summary
+`log content hidden` and a null `sampleMessage`.
+
+`GET /v1/alerts` accepts `monitorId` (UUID, must belong to the resolved
+project), `state` (`fired` or `resolved`), and `from`/`to` epoch milliseconds on
+`firedAt`. An inverted range is rejected; any provided range is clamped to the
+same 31-day window as events. `GET /v1/alerts/:id` applies the same project and
+masking rules and returns `404` for an alert outside the project.
 
 ## Notifications
 
