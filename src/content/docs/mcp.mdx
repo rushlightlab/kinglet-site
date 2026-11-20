@@ -35,7 +35,7 @@ its own scopes, and never grants a human role or admin access.
 
 | Scope            | Grants                                                                |
 | ---------------- | --------------------------------------------------------------------- |
-| `logs.read`      | Search and read events, histograms, and services                      |
+| `logs.read`      | Search and read events, histograms, counts, and services              |
 | `monitors.read`  | List and get monitors, recent alerts, and channel summaries (no URLs) |
 | `monitors.write` | Create, update, and delete monitors; requires `monitors.read`         |
 
@@ -269,6 +269,7 @@ scope; `get_context` works with any valid MCP key.
 | `get_event`      | `logs.read`      | One event by `uid`                                                 |
 | `get_histogram`  | `logs.read`      | Bucket counts for a filter and time range                          |
 | `list_services`  | `logs.read`      | Services with event counts and last-seen timestamps                |
+| `count_events`   | `logs.read`      | Total and optional `service`/`level`/`env` groups for a filter     |
 | `list_monitors`  | `monitors.read`  | Monitors, state, last evaluation, and channel summaries            |
 | `get_monitor`    | `monitors.read`  | One monitor by id                                                  |
 | `list_alerts`    | `monitors.read`  | Recent alerts, newest first                                        |
@@ -310,6 +311,8 @@ change access.
   proxy or edge because each instance enforces its own bucket.
 - **Rows:** 50 by default, 200 maximum. `search_events` returns a `nextCursor`
   when more rows are available.
+- **Groups:** `count_events` returns 50 groups by default, 200 maximum, ordered
+  by count. `truncated: true` means more groups exist.
 - **Response size:** 256 KiB per result. Large list responses are trimmed and
   marked `truncated: true`; a single result that still exceeds the cap returns
   an error asking for a narrower query.

@@ -54,6 +54,7 @@ Go, and PHP.
 | `/v1/events`      | `DELETE` | Clear a project's events. Optional `from`/`to` epoch ms; omit both for all. Admin or a member granted **clear logs** |
 | `/v1/histogram`   | `GET`    | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240)                                                 |
 | `/v1/services`    | `GET`    | Known services with event counts                                                                                     |
+| `/v1/aggregate`   | `GET`    | Totals for a filter; optional `groupBy=service\|level\|env`, `limit` ≤ 200                                           |
 | `/v1/stream`      | `GET`    | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients                                          |
 | `/healthz`        | `GET`    | Health check (no auth)                                                                                               |
 
@@ -76,6 +77,31 @@ Every event has two identifiers:
 `id` is the integer row id used for pagination and full-text search. `uid` is a
 UUID v7 that is stable and safe to share; fetch one event with
 `GET /v1/events/<uid>`.
+
+## Aggregation
+
+`GET /v1/aggregate` counts matching events without returning rows. It takes the
+same `q`, `from`, and `to` parameters as `/v1/events`, so filter semantics and
+the 31-day clamp are identical.
+
+```json
+{
+  "from": 1795075200000,
+  "to": 1795078800000,
+  "total": 118,
+  "groupBy": "service",
+  "groups": [
+    { "key": "api", "count": 96 },
+    { "key": null, "count": 22 }
+  ]
+}
+```
+
+Without `groupBy` the response is just `{ from, to, total }`. With
+`groupBy=service|level|env` it adds `groups` ordered by count and
+`truncated: true` when more than `limit` groups exist. `limit` defaults to 50
+and caps at 200. Null `service` or `env` keys are events that omitted the field;
+`level` keys are names such as `error` or `fatal`.
 
 ## Monitors & alerts
 
@@ -103,6 +129,8 @@ administrators. Members, viewers, and MCP keys receive `null` for that field.
 
 - Ingest: 8 MB / 10,000 events per request, 600 batches/minute per identity.
 - Query: `q` ≤ 500 characters and ≤ 32 terms; `limit` 1–1000; `buckets` 1–240.
+- Aggregate: `groupBy` is `service`, `level`, or `env`; group `limit` 1–200,
+  default 50.
 - `from`/`to` must be epoch ms and are clamped to the last 31 days and 5 minutes
   of future skew.
 - Alerts: `limit` 1–500. Monitors: 100 per project.
