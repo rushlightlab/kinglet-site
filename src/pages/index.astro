@@ -553,9 +553,8 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             class="reveal"
             style="text-align: center; max-width: 40rem; margin: 28px auto 0; font-size: 11px; line-height: 1.8; color: var(--faint);"
           >
-            Local Docker measurement: 197 MB idle, 375 MB under four concurrent 1k-event batches;
-            about 0.7 GB of database per million small events. Your payloads and retention will move
-            those numbers.
+            Local Docker measurement: 197 MB idle, 375–613 MB under batch load; about 0.7–0.9 GB of
+            database per million small events. Your payloads and retention will move those numbers.
           </p>
         </div>
       </section>
