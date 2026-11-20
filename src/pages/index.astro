@@ -150,14 +150,10 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                   <span style="color: var(--gold)">$</span> one container, no services to wire
                 </div>
                 <div class="cmd-bar cmd-bar-stack">
-                  <code class="cmd-text cmd-text-stack">
-                    <span class="cmd-line">
-                      <span style="color: var(--gold)">$</span> docker run -d --name kinglet \
-                    </span>
-                    <span class="cmd-line"> -p 8080:3000 -v kinglet-data:/data \</span>
-                    <span class="cmd-line"> -e KINGLET_BASE_URL=http://localhost:8080 \</span>
-                    <span class="cmd-line"> ghcr.io/rushlightlab/kinglet:latest</span>
-                  </code>
+                  <pre class="cmd-pre"><code><span style="color: var(--gold)">$</span> docker run -d --name kinglet \
+  -p 8080:3000 -v kinglet-data:/data \
+  -e KINGLET_BASE_URL=http://localhost:8080 \
+  ghcr.io/rushlightlab/kinglet:latest</code></pre>
                   <button
                     class="copy-btn"
                     data-copy="docker run -d --name kinglet -p 8080:3000 -v kinglet-data:/data -e KINGLET_BASE_URL=http://localhost:8080 ghcr.io/rushlightlab/kinglet:latest"
@@ -599,14 +595,10 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             </a>
           </div>
           <div class="cmd-bar cmd-bar-stack" style="margin: 40px auto 0; max-width: 34rem;">
-            <code class="cmd-text cmd-text-stack">
-              <span class="cmd-line">
-                <span style="color: var(--gold)">$</span> docker run -d --name kinglet \
-              </span>
-              <span class="cmd-line"> -p 8080:3000 -v kinglet-data:/data \</span>
-              <span class="cmd-line"> -e KINGLET_BASE_URL=http://localhost:8080 \</span>
-              <span class="cmd-line"> ghcr.io/rushlightlab/kinglet:latest</span>
-            </code>
+            <pre class="cmd-pre"><code><span style="color: var(--gold)">$</span> docker run -d --name kinglet \
+  -p 8080:3000 -v kinglet-data:/data \
+  -e KINGLET_BASE_URL=http://localhost:8080 \
+  ghcr.io/rushlightlab/kinglet:latest</code></pre>
             <button
               class="copy-btn"
               data-copy="docker run -d --name kinglet -p 8080:3000 -v kinglet-data:/data -e KINGLET_BASE_URL=http://localhost:8080 ghcr.io/rushlightlab/kinglet:latest"
