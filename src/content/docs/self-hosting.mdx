@@ -33,6 +33,7 @@ Set these for anything beyond localhost:
 | `BETTER_AUTH_SECRET`                             | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data/auth-secret.txt`), required when several instances share a database.     |
 | `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only when no administrator exists. After that they are ignored.                                                                                                |
 | `KINGLET_TRUSTED_PROXIES`                        | Set to the proxy address or proxy network only. Otherwise all clients share the proxy's rate-limit bucket. See [Common deployments](/security/#common-deployments). |
+| `KINGLET_HOST`                                   | Optional bind address. Unset listens on all interfaces; set `127.0.0.1` when a same-host proxy is the only client.                                                  |
 | `KINGLET_DB_PATH`                                | `/data/kinglet.db` in the image. Keep the volume mounted at `/data`.                                                                                                |
 
 Generate a secret with:
@@ -307,6 +308,7 @@ UI details.
 | Env var                            | Default                  | What it does                                                       |
 | ---------------------------------- | ------------------------ | ------------------------------------------------------------------ |
 | `KINGLET_PORT`                     | `3000`                   | HTTP port inside the container                                     |
+| `KINGLET_HOST`                     | —                        | Bind address; unset listens on all interfaces                      |
 | `KINGLET_STORAGE`                  | `auto`                   | `sqlite`, `libsql`, or `auto` (picks by db path scheme)            |
 | `KINGLET_DB_PATH`                  | `/data/kinglet.db`       | Local SQLite path; `libsql://`/`https://`/`file:` → libSQL         |
 | `KINGLET_DB_AUTH_TOKEN`            | —                        | Auth token for remote libSQL/Turso                                 |

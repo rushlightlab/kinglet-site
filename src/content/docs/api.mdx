@@ -87,6 +87,9 @@ UUID v7 that is stable and safe to share; fetch one event with
 | `/v1/monitors/test-channel` | `POST`           | Test an unsaved channel — body `{ "type": "webhook", "url": "…" }`          |
 | `/v1/alerts`                | `GET`            | Alert history, latest first                                                 |
 
+Alert delivery errors are sanitized and returned as `notifyError` only to
+administrators. Members, viewers, and MCP keys receive `null` for that field.
+
 ## Notifications
 
 - `webhook` channels receive JSON with the structured alert plus a ready-to-post

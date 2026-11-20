@@ -215,7 +215,8 @@ channel ids only. See [MCP server](/mcp/) for client setup.
   create new inline webhook channels, and deleting or rotating a channel removes
   the legacy copy. Notification text is sanitized before Discord, Slack, or
   webhook delivery, including escaping existing backslashes before markdown
-  escapes.
+  escapes. Stored delivery errors are sanitized and exposed as `notifyError`
+  only to administrators; members, viewers, and MCP keys receive `null`.
 - Use a separate notification channel for production alerts, and review who can
   edit monitors and channels.
 
