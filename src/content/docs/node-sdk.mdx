@@ -6,7 +6,7 @@ description: Buffer, batch, and ship logs from Node.js without blocking your app
 import { Aside } from "@astrojs/starlight/components";
 
 `@kinglet/sdk-node` is a zero-dependency batching client for Node 26+. Events
-buffer in-process and ship as a single NDJSON batch — 200 events or every
+buffer in-process and ship as a single NDJSON batch — 1,000 events or every
 second, whichever comes first. A failed batch is re-queued (with a cap) and
 reported through `onError`, so your app never blocks on logging.
 
@@ -72,7 +72,7 @@ can resolve the `types` entry.
 | `url`             | —       | Kinglet base URL (required)                                            |
 | `token`           | —       | `kl_…` key with the ingest scope (required) — also selects the project |
 | `service` / `env` | —       | tagged onto every event                                                |
-| `batchSize`       | `200`   | flush after this many buffered events                                  |
+| `batchSize`       | `1000`  | flush after this many buffered events (max 5000)                       |
 | `flushMs`         | `1000`  | flush at least this often                                              |
 | `onError`         | —       | called when a flush fails; the batch is re-queued                      |
 
@@ -82,7 +82,26 @@ can resolve the `types` entry.
 | ----------------- | ----------------------------------------------- |
 | `trace` … `fatal` | buffer one event with an optional fields object |
 | `flush()`         | send the current buffer now                     |
-| `close()`         | stop the timer and perform a final flush        |
+| `close()`         | wait for a request in flight, then drain buffer |
+
+## Why 1000 events per batch
+
+Most apps never fill a batch: below a few hundred events a second, the
+one-second timer flushes first and the batch size changes nothing. It matters
+for busy services:
+
+- **Rate limit.** Ingest allows 600 requests per minute per key. At 200 events
+  per request that caps one key near 2,000 events/s; at 1,000 it is 10,000,
+  about what one Kinglet server can absorb.
+- **Server cost.** Each request pays fixed work (auth, parsing, a commit).
+  1,000-event batches ingest roughly 25% faster per event than 100-event ones.
+- **Outage buffer.** The client keeps up to 10 batches in memory while the
+  server is unreachable, so a larger batch also rides out a longer restart.
+
+The trade-off is memory (up to 10,000 buffered events) and, on a hard crash,
+losing up to one batch or one second of logs, whichever is smaller. Lower
+`batchSize` if your events are large; one request never carries more than 5,000
+events.
 
 <Aside type="note" title="Roadmap">
   A pino transport (`transport: { target: "@kinglet/pino" }`) and a zero-code

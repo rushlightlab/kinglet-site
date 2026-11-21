@@ -19,6 +19,23 @@ KINGLET_DB_PATH=/data/kinglet.db
 
 WAL mode and the FTS5 trigram index are configured automatically.
 
+### Search index
+
+`KINGLET_SEARCH` picks how message text is indexed. The index is the largest
+single cost of ingest, so this is the main knob for high-volume installs.
+Measured over HTTP in a 2-vCPU Docker VM with ~500k ~200-byte events:
+
+| Mode                    | Matches                                      | Ingest      | Disk / 1M events | Peak RAM |
+| ----------------------- | -------------------------------------------- | ----------- | ---------------- | -------- |
+| `substring` _(default)_ | any 3+ character fragment                    | ~7,300 ev/s | ~0.55 GB         | ~410 MB  |
+| `words`                 | words and word prefixes (`time` → `timeout`) | ~8,900 ev/s | ~0.42 GB         | ~220 MB  |
+| `off`                   | substrings, by scanning the selected window  | ~9,400 ev/s | ~0.38 GB         | ~190 MB  |
+
+With `off`, a filter on a common term still returns quickly (the newest
+matches are found first), but a rare term or a count scans every event in the
+window: roughly 0.5 s with half a million events in range. Changing the mode rebuilds (or drops)
+the index once at boot. The live tail always matches substrings.
+
 **Turso** — point at your database; nothing else changes:
 
 ```bash

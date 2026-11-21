@@ -55,6 +55,8 @@ filters follow you into the live view.
 </Aside>
 
 <Aside type="tip">
-  Search is substring-based (FTS5 trigram), so `timeout` finds `connectiontimeouterror` — not just
-  exact words.
+  By default search is substring-based (FTS5 trigram), so `timeout` finds `connectiontimeouterror` —
+  not just exact words. With `KINGLET_SEARCH=words` it matches words and word prefixes instead
+  (`time` finds `timeout`); with `off`, text filters scan the selected time window. See [Search
+  index](/storage/#search-index).
 </Aside>

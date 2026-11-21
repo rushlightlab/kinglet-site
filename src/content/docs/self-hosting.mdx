@@ -305,26 +305,27 @@ UI details.
 
 ## Configuration
 
-| Env var                            | Default                  | What it does                                                       |
-| ---------------------------------- | ------------------------ | ------------------------------------------------------------------ |
-| `KINGLET_PORT`                     | `3000`                   | HTTP port inside the container                                     |
-| `KINGLET_HOST`                     | —                        | Bind address; unset listens on all interfaces                      |
-| `KINGLET_STORAGE`                  | `auto`                   | `sqlite`, `libsql`, or `auto` (picks by db path scheme)            |
-| `KINGLET_DB_PATH`                  | `/data/kinglet.db`       | Local SQLite path; `libsql://`/`https://`/`file:` → libSQL         |
-| `KINGLET_DB_AUTH_TOKEN`            | —                        | Auth token for remote libSQL/Turso                                 |
-| `KINGLET_BASE_URL`                 | —                        | Public HTTPS origin — secure cookies and alert deep links          |
-| `BETTER_AUTH_SECRET`               | _(generated in `/data`)_ | Session signing secret; set explicitly for multi-instance installs |
-| `KINGLET_TRUSTED_PROXIES`          | —                        | CIDRs allowed to set `X-Forwarded-For`                             |
-| `KINGLET_ADMIN_EMAIL`              | `admin@kinglet.local`    | Bootstrap administrator email (when no administrator exists)       |
-| `KINGLET_ADMIN_PASSWORD`           | _(generated)_            | Bootstrap administrator password (when no administrator exists)    |
-| `KINGLET_SESSION_DAYS`             | `30`                     | Web session lifetime                                               |
-| `KINGLET_RETENTION_DAYS`           | `14`                     | Delete events older than this                                      |
-| `KINGLET_ALERT_RETENTION_DAYS`     | `90`                     | Delete alert history older than this                               |
-| `KINGLET_MAX_EVENTS_PER_PROJECT`   | `1000000`                | Hard cap on retained events per project (`0` = unlimited)          |
-| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                   | Hard cap on retained event bytes per project (`0` = unlimited)     |
-| `KINGLET_MAX_DB_MB`                | `4096`                   | Hard cap on local database size in MB (`0` = unlimited)            |
-| `KINGLET_ALLOW_PRIVATE_WEBHOOKS`   | —                        | Allow private/internal webhook targets (SSRF escape hatch)         |
-| `KINGLET_MCP_ALLOW_MONITOR_WRITES` | —                        | Allow MCP keys to create/update/delete monitors; off by default    |
+| Env var                            | Default                  | What it does                                                                        |
+| ---------------------------------- | ------------------------ | ----------------------------------------------------------------------------------- |
+| `KINGLET_PORT`                     | `3000`                   | HTTP port inside the container                                                      |
+| `KINGLET_HOST`                     | —                        | Bind address; unset listens on all interfaces                                       |
+| `KINGLET_STORAGE`                  | `auto`                   | `sqlite`, `libsql`, or `auto` (picks by db path scheme)                             |
+| `KINGLET_SEARCH`                   | `substring`              | Search index: `substring`, `words`, or `off` ([trade-offs](/storage/#search-index)) |
+| `KINGLET_DB_PATH`                  | `/data/kinglet.db`       | Local SQLite path; `libsql://`/`https://`/`file:` → libSQL                          |
+| `KINGLET_DB_AUTH_TOKEN`            | —                        | Auth token for remote libSQL/Turso                                                  |
+| `KINGLET_BASE_URL`                 | —                        | Public HTTPS origin — secure cookies and alert deep links                           |
+| `BETTER_AUTH_SECRET`               | _(generated in `/data`)_ | Session signing secret; set explicitly for multi-instance installs                  |
+| `KINGLET_TRUSTED_PROXIES`          | —                        | CIDRs allowed to set `X-Forwarded-For`                                              |
+| `KINGLET_ADMIN_EMAIL`              | `admin@kinglet.local`    | Bootstrap administrator email (when no administrator exists)                        |
+| `KINGLET_ADMIN_PASSWORD`           | _(generated)_            | Bootstrap administrator password (when no administrator exists)                     |
+| `KINGLET_SESSION_DAYS`             | `30`                     | Web session lifetime                                                                |
+| `KINGLET_RETENTION_DAYS`           | `14`                     | Delete events older than this                                                       |
+| `KINGLET_ALERT_RETENTION_DAYS`     | `90`                     | Delete alert history older than this                                                |
+| `KINGLET_MAX_EVENTS_PER_PROJECT`   | `1000000`                | Hard cap on retained events per project (`0` = unlimited)                           |
+| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                   | Hard cap on retained event bytes per project (`0` = unlimited)                      |
+| `KINGLET_MAX_DB_MB`                | `4096`                   | Hard cap on local database size in MB (`0` = unlimited)                             |
+| `KINGLET_ALLOW_PRIVATE_WEBHOOKS`   | —                        | Allow private/internal webhook targets (SSRF escape hatch)                          |
+| `KINGLET_MCP_ALLOW_MONITOR_WRITES` | —                        | Allow MCP keys to create/update/delete monitors; off by default                     |
 
 ### S3 backups (optional)
 
@@ -359,14 +360,21 @@ the database or an image layer.
 
 ## Sizing
 
-- **RAM**: ~200 MB idle; ~200–600 MB under load. Leave 512 MB–1 GB of headroom
-  for query, retention, and backup jobs.
-- **CPU**: 2 vCPUs are enough for a busy small app; throughput depends on event
-  size and query volume. Ingest is batched SQLite writes, not per-request round
-  trips.
-- **Disk**: roughly 0.8–1 GB per million small events, depending on payload size
-  and indexes. With the default 14-day retention, a small app stays in
-  single-digit gigabytes.
+Measured in a 2-vCPU Docker VM with ~200-byte events (message plus a few
+fields):
+
+- **RAM**: ~180 MB idle; ~400 MB peak under sustained ingest and dashboard
+  queries (~220 MB with `KINGLET_SEARCH=words`). Leave 512 MB–1 GB of headroom
+  for retention and backup jobs.
+- **CPU / throughput**: one container ingests ~7,000 events/s with 1,000-event
+  batches from four clients (~9,000 with `words`), and ~3,500 events/s with
+  100-event batches. The default 14-day window lists recent events in ~10 ms and
+  draws the histogram in under 100 ms with half a million events in range.
+- **Disk**: ~0.55 GB per million events with the default substring search,
+  ~0.42 GB with `words`, ~0.38 GB with `off`. Larger `fields` objects grow this
+  roughly in proportion. With the default 14-day retention, a small app stays
+  in single-digit gigabytes.
+- **Boot**: ~3–4 s to healthy, including container start.
 
 ## Backups
 
@@ -406,6 +414,13 @@ run automatically on boot.
   boot. The migration preserves rows and rewires every project, key, monitor, alert, and member
   reference, but it rewrites tables, so take a backup of `/data` first. Expect a one-time pause
   proportional to the database size.
+</Aside>
+
+<Aside type="caution" title="Compact event storage upgrade">
+  The release that introduces integer project keys rebuilds the `events` table and its indexes on
+  first boot (schema v11). Rows, ids, and search are preserved, and the database shrinks by about a
+  quarter. The rebuild takes roughly a minute per million events, during which the API is not yet
+  listening. Back up `/data` first.
 </Aside>
 
 ## Troubleshooting

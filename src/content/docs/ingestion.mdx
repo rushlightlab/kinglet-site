@@ -126,9 +126,9 @@ console.log(await response.json()); // { accepted: 1, rejected: 0 }
 
 ### Batching logger
 
-Sending one request per log line will rate-limit you and add latency to every
-call. Buffer instead: flush at 200 events or once a second, whichever comes
-first.
+Sending one request per log line will rate-limit you (600 requests per minute
+per key) and add latency to every call. Buffer instead: flush at about 1,000
+events or once a second, whichever comes first.
 
 ```ts title="kinglet-logger.ts"
 type Level = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
@@ -164,8 +164,8 @@ export class KingletLogger {
   constructor(options: KingletOptions) {
     this.options = options;
     this.endpoint = `${options.url.replace(/\/+$/, "")}/v1/events`;
-    this.batchSize = options.batchSize ?? 200;
-    this.maxQueue = this.batchSize * 50; // drop oldest if the server is unreachable
+    this.batchSize = options.batchSize ?? 1000;
+    this.maxQueue = this.batchSize * 10; // drop oldest if the server is unreachable
     this.timer = setInterval(() => void this.flush(), options.flushMs ?? 1000);
     (this.timer as { unref?: () => void }).unref?.();
   }
