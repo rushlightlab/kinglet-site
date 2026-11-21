@@ -68,17 +68,21 @@ docker run -d --name kinglet -p 8080:3000 \
 - **Backups are Turso's job.** Litestream applies to local SQLite files only.
 - Schema and migrations run automatically on first boot, same as a local file.
 
-Measured from a laptop to a Turso database in another region (~77 ms per round
-trip), against the same workload on a local file:
+**Recommended: the default local file.** It is the fastest option by a wide
+margin, needs no account or network, and supports substring search and
+snapshots. Use libSQL or Turso when you specifically want a managed or shared
+database. Measured with the same workload on each:
 
-| Database                      | 1,000-event batch | Ingest (4 senders) | Dashboard query |
-| ----------------------------- | ----------------- | ------------------ | --------------- |
-| Local SQLite file             | ~80 ms            | ~10,500 events/s   | 8–20 ms         |
-| Turso (libSQL engine)         | ~560 ms           | ~2,700 events/s    | 240–320 ms      |
-| Turso (MVCC / Turso Database) | ~1.4–1.6 s        | ~750 events/s      | 240–500 ms      |
+| Database                                     | 1,000-event batch | Ingest (4 senders) | Dashboard query | Search     |
+| -------------------------------------------- | ----------------- | ------------------ | --------------- | ---------- |
+| Local SQLite file _(default)_                | ~80 ms            | ~10,500 events/s   | 8–20 ms         | substring  |
+| Self-hosted libSQL server, same machine      | ~220 ms           | ~7,500 events/s    | 30–70 ms        | substring  |
+| Turso, libSQL engine (~77 ms away)           | ~560 ms           | ~2,700 events/s    | 240–320 ms      | substring  |
+| Turso, MVCC engine / Turso Database (~77 ms) | ~1.4–1.6 s        | ~750 events/s      | 240–500 ms      | off (scan) |
 
-Latency to the database dominates, so run Kinglet in the same region as it.
-Memory use is about the same either way. Turso bills rows written, and each
+Every remote option adds round trips, and latency to the database dominates,
+so run Kinglet in the same region as it. Kinglet uses about the same memory
+either way (a self-hosted libSQL server adds ~60 MB of its own). Turso bills rows written, and each
 event writes several rows (the event, usage accounting, and the search index
 when enabled), so check the free plan's write limit against your volume.
 
