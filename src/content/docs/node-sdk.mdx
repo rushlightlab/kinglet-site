@@ -5,7 +5,7 @@ description: Buffer, batch, and ship logs from Node.js without blocking your app
 
 import { Aside } from "@astrojs/starlight/components";
 
-`@kinglet/sdk-node` is a zero-dependency batching client for Node 26+. Events
+`@kinglet/sdk-node` is a zero-dependency batching client for Node 24+. Events
 buffer in-process and ship as a single NDJSON batch — 1,000 events or every
 second, whichever comes first. A failed batch is re-queued (with a cap) and
 reported through `onError`, so your app never blocks on logging.
@@ -56,8 +56,7 @@ import { createLogger, type Logger, type LoggerOptions, type LogFields } from "@
 ```
 
 It is ESM-only (`"type": "module"`, with an `import` export) and requires
-Node 26+. With a local file dependency, build the package first so TypeScript
-can resolve the `types` entry.
+Node 24 or newer.
 
 ## Options
 
