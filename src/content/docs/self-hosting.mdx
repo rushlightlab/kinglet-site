@@ -72,7 +72,7 @@ docker run -d --name kinglet \
   -p 8080:3000 \
   -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
-  ghcr.io/rushlightlab/kinglet:0.3.0
+  ghcr.io/rushlightlab/kinglet:0.4.0
 ```
 
 Open `http://localhost:8080`. If you did not set an admin password, read the
@@ -88,7 +88,7 @@ For a public server, set `KINGLET_BASE_URL=https://logs.example.com` before the
 first boot.
 
 <Aside type="tip" title="Pin versions">
-  `:latest` moves with each release. Pin a version tag such as `:0.3.0` in production, or use a
+  `:latest` moves with each release. Pin a version tag such as `:0.4.0` in production, or use a
   digest for an immutable deployment.
 </Aside>
 
@@ -100,7 +100,7 @@ the platform sections below instead.
 ```yaml
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.3.0
+    image: ghcr.io/rushlightlab/kinglet:0.4.0
     restart: unless-stopped
     ports:
       - "8080:3000" # standalone only — remove behind Coolify/Dokploy
@@ -153,7 +153,7 @@ Create or open a project, then choose **+ New → Docker Image**.
 
 ### 2. Choose the image
 
-Set the image name to `ghcr.io/rushlightlab/kinglet` and the tag to `0.3.0`
+Set the image name to `ghcr.io/rushlightlab/kinglet` and the tag to `0.4.0`
 (or `latest`). No registry credentials are needed.
 
 ### 3. Set the port
@@ -215,7 +215,7 @@ Create or open a project, then create a **Docker Compose** service.
 ```yaml
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.3.0
+    image: ghcr.io/rushlightlab/kinglet:0.4.0
     restart: unless-stopped
     expose:
       - "3000"

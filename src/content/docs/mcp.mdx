@@ -59,8 +59,8 @@ development.
 
 <Aside type="note" title="Windows: wrap npx with cmd /c">
   Desktop clients often start without your shell `PATH`. If `npx` is not found, use `"command":
-  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp@0.3.0"]` in JSON clients. On Codex CLI, set
-  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.3.0"]`.
+  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]` in JSON clients. On Codex CLI, set
+  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]`.
 </Aside>
 
 ### Claude Desktop
@@ -72,7 +72,7 @@ Edit `claude_desktop_config.json` (Settings → Developer → Edit Config):
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.3.0"],
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -90,7 +90,7 @@ Add the server from a terminal:
 claude mcp add kinglet \
   --env KINGLET_URL=https://logs.example.com \
   --env KINGLET_MCP_KEY=km_... \
-  -- npx -y @kinglet/mcp@0.3.0
+  -- npx -y @kinglet/mcp@0.4.0
 ```
 
 A project-scoped `.mcp.json` uses the same `mcpServers` shape as Claude Desktop.
@@ -107,7 +107,7 @@ project:
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.3.0"],
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -127,7 +127,7 @@ Edit `.vscode/mcp.json`:
     "kinglet": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.3.0"],
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -147,7 +147,7 @@ Edit `~/.codex/config.toml`:
 ```toml
 [mcp_servers.kinglet]
 command = "npx"
-args = ["-y", "@kinglet/mcp@0.3.0"]
+args = ["-y", "@kinglet/mcp@0.4.0"]
 env = { KINGLET_URL = "https://logs.example.com", KINGLET_MCP_KEY = "km_..." }
 ```
 
@@ -160,7 +160,7 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.3.0"],
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -180,7 +180,7 @@ writes the same entry:
   "context_servers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.3.0"],
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -201,7 +201,7 @@ Add a local server to `opencode.json` or `opencode.jsonc`:
     "servers": {
       "kinglet": {
         "type": "local",
-        "command": ["npx", "-y", "@kinglet/mcp@0.3.0"],
+        "command": ["npx", "-y", "@kinglet/mcp@0.4.0"],
         "environment": {
           "KINGLET_URL": "https://logs.example.com",
           "KINGLET_MCP_KEY": "km_...",

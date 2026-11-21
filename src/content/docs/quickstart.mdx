@@ -39,7 +39,7 @@ Sign in with `admin@kinglet.local` (or the email you set through
 `KINGLET_ADMIN_EMAIL`) and that password.
 
 <Aside type="tip" title="Pin a version">
-  `:latest` is convenient for a trial. For production, pin a release tag such as `:0.3.0`, or a
+  `:latest` is convenient for a trial. For production, pin a release tag such as `:0.4.0`, or a
   digest for an immutable deployment. See [Updates and image
   pinning](/security/#updates-and-image-pinning).
 </Aside>
@@ -54,7 +54,7 @@ Create `docker-compose.yml`:
 ```yaml
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.3.0
+    image: ghcr.io/rushlightlab/kinglet:0.4.0
     restart: unless-stopped
     ports:
       - "8080:3000"
