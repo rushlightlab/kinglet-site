@@ -19,6 +19,23 @@ KINGLET_DB_PATH=/data/kinglet.db
 
 WAL mode and the FTS5 trigram index are configured automatically.
 
+### Search index
+
+`KINGLET_SEARCH` picks how message text is indexed. The index is the largest
+single cost of ingest, so this is the main knob for high-volume installs.
+Measured over HTTP in a 2-vCPU Docker VM with ~500k ~200-byte events:
+
+| Mode                    | Matches                                      | Ingest      | Disk / 1M events | Peak RAM |
+| ----------------------- | -------------------------------------------- | ----------- | ---------------- | -------- |
+| `substring` _(default)_ | any 3+ character fragment                    | ~7,300 ev/s | ~0.55 GB         | ~410 MB  |
+| `words`                 | words and word prefixes (`time` → `timeout`) | ~8,900 ev/s | ~0.42 GB         | ~220 MB  |
+| `off`                   | substrings, by scanning the selected window  | ~9,400 ev/s | ~0.38 GB         | ~190 MB  |
+
+With `off`, a filter on a common term still returns quickly (the newest
+matches are found first), but a rare term or a count scans every event in the
+window: roughly 0.5 s with half a million events in range. Changing the mode rebuilds (or drops)
+the index once at boot. The live tail always matches substrings.
+
 **Turso** — point at your database; nothing else changes:
 
 ```bash
@@ -30,9 +47,8 @@ With `KINGLET_STORAGE=auto` (the default), a plain path uses the local file and
 `libsql://`, `https://`, `wss://`, or `file:` URLs use the libSQL transport.
 
 <Aside type="note" title="One engine, two transports">
-  Earlier versions had separate better-sqlite3 and libSQL drivers. They are now
-  one libSQL client — the same query code, schema, and migrations run locally
-  and on Turso.
+  Earlier versions had separate better-sqlite3 and libSQL drivers. They are now one libSQL client —
+  the same query code, schema, and migrations run locally and on Turso.
 </Aside>
 
 ### Notes for hosted Turso
@@ -51,6 +67,34 @@ docker run -d --name kinglet -p 8080:3000 \
   monitor's count check costs one round trip per interval.
 - **Backups are Turso's job.** Litestream applies to local SQLite files only.
 - Schema and migrations run automatically on first boot, same as a local file.
+
+**Recommended: the default local file.** It is the fastest option by a wide
+margin, needs no account or network, and supports substring search and
+snapshots. Use libSQL or Turso when you specifically want a managed or shared
+database. Measured with the same workload on each:
+
+| Database                                     | 1,000-event batch | Ingest (4 senders) | Dashboard query | Search     |
+| -------------------------------------------- | ----------------- | ------------------ | --------------- | ---------- |
+| Local file, embedded libSQL _(default)_      | ~80 ms            | ~10,500 events/s   | 8–20 ms         | substring  |
+| Self-hosted libSQL server, same machine      | ~220 ms           | ~7,500 events/s    | 30–70 ms        | substring  |
+| Turso, libSQL engine (~77 ms away)           | ~560 ms           | ~2,700 events/s    | 240–320 ms      | substring  |
+| Turso, MVCC engine / Turso Database (~77 ms) | ~1.4–1.6 s        | ~750 events/s      | 240–500 ms      | off (scan) |
+
+The local file and the libSQL server run the same engine: the default embeds
+libSQL in the Kinglet process, while server mode sends every query over HTTP.
+That hop is the whole difference, even on one machine. Every remote option adds
+round trips, and latency to the database dominates,
+so run Kinglet in the same region as it. Kinglet uses about the same memory
+either way (a self-hosted libSQL server adds ~60 MB of its own). Turso bills rows written, and each
+event writes several rows (the event, usage accounting, and the search index
+when enabled), so check the free plan's write limit against your volume.
+
+<Aside type="note" title="Turso's MVCC engine">
+  Databases on Turso's newer engine with MVCC (concurrent writes) do not support the virtual table
+  behind full-text search. Kinglet detects this on boot, runs every migration except the search
+  index, and serves text filters by scanning the selected time window, as with `KINGLET_SEARCH=off`.
+  Set `KINGLET_SEARCH=off` to silence the warning. Everything else works the same.
+</Aside>
 
 ## Migrations
 

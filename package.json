@@ -3,9 +3,9 @@
   "version": "0.3.0",
   "private": true,
   "description": "Docs and landing page for Kinglet — small. light. king.",
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@12.21.0",
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "type": "module",
   "scripts": {
@@ -13,13 +13,23 @@
     "prebuild": "node scripts/fetch-releases.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "lint": "oxlint . --deny-warnings",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt . --threads=1",
+    "format:check": "oxfmt --check . --threads=1"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.5",
+    "@astrojs/sitemap": "^3.7.6",
     "@astrojs/starlight": "^0.43.1",
-    "@fontsource-variable/jetbrains-mono": "^5.2.0",
-    "@fontsource/chakra-petch": "^5.1.0",
-    "astro": "^7.4.12"
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource/chakra-petch": "^5.3.0",
+    "astro": "^7.4.13"
+  },
+  "devDependencies": {
+    "@astrojs/compiler-rs": "^0.5.3",
+    "@oxlint/plugins": "1.94.0",
+    "oxfmt": "0.79.0",
+    "oxlint": "1.94.0"
   }
 }

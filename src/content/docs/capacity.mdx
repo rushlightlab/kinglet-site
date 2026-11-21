@@ -1,0 +1,96 @@
+---
+title: Capacity planning
+description: Measured ingest and dashboard capacity on small machines, and how to size Kinglet for your log volume.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet is one Node process writing to one SQLite file. Ingest runs on a single
+thread, so single-core speed matters more than core count, and for most
+installs the disk needed for retention runs out long before the CPU does.
+
+## Measured capacity
+
+The **sustained** rate is the highest ingest rate a machine held while five
+people kept the dashboard open, without latency running away:
+
+| Machine           | Sustained ingest | With `KINGLET_SEARCH=words` | Peak RAM |
+| ----------------- | ---------------- | --------------------------- | -------- |
+| 0.5 vCPU / 512 MB | 2,000 events/s   | —                           | ~300 MB  |
+| 1 vCPU / 512 MB   | 3,000 events/s   | —                           | ~300 MB  |
+| 1 vCPU / 1 GB     | 3,000 events/s   | 6,000 events/s              | ~330 MB  |
+| 2 vCPU / 2 GB     | 4,000 events/s   | 6,000 events/s              | ~410 MB  |
+
+<Aside type="note" title="How this was measured">
+  Docker on a laptop (AMD Ryzen 9 5900HS), with CPU and memory capped by `--cpus` and `--memory` and
+  no swap. Events were ~200 bytes (a message plus four fields) from four senders, in the batch sizes
+  a client produces at that rate (30–1,000 events per request), on top of 300,000 events of history.
+  Five simulated users each reloaded the default one-hour view (500 events plus the histogram, every
+  other time with a search) every 15 seconds. A rate counts as sustained when at least 95% of it was
+  delivered with ingest p99 under 1 s, dashboard p95 under 2 s, and no errors. Shared cloud vCPUs
+  are often slower than a laptop core: plan on roughly half these rates.
+</Aside>
+
+What else the runs showed:
+
+- **Dashboard users are cheap.** Every machine above served 50 simultaneous
+  users, each refreshing every 15 seconds, at p95 under 0.5 s.
+- **Query cost follows the window, not the database.** A histogram costs about
+  0.15–0.2 s and grouped counts about 0.25–0.3 s per million events in the
+  selected time range. Listing the newest events stayed around 10 ms with half
+  a million events in the window.
+- **Overload degrades gracefully.** Above the sustained rate, requests queue
+  and latency rises; no run ran out of memory or restarted. Under extreme
+  overload a few keep-alive connections are dropped, and the Node SDK retries
+  them.
+- **Cores help a little.** Going from 1 to 2 vCPUs added about 30% with
+  substring search and nothing measurable with `words`. Machines above 2 vCPUs
+  were not tested; extra cores mainly speed up backups and retention.
+- **Memory is not the constraint.** Node sizes its heap to the container, and
+  512 MB was enough in every run. Extra RAM helps as file cache once the
+  database is much larger than memory.
+- **Bigger batches go further.** With 1,000-event batches and no dashboard
+  load, 2 vCPUs peak at about 7,300 events/s (about 9,000 with `words`).
+
+## Retention usually decides the size
+
+Throughput above is per second; disk is what you keep. At the default 14-day
+retention, with ~200-byte events:
+
+| Average rate | Events per day | Kept for 14 days | Disk (substring) | Disk (`words`) |
+| ------------ | -------------- | ---------------- | ---------------- | -------------- |
+| 1/s          | 86k            | 1.2M             | ~0.7 GB          | ~0.5 GB        |
+| 10/s         | 864k           | 12M              | ~6.5 GB          | ~5 GB          |
+| 50/s         | 4.3M           | 60M              | ~33 GB           | ~26 GB         |
+| 100/s        | 8.6M           | 121M             | ~65 GB           | ~51 GB         |
+| 250/s        | 21.6M          | 302M             | ~165 GB          | ~130 GB        |
+
+Use your **average** rate, not the peak: a service that bursts to 2,000
+events/s for one minute an hour averages about 33/s. Larger `fields` objects
+grow disk roughly in proportion.
+
+<Aside type="caution" title="Raise the default caps for real volume">
+  The defaults protect a shared database: `KINGLET_MAX_EVENTS_PER_PROJECT=1000000`,
+  `KINGLET_MAX_PROJECT_DB_MB=1024`, and `KINGLET_MAX_DB_MB=4096`. At the default 14-day retention a
+  project averaging more than about 0.8 events/s reaches the event cap, and ingest returns `429`
+  until retention frees space. Size the caps to the table above (`0` disables a cap) and keep
+  `KINGLET_MAX_DB_MB` below your free disk.
+</Aside>
+
+## Recommendations
+
+| You are                    | Typical volume                                   | Machine              | Disk           | Settings                                                                              |
+| -------------------------- | ------------------------------------------------ | -------------------- | -------------- | ------------------------------------------------------------------------------------- |
+| Hobby or side project      | under 5 events/s average, 1–3 people             | 1 vCPU / 512 MB–1 GB | 10 GB          | Defaults; raise the event cap above ~0.8 events/s average                             |
+| Small team, production app | 5–50 events/s average, bursts to 1–2k            | 1–2 vCPU / 1–2 GB    | 40–80 GB SSD   | Raise the caps to fit retention                                                       |
+| Busy service               | 50–200 events/s average, bursts to several k     | 2 vCPU / 2–4 GB      | 100–250 GB SSD | `KINGLET_SEARCH=words`; consider 7-day retention; keep dashboards on short windows    |
+| Beyond that                | over ~200 events/s average, or 300M+ events kept | —                    | —              | Split projects across instances. A ClickHouse event backend is planned for this scale |
+
+Whatever the size:
+
+- Batch 500–1,000 events per request (the Node SDK default is 1,000). Ingest
+  allows 600 requests per minute per API key, so give each service or instance
+  its own key.
+- If you do not need substring search, `KINGLET_SEARCH=words` is the biggest
+  single lever: 1.5–2× the sustained rate and ~22% less disk. See [Search index](/storage/#search-index).
+- Shorter retention shrinks disk linearly and keeps long-window queries fast.

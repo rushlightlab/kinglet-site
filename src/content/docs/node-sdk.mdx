@@ -5,30 +5,23 @@ description: Buffer, batch, and ship logs from Node.js without blocking your app
 
 import { Aside } from "@astrojs/starlight/components";
 
-`@kinglet/sdk-node` is a zero-dependency batching client for Node 26+. Events
-buffer in-process and ship as a single NDJSON batch — 200 events or every
+`@kinglet/sdk-node` is a zero-dependency batching client for Node 24+. Events
+buffer in-process and ship as a single NDJSON batch — 1,000 events or every
 second, whichever comes first. A failed batch is re-queued (with a cap) and
 reported through `onError`, so your app never blocks on logging.
-
-<Aside type="note" title="Not on npm yet">
-  The package lives in the Kinglet monorepo at `packages/sdk-node` and is not
-  published to npm. From a checkout, build it with
-  `pnpm --filter @kinglet/sdk-node build` and use a workspace/file dependency
-  until the npm release.
-</Aside>
 
 ## Install
 
 ```bash
-# not published yet — from the Kinglet repo:
-pnpm --filter @kinglet/sdk-node build
+npm install @kinglet/sdk-node
+# or: pnpm add @kinglet/sdk-node
 ```
 
 ## Projects and keys
 
 There is no `project` option. A Kinglet API key is bound to one project on the
 server, so the key you pass as `token` selects where the events go. Create a
-key with the **ingest** scope in **Settings → projects & keys**, and use a
+key with the **ingest** scope in **Settings → Projects → manage**, and use a
 separate key for each project or environment.
 
 `service` and `env` only tag events for filtering — they don't route them.
@@ -39,8 +32,8 @@ separate key for each project or environment.
 import { createLogger } from "@kinglet/sdk-node";
 
 const log = createLogger({
-  url: "http://localhost:8080",      // your Kinglet server
-  token: process.env.KINGLET_KEY!,   // project key with the ingest scope (kl_…)
+  url: "http://localhost:8080", // your Kinglet server
+  token: process.env.KINGLET_KEY!, // project key with the ingest scope (kl_…)
   service: "my-app",
   env: "prod",
 });
@@ -59,36 +52,49 @@ The SDK is written in TypeScript and builds with declaration output, so
 and `LogFields` are exported — no separate `@types` package is needed:
 
 ```ts
-import {
-  createLogger,
-  type Logger,
-  type LoggerOptions,
-  type LogFields,
-} from "@kinglet/sdk-node";
+import { createLogger, type Logger, type LoggerOptions, type LogFields } from "@kinglet/sdk-node";
 ```
 
 It is ESM-only (`"type": "module"`, with an `import` export) and requires
-Node 26+. With a local file dependency, build the package first so TypeScript
-can resolve the `types` entry.
+Node 24 or newer.
 
 ## Options
 
-| Option | Default | What it does |
-| --- | --- | --- |
-| `url` | — | Kinglet base URL (required) |
-| `token` | — | `kl_…` key with the ingest scope (required) — also selects the project |
-| `service` / `env` | — | tagged onto every event |
-| `batchSize` | `200` | flush after this many buffered events |
-| `flushMs` | `1000` | flush at least this often |
-| `onError` | — | called when a flush fails; the batch is re-queued |
+| Option            | Default | What it does                                                           |
+| ----------------- | ------- | ---------------------------------------------------------------------- |
+| `url`             | —       | Kinglet base URL (required)                                            |
+| `token`           | —       | `kl_…` key with the ingest scope (required) — also selects the project |
+| `service` / `env` | —       | tagged onto every event                                                |
+| `batchSize`       | `1000`  | flush after this many buffered events (max 5000)                       |
+| `flushMs`         | `1000`  | flush at least this often                                              |
+| `onError`         | —       | called when a flush fails; the batch is re-queued                      |
 
 ## Methods
 
-| Method | What it does |
-| --- | --- |
+| Method            | What it does                                    |
+| ----------------- | ----------------------------------------------- |
 | `trace` … `fatal` | buffer one event with an optional fields object |
-| `flush()` | send the current buffer now |
-| `close()` | stop the timer and perform a final flush |
+| `flush()`         | send the current buffer now                     |
+| `close()`         | wait for a request in flight, then drain buffer |
+
+## Why 1000 events per batch
+
+Most apps never fill a batch: below a few hundred events a second, the
+one-second timer flushes first and the batch size changes nothing. It matters
+for busy services:
+
+- **Rate limit.** Ingest allows 600 requests per minute per key. At 200 events
+  per request that caps one key near 2,000 events/s; at 1,000 it is 10,000,
+  about what one Kinglet server can absorb.
+- **Server cost.** Each request pays fixed work (auth, parsing, a commit).
+  1,000-event batches ingest roughly 25% faster per event than 100-event ones.
+- **Outage buffer.** The client keeps up to 10 batches in memory while the
+  server is unreachable, so a larger batch also rides out a longer restart.
+
+The trade-off is memory (up to 10,000 buffered events) and, on a hard crash,
+losing up to one batch or one second of logs, whichever is smaller. Lower
+`batchSize` if your events are large; one request never carries more than 5,000
+events.
 
 <Aside type="note" title="Roadmap">
   A pino transport (`transport: { target: "@kinglet/pino" }`) and a zero-code

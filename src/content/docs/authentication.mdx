@@ -24,31 +24,57 @@ Drizzle adapter, tuned per its performance guide:
 When no administrator exists — first boot, or recovery from a database with no
 admin account — Kinglet creates or promotes one:
 
-| Env var | Default | Notes |
-| --- | --- | --- |
-| `KINGLET_ADMIN_EMAIL` | `admin@kinglet.local` | login identifier |
-| `KINGLET_ADMIN_PASSWORD` | *(generated)* | printed once; written to `admin-password.txt` only for local databases |
+| Env var                  | Default               | Notes                                                                  |
+| ------------------------ | --------------------- | ---------------------------------------------------------------------- |
+| `KINGLET_ADMIN_EMAIL`    | `admin@kinglet.local` | login identifier                                                       |
+| `KINGLET_ADMIN_PASSWORD` | _(generated)_         | printed once; written to `admin-password.txt` only for local databases |
 
 These only apply when no administrator exists — changing them while an admin is
 present does nothing. If an account with the configured email already exists, it
 is promoted and keeps its current password. The administrator cannot be deleted.
 
+## Passwords
+
+New and changed passwords set through the UI or the admin user API must be at
+least **12 characters** and include a lowercase letter, an uppercase letter, and
+a number. The UI shows a live checklist and a show/hide toggle on every password
+field. Existing shorter passwords still sign in; the policy applies when a
+password is set or changed.
+
+Administrators can leave the password blank when creating a user — Kinglet
+generates a 16-character password that meets the same policy and shows it once.
+Your own password lives in **Account settings** in the user menu.
+
+## User actions
+
+Admins can reset a user's password, change their role, disable or enable the
+account, or delete it from **Settings → Users**.
+
+- **Change role** switches a user between member and viewer.
+- **Reset password** generates a compliant password, shows it once, signs the
+  user out everywhere, and revokes keys they created.
+- **Disable** blocks sign-in and revokes keys minted by that user. Enabling the
+  account does not restore those keys.
+- **Delete** removes the account, its sessions, and its keys; administrators
+  cannot be deleted or disabled, and you cannot disable or delete your own
+  account.
+
 ## Roles
 
-| Role | Can do |
-| --- | --- |
-| **admin** | everything: projects, users, keys, logs, monitors. Cannot be deleted or demoted while last |
-| **member** | read/write logs, manage monitors, manage API keys |
-| **viewer** | read logs, monitors, and project metadata |
+| Role       | Can do                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| **admin**  | everything: projects, users, keys, logs, monitors. Cannot be deleted or demoted while last |
+| **member** | read/write logs, manage monitors, manage API keys                                          |
+| **viewer** | read logs, monitors, and project metadata                                                  |
 
 Roles map to explicit permission keys (`logs.read`, `monitors.write`,
 `keys.write`, `users.read`, …) internally, so custom roles later are a data
 change rather than a refactor.
 
 <Aside type="note" title="Project access">
-  Roles set what a user can do; project membership sets where they can do it.
-  Admins see every project. Members and viewers see only the projects assigned
-  to them in **/settings → projects & keys**.
+  Roles set what a user can do; project membership sets where they can do it. Admins see every
+  project. Members and viewers see only the projects assigned to them in **Settings → Projects →
+  manage → members**.
 </Aside>
 
 ## Project membership
@@ -59,12 +85,16 @@ Admins always have access to every project. Everyone else needs a
 - **Members** get their role's write capabilities (logs, monitors, keys)
   inside assigned projects.
 - **Viewers** get read-only access inside assigned projects.
-- Assign or remove people in **/settings → projects & keys** while the project
-  is selected.
+- **Clear logs** is a separate per-project grant. Admins always have it;
+  members can be granted it from the member list; viewers cannot. It is off by
+  default.
+- Assign or remove people in **Settings → Projects → manage → members** while the
+  project is selected.
 - Upgrading from an older Kinglet backfills every user into every existing
   project, so nobody loses access; prune assignments afterwards.
 
-The API exposes this as `GET`/`POST /v1/projects/:id/members` and
+The API exposes this as `GET`/`POST /v1/projects/:id/members`,
+`PATCH /v1/projects/:id/members/:userId` (`{ "canClearLogs": true|false }`), and
 `DELETE /v1/projects/:id/members/:userId` (admin only). A non-member requesting
 another project's data gets a `404`, so project ids cannot be probed.
 
@@ -72,23 +102,40 @@ another project's data gets a `404`, so project ids cannot be probed.
 
 Every project owns its events, monitors, alert history, and API keys. Switch
 projects from the header dropdown; the logs, histogram, live tail, monitors,
-and alerts all follow. Admins create and delete projects in **/settings**.
+and alerts all follow. Admins manage projects in **Settings → Projects**; open a
+project to rename or delete it.
+
+### Clearing logs
+
+Admins, and members granted **clear logs**, can delete a project's events from
+**Settings → Projects → manage → Clear logs**. Pick a preset range (last hour,
+6 hours, 24 hours, 7 days, 30 days), all time, or a custom start/end. Keys,
+monitors, and alert history are left alone. The grant is per project, off by
+default, and cannot be given to viewers.
 
 ## API keys
 
 Machine credentials live per project with explicit **scopes** — a key never
 inherits a human role:
 
-| Scope | Allows |
-| --- | --- |
-| `ingest` | `POST /v1/events` |
-| `query` | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
+| Scope    | Allows                                                          |
+| -------- | --------------------------------------------------------------- |
+| `ingest` | `POST /v1/events`                                               |
+| `query`  | `GET /v1/events`, `/v1/histogram`, `/v1/services`, `/v1/stream` |
 
 Keys look like `kl_…` and are shown **once** at creation. Revoke them any time
-in **/settings → projects & keys**; the list keeps a display prefix, scopes,
-creator, and last-used time. A key created without an explicit `scopes` array
-defaults to `["ingest"]`; unknown scopes are rejected with a 400. When a user is
-demoted or deleted, keys they created are revoked.
+in **Settings → Projects → manage**; the list keeps a short token prefix
+(`kl_XXXXXXXX…`), scopes, creator, created date, and last-used time. A key
+created without an explicit `scopes` array defaults to `["ingest"]`; unknown
+scopes are rejected with a 400. When a user is demoted, disabled, deleted, or
+removed from a project, keys they created are revoked (project removal revokes
+the keys for that project). A password reset also revokes the target's keys.
+
+The key actions menu can also **edit permissions** (change `ingest`/`query`
+scopes without replacing the key) and **reroll** it. Rerolling immediately
+invalidates the old plaintext and shows the new one once. **View usage** filters
+the logs to `key:<id>`, so you can see what each key has been sending. Only the
+key's creator or an administrator can change or revoke it.
 
 ```bash
 curl -X POST http://localhost:8080/v1/events \
@@ -112,7 +159,7 @@ delete the user's sessions and API keys; mutating requests always bypass the
 cookie cache, so a demoted user cannot keep writing.
 
 <Aside type="caution" title="Run behind TLS">
-  Session cookies are HttpOnly + SameSite=Lax and become `Secure` when
-  `KINGLET_BASE_URL` is an HTTPS URL. For anything beyond localhost, set
-  `KINGLET_BASE_URL` and put Kinglet behind Caddy/nginx TLS.
+  Session cookies are HttpOnly + SameSite=Lax and become `Secure` when `KINGLET_BASE_URL` is an
+  HTTPS URL. For anything beyond localhost, set `KINGLET_BASE_URL` and put Kinglet behind
+  Caddy/nginx TLS.
 </Aside>

@@ -7,65 +7,158 @@ import { Aside } from "@astrojs/starlight/components";
 
 Auth is either the Better Auth session cookie (web UI) or
 `Authorization: Bearer kl_…` (project API keys). Session requests to
-project-scoped routes pass `?project=<id>`; API keys are bound to their project
+project-scoped routes pass `?project=<uuid>`; API keys are bound to their project
 and enforce their `ingest` / `query` scopes.
 
 Browser sign-in, sign-out, and password changes are served by Better Auth under
 `/api/auth/*`. Public self-signup is disabled — administrators create accounts.
 
 <Aside type="caution" title="CSRF header">
-  Cookie-authenticated mutations (`POST`, `PATCH`, `DELETE` under `/v1`) must
-  send `X-Kinglet-Request: 1`. The web UI does this automatically; scripts
-  driving the API with a session cookie must set it too. Requests using an
-  `Authorization: Bearer` key are exempt.
+  Cookie-authenticated mutations (`POST`, `PATCH`, `DELETE` under `/v1`) must send
+  `X-Kinglet-Request: 1`. The web UI does this automatically; scripts driving the API with a session
+  cookie must set it too. Requests using an `Authorization: Bearer` key are exempt.
 </Aside>
 
 ## Auth & workspace
 
-| Route | Method | What it does |
-| --- | --- | --- |
-| `/api/auth/sign-in/email` | `POST` | Sign in — sets the session cookie |
-| `/api/auth/sign-out` | `POST` | Sign out |
-| `/api/auth/get-session` | `GET` | Current Better Auth session |
-| `/api/auth/change-password` | `POST` | Change your password |
-| `/v1/me` | `GET` | Current user + permissions |
-| `/v1/projects` | `GET`/`POST` | List assigned projects / create a project (admin) |
-| `/v1/projects/:id` | `DELETE` | Delete a project and all its data (admin) |
-| `/v1/users` | `GET`/`POST` | List / create users (admin) |
-| `/v1/users/:id` | `PATCH`/`DELETE` | Change role / delete user (admin) |
-| `/v1/projects/:id/keys` | `GET`/`POST` | List / create API keys for a project |
-| `/v1/keys/:id` | `DELETE` | Revoke a key (requires `?project=`) |
-| `/v1/projects/:id/members` | `GET`/`POST` | List / assign project members (admin) — POST body `{ "userId": "…" }` |
-| `/v1/projects/:id/members/:userId` | `DELETE` | Remove a project member (admin) |
-| `/v1/system/status` | `GET` | Operational diagnostics — retention, monitors, counts (admin) |
+| Route                              | Method           | What it does                                                                  |
+| ---------------------------------- | ---------------- | ----------------------------------------------------------------------------- |
+| `/api/auth/sign-in/email`          | `POST`           | Sign in — sets the session cookie                                             |
+| `/api/auth/sign-out`               | `POST`           | Sign out                                                                      |
+| `/api/auth/get-session`            | `GET`            | Current Better Auth session                                                   |
+| `/api/auth/change-password`        | `POST`           | Change your password                                                          |
+| `/v1/me`                           | `GET`            | Current user + permissions                                                    |
+| `/v1/projects`                     | `GET`/`POST`     | List assigned projects / create a project (admin)                             |
+| `/v1/projects/:id`                 | `PATCH`          | Rename a project (admin) — body `{ "name": "…" }`                             |
+| `/v1/projects/:id`                 | `DELETE`         | Delete a project and all its data (admin). The only project cannot be deleted |
+| `/v1/users`                        | `GET`/`POST`     | List / create users (admin)                                                   |
+| `/v1/users/:id`                    | `PATCH`/`DELETE` | Change role, name, or disabled status / delete user (admin)                   |
+| `/v1/users/:id/reset-password`     | `POST`           | Generate a new password and revoke sessions (admin)                           |
+| `/v1/projects/:id/keys`            | `GET`/`POST`     | List / create API keys for a project                                          |
+| `/v1/keys/:id`                     | `PATCH`/`DELETE` | Edit scopes / revoke a key (requires `?project=`)                             |
+| `/v1/keys/:id/rotate`              | `POST`           | Replace key material; the old key stops working (requires `?project=`)        |
+| `/v1/projects/:id/members`         | `GET`/`POST`     | List / assign project members (admin) — POST body `{ "userId": "…" }`         |
+| `/v1/projects/:id/members/:userId` | `PATCH`/`DELETE` | Grant/revoke `canClearLogs` / remove a member (admin)                         |
+| `/v1/context`                      | `GET`            | Machine-key project, scopes, capabilities, write gate, version, retention     |
+| `/v1/system/status`                | `GET`            | Operational diagnostics — retention, monitors, counts (admin)                 |
+
+`GET /v1/context` is the machine-credential view for `kl_` and `km_` keys. It
+returns the key's project, scopes, effective capabilities, server version and
+retention, and `monitorWritesEnabled`. That boolean reports whether this server
+allows MCP monitor writes; it is derived configuration state, never the raw
+environment value.
 
 ## Logs
 
 See [HTTP ingestion](/ingestion/) for copy-paste clients in TypeScript, Python,
 Go, and PHP.
 
-| Route | Method | What it does |
-| --- | --- | --- |
-| `/v1/events` | `POST` | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events |
-| `/v1/events` | `GET` | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor` |
-| `/v1/histogram` | `GET` | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240) |
-| `/v1/services` | `GET` | Known services with event counts |
-| `/v1/stream` | `GET` | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients |
-| `/healthz` | `GET` | Health check (no auth) |
+| Route                     | Method   | What it does                                                                                                         |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/v1/events`              | `POST`   | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events                                                             |
+| `/v1/events`              | `GET`    | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor`                                       |
+| `/v1/events/:uid`         | `GET`    | Fetch one event by its UUID v7 (project-scoped)                                                                      |
+| `/v1/events/:uid/context` | `GET`    | Neighbouring events. Params: `before`, `after` (0–20, default 5)                                                     |
+| `/v1/events`              | `DELETE` | Clear a project's events. Optional `from`/`to` epoch ms; omit both for all. Admin or a member granted **clear logs** |
+| `/v1/histogram`           | `GET`    | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240)                                                 |
+| `/v1/services`            | `GET`    | Known services with event counts                                                                                     |
+| `/v1/aggregate`           | `GET`    | Totals for a filter; optional `groupBy=service\|level\|env`, `limit` ≤ 200                                           |
+| `/v1/stream`              | `GET`    | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients                                          |
+| `/healthz`                | `GET`    | Health check (no auth)                                                                                               |
+
+Every event has two identifiers:
+
+```json
+{
+  "id": 84021,
+  "uid": "0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30",
+  "apiKeyId": "0190f3a2-8d10-7f3b-9c4a-1e2d3f4a5b6c",
+  "ts": 1795076053357,
+  "level": 4,
+  "service": "api",
+  "env": "prod",
+  "message": "upstream timed out",
+  "fields": { "requestId": "req_9f2" }
+}
+```
+
+`id` is the integer row id used for pagination and full-text search. `uid` is a
+UUID v7 that is stable and safe to share; fetch one event with
+`GET /v1/events/<uid>`.
+
+## Event context
+
+`GET /v1/events/<uid>/context?before=5&after=5` returns one event plus its
+immediate neighbours as `{ event, before, after }`. `before` and `after` default
+to 5 and accept 0–20. Each list is chronological and ordered by `(ts, id)`, so
+equal timestamps are stable. The event and both lists are restricted to the
+resolved project; an unknown or cross-project `uid` is a `404`.
+
+## Aggregation
+
+`GET /v1/aggregate` counts matching events without returning rows. It takes the
+same `q`, `from`, and `to` parameters as `/v1/events`, so filter semantics and
+the 31-day clamp are identical.
+
+```json
+{
+  "from": 1795075200000,
+  "to": 1795078800000,
+  "total": 118,
+  "groupBy": "service",
+  "groups": [
+    { "key": "api", "count": 96 },
+    { "key": null, "count": 22 }
+  ]
+}
+```
+
+Without `groupBy` the response is just `{ from, to, total }`. With
+`groupBy=service|level|env` it adds `groups` ordered by count and
+`truncated: true` when more than `limit` groups exist. `limit` defaults to 50
+and caps at 200. Null `service` or `env` keys are events that omitted the field;
+`level` keys are names such as `error` or `fatal`.
 
 ## Monitors & alerts
 
-| Route | Method | What it does |
-| --- | --- | --- |
-| `/v1/monitors` | `GET`/`POST` | List / create monitors (session cookie only — `kl_` keys can't manage them) |
-| `/v1/monitors/:id` | `PATCH`/`DELETE` | Update / delete a monitor |
-| `/v1/monitors/:id/test` | `POST` | Send a test notification through every channel |
-| `/v1/alerts` | `GET` | Alert history, latest first |
+| Route                       | Method           | What it does                                                                |
+| --------------------------- | ---------------- | --------------------------------------------------------------------------- |
+| `/v1/monitors`              | `GET`/`POST`     | List / create monitors (session cookie only — `kl_` keys can't manage them) |
+| `/v1/monitors/:id`          | `PATCH`/`DELETE` | Update / delete a monitor                                                   |
+| `/v1/monitors/:id/test`     | `POST`           | Send a test notification through every channel                              |
+| `/v1/monitors/test-channel` | `POST`           | Test an unsaved channel — body `{ "type": "webhook", "url": "…" }`          |
+| `/v1/alerts`                | `GET`            | Alert history. Optional `monitorId`, `state`, `from`, `to`; newest first    |
+| `/v1/alerts/:id`            | `GET`            | One alert by id; 404 outside the project                                    |
+
+Alert delivery errors are sanitized and returned as `notifyError` only to
+administrators. Members, viewers, and MCP keys receive `null` for that field.
+Callers without `logs.read` also receive the placeholder summary
+`log content hidden` and a null `sampleMessage`.
+
+`GET /v1/alerts` accepts `monitorId` (UUID, must belong to the resolved
+project), `state` (`fired` or `resolved`), and `from`/`to` epoch milliseconds on
+`firedAt`. An inverted range is rejected; when `from`/`to` are supplied, the
+window is clamped to the same 31 days as events. With no bounds, history remains
+all-time and is capped by `limit`. A `monitorId` outside the resolved project
+returns `404` rather than an empty list. `GET /v1/alerts/:id` applies the same
+project and masking rules and also returns `404` for an alert outside the
+project.
+
+## Notifications
+
+- `webhook` channels receive JSON with the structured alert plus a ready-to-post
+  `text` summary.
+- `discord` channels receive a rich embed with a state color, project, service,
+  env, monitor, level, query, count/threshold/window, a code block for the sample
+  event, a link back to Kinglet, and a timestamp.
+- `slack` channels receive the same information as an attachment.
 
 ## Limits
 
 - Ingest: 8 MB / 10,000 events per request, 600 batches/minute per identity.
 - Query: `q` ≤ 500 characters and ≤ 32 terms; `limit` 1–1000; `buckets` 1–240.
+- Aggregate: `groupBy` is `service`, `level`, or `env`; group `limit` 1–200,
+  default 50.
 - `from`/`to` must be epoch ms and are clamped to the last 31 days and 5 minutes
   of future skew.
 - Alerts: `limit` 1–500. Monitors: 100 per project.
@@ -75,12 +168,16 @@ Go, and PHP.
 
 ## Pagination
 
-`GET /v1/events` returns events newest-first plus a `nextCursor` (the id of
-the last row returned) when more may exist. Request the next page with
-`cursor=<nextCursor>`:
+`GET /v1/events` returns events newest-first by event timestamp (`ts`), with
+ties broken by row id, plus a `nextCursor` (the numeric row id of the last row
+returned) when more may exist. Request the next page with
+`cursor=<nextCursor>`; the server resumes from that row's timestamp and id, so
+new events written while you page do not shift later pages. A backfilled event
+with an older timestamp can still appear on a later page. Project ids are UUID
+v7; the cursor is deliberately still the integer row id.
 
 ```bash
-curl "http://localhost:8080/v1/events?project=1&q=level:error&limit=500&cursor=84021" \
+curl "http://localhost:8080/v1/events?project=0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30&q=level:error&limit=500&cursor=84021" \
   -H "Authorization: Bearer kl_…"
 ```
 
@@ -94,6 +191,6 @@ Bad lines are counted and (up to three) reported — the rest of the batch
 still lands.
 
 <Aside type="tip" title="Live tail auth">
-  Browsers use the session cookie. Shippers that cannot send headers can use
-  `?key=kl_…` (API key) on `/v1/stream`.
+  Browsers use the session cookie. Shippers that cannot send headers can use `?key=kl_…` (API key)
+  on `/v1/stream`.
 </Aside>

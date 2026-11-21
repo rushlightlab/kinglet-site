@@ -12,8 +12,11 @@ Production URL: **https://kinglet.rushlightlab.com** (set as the canonical
 
 ```bash
 pnpm install
-pnpm dev       # http://localhost:4321
-pnpm build     # static output in dist/
+pnpm dev          # http://localhost:4321
+pnpm build        # static output in dist/
+pnpm lint         # oxlint (fails on warnings)
+pnpm format       # oxfmt, writes files
+pnpm format:check
 ```
 
 ## Deploy
@@ -36,11 +39,13 @@ Other static hosts work too:
 
 - **Vercel / Netlify** — point at this repo, build command `pnpm build`,
   output directory `dist/`.
-- **Docker** — `docker build -t kinglet-site .` (nginx serves the static
-  output behind your TLS proxy).
+- **Docker** — `docker build -t kinglet-site .`, then
+  `docker run --rm -p 8080:8080 kinglet-site` (a non-root nginx serves the
+  static output behind your TLS proxy).
 
-The build needs Node 24+ (`engines`), which is what Cloudflare's image
-provides. All GitHub and GHCR links already point at
+The build needs Node 26+ (`engines`, also pinned in `.nvmrc`). Cloudflare
+Workers Builds defaults to Node 24, so the version file makes its build image
+download and use Node 26. All GitHub and GHCR links already point at
 [`rushlightlab`](https://github.com/rushlightlab).
 
 ## Changelog and releases

@@ -1,0 +1,373 @@
+---
+title: MCP server
+description: Connect Claude, Cursor, VS Code, Codex, and other MCP clients to a Kinglet project over local stdio.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`@kinglet/mcp` is a local [Model Context Protocol](https://modelcontextprotocol.io/)
+server for Kinglet. It lets AI clients search logs, inspect monitors and alerts,
+and — when the key allows it — create, update, or delete monitors in one project.
+
+The server runs on your machine over stdio and calls the normal Kinglet HTTP API
+with a project-scoped MCP key. It never opens the database, never ingests logs,
+and never inherits a human role. It requires Node.js 24 or newer. Client support
+is not tied to a specific app: Claude Desktop, Claude Code, Cursor, VS
+Code/Copilot, Codex CLI, Windsurf, Zed, OpenCode, and any other stdio-capable MCP
+client work with the configuration below.
+
+## Create an MCP key
+
+MCP keys are separate from API keys. A `km_...` key is bound to one project, has
+its own scopes, and never grants a human role or admin access.
+
+1. Open **Settings → Projects**, then open the project the client should use.
+2. In **MCP keys**, choose **new MCP key**, name it for the client, and select
+   scopes.
+3. Copy the secret when it is shown. It is displayed once; only a hash is stored.
+
+| Scope            | Grants                                                                |
+| ---------------- | --------------------------------------------------------------------- |
+| `logs.read`      | Search and read events, histograms, counts, and services              |
+| `monitors.read`  | List and get monitors, recent alerts, and channel summaries (no URLs) |
+| `monitors.write` | Create, update, and delete monitors; requires `monitors.read`         |
+
+New keys default to read-only access: `logs.read` and `monitors.read` are on,
+`monitors.write` is off. At least one scope is required, and write access implies
+read access. Grant `monitors.write` only when the client should change monitors.
+The server also requires `KINGLET_MCP_ALLOW_MONITOR_WRITES=1` before it accepts
+monitor writes from MCP keys; the scope alone is not enough. This keeps
+AI-driven monitor changes off until the deployer explicitly enables them.
+
+Revoke or reroll the key in the same card. The change applies on the next
+request; anything still using the old secret starts receiving `401` responses.
+
+## Configuration
+
+Both settings are required. The URL is the base of your Kinglet instance, and
+the key is the `km_...` secret from the project's MCP keys card.
+
+| Variable                 | Required | Description                                                                       |
+| ------------------------ | -------- | --------------------------------------------------------------------------------- |
+| `KINGLET_URL`            | yes      | Base URL, for example `https://logs.example.com`; must be `http://` or `https://` |
+| `KINGLET_MCP_KEY`        | yes      | MCP key starting with `km_...`; a `kl_...` API key is rejected                    |
+| `KINGLET_MCP_TIMEOUT_MS` | no       | Per-request timeout in milliseconds; default `15000` (1000–300000)                |
+
+The URL may include a path prefix, such as `https://example.com/kinglet`, but
+not credentials, a query string, or a fragment. Use HTTPS outside local
+development.
+
+<Aside type="note" title="Windows: wrap npx with cmd /c">
+  Desktop clients often start without your shell `PATH`. If `npx` is not found, use `"command":
+  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]` in JSON clients. On Codex CLI, set
+  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]`.
+</Aside>
+
+### Claude Desktop
+
+Edit `claude_desktop_config.json` (Settings → Developer → Edit Config):
+
+```json
+{
+  "mcpServers": {
+    "kinglet": {
+      "command": "npx",
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "env": {
+        "KINGLET_URL": "https://logs.example.com",
+        "KINGLET_MCP_KEY": "km_..."
+      }
+    }
+  }
+}
+```
+
+### Claude Code
+
+Add the server from a terminal:
+
+```bash
+claude mcp add kinglet \
+  --env KINGLET_URL=https://logs.example.com \
+  --env KINGLET_MCP_KEY=km_... \
+  -- npx -y @kinglet/mcp@0.4.0
+```
+
+A project-scoped `.mcp.json` uses the same `mcpServers` shape as Claude Desktop.
+Prefer `${KINGLET_MCP_KEY}` environment expansion where the client supports it
+over a literal secret in a committed file.
+
+### Cursor
+
+Edit `~/.cursor/mcp.json` for a global server or `.cursor/mcp.json` in the
+project:
+
+```json
+{
+  "mcpServers": {
+    "kinglet": {
+      "command": "npx",
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "env": {
+        "KINGLET_URL": "https://logs.example.com",
+        "KINGLET_MCP_KEY": "km_..."
+      }
+    }
+  }
+}
+```
+
+### VS Code and Copilot
+
+Edit `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "kinglet": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "env": {
+        "KINGLET_URL": "https://logs.example.com",
+        "KINGLET_MCP_KEY": "km_..."
+      }
+    }
+  }
+}
+```
+
+VS Code supports `inputs` for secrets; use an input instead of a literal key when
+the configuration is shared.
+
+### Codex CLI
+
+Edit `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.kinglet]
+command = "npx"
+args = ["-y", "@kinglet/mcp@0.4.0"]
+env = { KINGLET_URL = "https://logs.example.com", KINGLET_MCP_KEY = "km_..." }
+```
+
+### Windsurf
+
+Edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "kinglet": {
+      "command": "npx",
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "env": {
+        "KINGLET_URL": "https://logs.example.com",
+        "KINGLET_MCP_KEY": "km_..."
+      }
+    }
+  }
+}
+```
+
+### Zed
+
+Add the server to `settings.json`; **Settings → AI → MCP Servers → Add Server**
+writes the same entry:
+
+```json
+{
+  "context_servers": {
+    "kinglet": {
+      "command": "npx",
+      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "env": {
+        "KINGLET_URL": "https://logs.example.com",
+        "KINGLET_MCP_KEY": "km_..."
+      }
+    }
+  }
+}
+```
+
+### OpenCode
+
+Add a local server to `opencode.json` or `opencode.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "kinglet": {
+        "type": "local",
+        "command": ["npx", "-y", "@kinglet/mcp@0.4.0"],
+        "environment": {
+          "KINGLET_URL": "https://logs.example.com",
+          "KINGLET_MCP_KEY": "km_...",
+        },
+      },
+    },
+  },
+}
+```
+
+OpenCode releases before V2 put server names directly under `mcp` instead of
+`mcp.servers`.
+
+### Generic stdio
+
+Any MCP client that can launch a command with environment variables works:
+
+```text
+command: npx
+args:    -y @kinglet/mcp
+env:     KINGLET_URL=https://logs.example.com
+         KINGLET_MCP_KEY=km_...
+```
+
+### Run from a checkout
+
+To try unreleased changes, build the package from a Kinglet checkout and point
+the client at the compiled entry point:
+
+```bash
+pnpm --filter @kinglet/mcp build
+```
+
+```json
+{
+  "mcpServers": {
+    "kinglet": {
+      "command": "node",
+      "args": ["/absolute/path/to/kinglet/packages/mcp/dist/cli.js"],
+      "env": {
+        "KINGLET_URL": "http://localhost:3000",
+        "KINGLET_MCP_KEY": "km_..."
+      }
+    }
+  }
+}
+```
+
+## Tools
+
+All tools are limited to the key's project. Read tools need their matching
+scope; `get_context` works with any valid MCP key. Monitor write tools
+(`create_monitor`, `update_monitor`, `delete_monitor`) are advertised only when
+the key has `monitors.write` **and** the server sets
+`KINGLET_MCP_ALLOW_MONITOR_WRITES=1`. A read-only key or a closed gate sees the
+12 read tools. Hiding tools is UX only; every write remains authorized by the
+API. A newer MCP package against an older server without `monitorWritesEnabled`
+stays read-only until the server is upgraded; restart the MCP client after a
+transient context failure.
+
+| Tool                | Scope            | What it does                                                                          |
+| ------------------- | ---------------- | ------------------------------------------------------------------------------------- |
+| `get_context`       | any valid key    | Project, key metadata, capabilities, monitor write gate, version, retention           |
+| `search_events`     | `logs.read`      | Events for a filter and time range, newest first, with a cursor and optional `fields` |
+| `get_event`         | `logs.read`      | One event by `uid`                                                                    |
+| `get_event_context` | `logs.read`      | One event plus `before`/`after` neighbours in `(ts, id)` order                        |
+| `get_histogram`     | `logs.read`      | Bucket counts for a filter and time range                                             |
+| `list_services`     | `logs.read`      | Services with event counts and last-seen timestamps                                   |
+| `count_events`      | `logs.read`      | Effective `from`/`to`, total, and optional `service`/`level`/`env` groups             |
+| `list_monitors`     | `monitors.read`  | Monitors, state, last evaluation, and channel summaries                               |
+| `get_monitor`       | `monitors.read`  | One monitor by id                                                                     |
+| `list_alerts`       | `monitors.read`  | Recent alerts; optional monitor/state/time filters                                    |
+| `get_alert`         | `monitors.read`  | One alert by id, with the same masking rules                                          |
+| `list_channels`     | `monitors.read`  | Channel id, name, type, enabled, and health only                                      |
+| `create_monitor`    | `monitors.write` | Create a monitor; channels are attached with `channelIds`                             |
+| `update_monitor`    | `monitors.write` | Partial update by id                                                                  |
+| `delete_monitor`    | `monitors.write` | Delete a monitor and its alert history (destructive)                                  |
+
+Monitor writes accept notification channel ids, never webhook URLs. Monitor and
+channel reads never return URLs or raw delivery errors.
+
+MCP keys never have `logs.write`, and there is no ingest, clear logs, project,
+user, key, backup, restore, archive, notification-channel administration,
+settings, arbitrary SQL, or shell tool. An MCP client cannot delete logs or
+change access.
+
+## Security
+
+- Log and monitor results from MCP tools leave your server and go to the AI
+  provider configured in your client. Logs can contain personal data, tokens, or
+  regulated data; point the key at a project whose contents are appropriate for
+  that provider.
+- Event messages and fields are untrusted input. A log line can contain text
+  that looks like an instruction; the server never acts on it, but prompt
+  injection defense ultimately depends on the client and model. Be cautious with
+  agents that can take follow-up actions.
+- Never paste secrets into logs you plan to search, and grant only the scopes the
+  client needs. Omit `monitors.write` unless the client should change monitors.
+- Revoke or reroll the key in project settings to cut access immediately. The
+  next request fails with `401`.
+- The server logs one line per tool call to stderr with the tool name, duration,
+  status, and row count — never arguments, filters, event contents, or the key.
+
+## Limits
+
+- **Requests:** 60 per minute per key, with a burst of 10. A `429` means back
+  off; there are no automatic retries. The bucket is enforced in the API
+  process; if you run multiple API instances, add a shared limit at the reverse
+  proxy or edge because each instance enforces its own bucket.
+- **Rows:** 50 by default, 200 maximum. `search_events` returns a `nextCursor`
+  when more rows are available. Its optional `fields` list (`id`, `uid`, `ts`,
+  `level`, `service`, `env`, `message`, `fields`; max 8, unique) projects each
+  event without changing the cursor.
+- **Context:** `get_event_context` returns the event plus chronological
+  `before`/`after` lists; both default to 5 and cap at 20. If the result exceeds
+  the 256 KiB cap, retry with smaller `before`/`after`.
+- **Groups:** `count_events` returns 50 groups by default, 200 maximum, ordered
+  by count. `truncated: true` means more groups exist. The group limit does not
+  cap `count_events.total`, which is the full match count; the response also
+  echoes the effective clamped `from`/`to` window.
+- **Alerts:** `list_alerts` filters by `monitorId`, `state`, and `from`/`to` on
+  `firedAt`; when `from`/`to` are supplied, the alert window is clamped to 31
+  days. With no bounds, history remains all-time and is capped by `limit`.
+  `get_alert` returns one alert or a clean `alert not found`.
+- **Response size:** 256 KiB per result. Large list responses are trimmed and
+  marked `truncated: true`; a single result that still exceeds the cap returns
+  an error asking for a narrower query.
+- **Event content:** messages are capped at 4 KiB and each event's `fields`
+  object at 8 KiB. Filters are limited to 500 characters and 32 terms, and the
+  API clamps search windows to 31 days.
+
+## Troubleshooting
+
+### `401` / “Kinglet rejected the MCP key”
+
+The key was revoked or rerolled, its owner was disabled, or `KINGLET_URL` points
+at a different Kinglet instance. Create a new MCP key and update the client
+configuration.
+
+### `403` / missing scope
+
+The key does not have the scope the tool needs. The error names the missing
+scope, such as `logs.read` or `monitors.write`. Add the scope to the key (or
+create a new key with it) and retry.
+
+### Nothing starts, or `npx` is not found
+
+Desktop clients often start with a different `PATH` than your terminal. Use an
+absolute `node` path, or the Windows `cmd /c npx` wrapper above. Run the same
+command and environment directly in a terminal to see stderr; stdout is reserved
+for MCP protocol frames.
+
+### Check the server with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector npx @kinglet/mcp
+```
+
+Until the package is published, point the inspector at the local build:
+
+```bash
+npx @modelcontextprotocol/inspector node /absolute/path/to/kinglet/packages/mcp/dist/cli.js
+```
+
+### Remote-only clients cannot connect
+
+v1 is local stdio only. There is no remote HTTP `/mcp` endpoint yet, so clients
+that only accept a URL — Claude web, ChatGPT connectors, and similar hosted
+clients — cannot use the server in this release.

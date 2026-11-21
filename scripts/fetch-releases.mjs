@@ -13,14 +13,15 @@ import { fileURLToPath } from "node:url";
  * If GitHub is unreachable or rate-limits the build, the committed snapshot is
  * left in place so the site still builds.
  */
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname, "..");
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "..");
 const dataPath = path.join(root, "src/data/releases.json");
 const pagePath = path.join(root, "src/content/docs/changelog.md");
 const repo = "rushlightlab/kinglet";
 const api = `https://api.github.com/repos/${repo}/releases?per_page=30`;
 
 let previous = { latest: null, releases: [] };
+
 try {
   previous = JSON.parse(await readFile(dataPath, "utf8"));
 } catch {
@@ -29,16 +30,21 @@ try {
 
 function demoteHeadings(markdown) {
   let fence = null;
+
   return markdown
     .split(/\r?\n/)
     .map((line) => {
       const fenceMatch = line.match(/^(```+|~~~+)/);
+
       if (fenceMatch) {
         if (!fence) fence = fenceMatch[1][0];
         else if (fenceMatch[1][0] === fence) fence = null;
+
         return line;
       }
+
       if (!fence && /^#{1,5}\s/.test(line)) return `#${line}`;
+
       return line;
     })
     .join("\n");
@@ -47,6 +53,7 @@ function demoteHeadings(markdown) {
 function dateOnly(value) {
   if (!value) return "";
   const date = new Date(value);
+
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
@@ -56,11 +63,14 @@ async function refresh() {
     "user-agent": "kinglet-site-build",
     "x-github-api-version": "2022-11-28",
   };
+
   if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
 
   const res = await fetch(api, { headers, signal: AbortSignal.timeout(12_000) });
+
   if (!res.ok) throw new Error(`GitHub API ${res.status}`);
   const json = await res.json();
+
   if (!Array.isArray(json)) throw new Error("unexpected GitHub response");
 
   const releases = json
@@ -74,9 +84,10 @@ async function refresh() {
       publishedAt: dateOnly(r.published_at || r.created_at),
       prerelease: Boolean(r.prerelease),
     }))
-    .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+    .toSorted((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 
   if (releases.length === 0) throw new Error("no published releases");
+
   return { latest: releases[0], releases };
 }
 
@@ -84,6 +95,7 @@ function renderPage(data) {
   const sections = data.releases
     .map((release, index) => {
       const body = demoteHeadings(String(release.body || "").trim()) || "_No release notes yet._";
+
       const meta = [
         release.publishedAt ? `**${release.publishedAt}**` : "",
         `[GitHub release](${release.url})`,
@@ -92,6 +104,7 @@ function renderPage(data) {
       ]
         .filter(Boolean)
         .join(" · ");
+
       return `## ${release.name}\n\n${meta}\n\n${body}\n`;
     })
     .join("\n---\n\n");
@@ -108,7 +121,10 @@ ${sections}`;
 }
 
 const data = await refresh().catch((err) => {
-  console.warn(`[changelog] could not refresh from GitHub (${err.message}); using committed snapshot.`);
+  console.warn(
+    `[changelog] could not refresh from GitHub (${err.message}); using committed snapshot.`,
+  );
+
   return previous.latest && previous.releases.length > 0 ? previous : null;
 });
 
