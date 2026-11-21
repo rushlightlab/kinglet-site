@@ -168,10 +168,13 @@ project.
 
 ## Pagination
 
-`GET /v1/events` returns events newest-first plus a `nextCursor` (the numeric
-row id of the last row returned) when more may exist. Request the next page
-with `cursor=<nextCursor>`. Project ids are UUID v7; the cursor is deliberately
-still the integer row id so pagination stays stable while logs are written.
+`GET /v1/events` returns events newest-first by event timestamp (`ts`), with
+ties broken by row id, plus a `nextCursor` (the numeric row id of the last row
+returned) when more may exist. Request the next page with
+`cursor=<nextCursor>`; the server resumes from that row's timestamp and id, so
+new events written while you page do not shift later pages. A backfilled event
+with an older timestamp can still appear on a later page. Project ids are UUID
+v7; the cursor is deliberately still the integer row id.
 
 ```bash
 curl "http://localhost:8080/v1/events?project=0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30&q=level:error&limit=500&cursor=84021" \
