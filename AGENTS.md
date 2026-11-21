@@ -167,10 +167,10 @@ Kinglet repo's `docs-release` workflow can trigger a Cloudflare deploy hook when
 ## Branches and deployment
 
 - `main` - production. Cloudflare Workers Builds deploys from this branch.
-- `docs/pre-release` - the working branch for the next Kinglet release. Land
-  docs changes here first; promote to `main` when the matching Kinglet release is
-  ready.
-- Feature/docs branches - short-lived branches that PR into `docs/pre-release`.
+- `next` - the working branch for the next Kinglet release, matching the
+  Kinglet repo's `next`. Land docs changes here first; promote to `main` when the
+  matching Kinglet release is ready.
+- Feature/docs branches - short-lived branches that PR into `next`.
 
 Cloudflare Workers Builds configuration:
 
