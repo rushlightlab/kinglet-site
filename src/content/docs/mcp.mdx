@@ -11,17 +11,10 @@ and — when the key allows it — create, update, or delete monitors in one pro
 
 The server runs on your machine over stdio and calls the normal Kinglet HTTP API
 with a project-scoped MCP key. It never opens the database, never ingests logs,
-and never inherits a human role. It requires Node.js 22 or newer. Client support
+and never inherits a human role. It requires Node.js 26 or newer. Client support
 is not tied to a specific app: Claude Desktop, Claude Code, Cursor, VS
 Code/Copilot, Codex CLI, Windsurf, Zed, OpenCode, and any other stdio-capable MCP
 client work with the configuration below.
-
-<Aside type="note" title="Not on npm yet">
-  The package is prepared for npm as `@kinglet/mcp`, but it is not published yet. The snippets below
-  use `npx -y @kinglet/mcp@0.3.0`; until publication, [build it from a
-  checkout](#run-from-a-checkout) and replace the command with `node` plus the absolute path to
-  `packages/mcp/dist/cli.js`.
-</Aside>
 
 ## Create an MCP key
 
@@ -235,8 +228,8 @@ env:     KINGLET_URL=https://logs.example.com
 
 ### Run from a checkout
 
-Until the npm release, build the package and point the client at the compiled
-entry point:
+To try unreleased changes, build the package from a Kinglet checkout and point
+the client at the compiled entry point:
 
 ```bash
 pnpm --filter @kinglet/mcp build

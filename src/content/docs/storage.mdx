@@ -75,12 +75,15 @@ database. Measured with the same workload on each:
 
 | Database                                     | 1,000-event batch | Ingest (4 senders) | Dashboard query | Search     |
 | -------------------------------------------- | ----------------- | ------------------ | --------------- | ---------- |
-| Local SQLite file _(default)_                | ~80 ms            | ~10,500 events/s   | 8–20 ms         | substring  |
+| Local file, embedded libSQL _(default)_      | ~80 ms            | ~10,500 events/s   | 8–20 ms         | substring  |
 | Self-hosted libSQL server, same machine      | ~220 ms           | ~7,500 events/s    | 30–70 ms        | substring  |
 | Turso, libSQL engine (~77 ms away)           | ~560 ms           | ~2,700 events/s    | 240–320 ms      | substring  |
 | Turso, MVCC engine / Turso Database (~77 ms) | ~1.4–1.6 s        | ~750 events/s      | 240–500 ms      | off (scan) |
 
-Every remote option adds round trips, and latency to the database dominates,
+The local file and the libSQL server run the same engine: the default embeds
+libSQL in the Kinglet process, while server mode sends every query over HTTP.
+That hop is the whole difference, even on one machine. Every remote option adds
+round trips, and latency to the database dominates,
 so run Kinglet in the same region as it. Kinglet uses about the same memory
 either way (a self-hosted libSQL server adds ~60 MB of its own). Turso bills rows written, and each
 event writes several rows (the event, usage accounting, and the search index

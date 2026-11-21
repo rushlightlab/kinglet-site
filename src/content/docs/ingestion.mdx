@@ -9,8 +9,9 @@ Everything speaks HTTP, so everything can log to Kinglet. One endpoint accepts
 batches of events, authenticated with a project API key.
 
 <Aside type="tip" title="Using Node.js?">
-  [`@kinglet/sdk-node`](/node-sdk/) wraps the same endpoint with buffering and retries, but it is
-  not on npm yet. The dependency-free client below is the fastest way to start today.
+  [`@kinglet/sdk-node`](/node-sdk/) wraps the same endpoint with buffering and retries: `npm install
+  @kinglet/sdk-node`. The dependency-free client below shows what it does under the hood, for other
+  runtimes or when you want no dependency at all.
 </Aside>
 
 ## Endpoint
