@@ -525,12 +525,12 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             </div>
             <div class="stat-cell reveal" style="--d:.11s">
               <div class="stat-num">
-                <span class="counter" data-target="7">
+                <span class="counter" data-target="3">
                   0
                 </span>
                 <span class="stat-unit">k/s</span>
               </div>
-              <div class="stat-label">events ingested on 2 vCPUs</div>
+              <div class="stat-label">events sustained on 1 vCPU</div>
             </div>
             <div class="stat-cell reveal" style="--d:.17s">
               <div class="stat-num">
@@ -554,9 +554,9 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             class="reveal"
             style="text-align: center; max-width: 40rem; margin: 28px auto 0; font-size: 11px; line-height: 1.8; color: var(--faint);"
           >
-            Measured in a 2-vCPU Docker VM with ~200-byte events: ~180 MB idle, ~400 MB peak while
-            ingesting 7,000 events/s in 1,000-event batches, and ~0.55 GB of database per million
-            events (~0.4 GB with word search). Your payloads and retention will move those numbers.
+            Measured in Docker with ~200-byte events: 1 vCPU / 512 MB sustains 3,000 events/s with
+            five dashboard users active (6,000 with word search), peaking near 300 MB; ~0.55 GB of
+            database per million events. Your payloads and retention will move those numbers.
           </p>
         </div>
       </section>

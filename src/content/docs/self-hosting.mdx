@@ -360,20 +360,19 @@ the database or an image layer.
 
 ## Sizing
 
-Measured in a 2-vCPU Docker VM with ~200-byte events (message plus a few
-fields):
+Measured in Docker with ~200-byte events (a message plus a few fields). See
+[Capacity planning](/capacity/) for the full test, results per machine size,
+and recommendations by volume.
 
-- **RAM**: ~180 MB idle; ~400 MB peak under sustained ingest and dashboard
-  queries (~220 MB with `KINGLET_SEARCH=words`). Leave 512 MB–1 GB of headroom
-  for retention and backup jobs.
-- **CPU / throughput**: one container ingests ~7,000 events/s with 1,000-event
-  batches from four clients (~9,000 with `words`), and ~3,500 events/s with
-  100-event batches. The default 14-day window lists recent events in ~10 ms and
-  draws the histogram in under 100 ms with half a million events in range.
+- **Smallest tested**: 0.5 vCPU / 512 MB sustains 2,000 events/s; 1 vCPU /
+  512 MB sustains 3,000 (6,000 with `KINGLET_SEARCH=words`), with five
+  dashboard users active.
+- **RAM**: ~70–180 MB idle and ~300–410 MB peak under load. 512 MB was enough
+  in every test.
 - **Disk**: ~0.55 GB per million events with the default substring search,
-  ~0.42 GB with `words`, ~0.38 GB with `off`. Larger `fields` objects grow this
-  roughly in proportion. With the default 14-day retention, a small app stays
-  in single-digit gigabytes.
+  ~0.42 GB with `words`, ~0.38 GB with `off`. For most installs retention, not
+  CPU, decides the machine size, and the default per-project caps need raising
+  above ~0.8 events/s average.
 - **Boot**: ~3–4 s to healthy, including container start.
 
 ## Backups
