@@ -66,7 +66,7 @@ body::before {
 /*
   Header brand: match the landing wordmark exactly.
   Starlight defaults to a 40px logo + 24px accent-colored title case
-  "Kinglet"; the landing uses a 20px crown + tracked uppercase KINGLET
+  "Kinglet"; the landing uses the 20px kinglet mark + tracked uppercase KINGLET
   in mist, 700 weight. These rules are unlayered, so they win over
   Starlight's @layer starlight.core defaults.
 */
