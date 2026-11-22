@@ -450,6 +450,7 @@ Anything that can POST NDJSON with a bearer token works. With
 type = "http"
 inputs = ["app_logs"]
 uri = "https://logs.example.com/v1/events"
+compression = "none"
 encoding.codec = "json"
 framing.method = "newline_delimited"
 
@@ -470,7 +471,22 @@ the same way: use its HTTP output with `Format json_lines`,
 `json_date_key timestamp`, `json_date_format iso8601`, and a
 `Header Authorization Bearer kl_…`. Without the date settings, Fluent Bit writes
 the time under `date`, which Kinglet ignores. Keep compression off, and make
-sure records carry a `message` (or `msg`) key.
+sure records carry a `message` (or `msg`) key:
+
+```ini title="fluent-bit.conf"
+[OUTPUT]
+    Name             http
+    Match            *
+    Host             logs.example.com
+    Port             443
+    URI              /v1/events
+    tls              On
+    Format           json_lines
+    json_date_key    timestamp
+    json_date_format iso8601
+    Header           Content-Type application/x-ndjson
+    Header           Authorization Bearer ${KINGLET_KEY}
+```
 
 <Aside type="note" title="Roadmap">
   Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so OpenTelemetry
