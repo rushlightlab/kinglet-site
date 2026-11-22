@@ -226,6 +226,27 @@ curl "http://localhost:8080/v1/events?q=level:error&limit=500&cursor=84021" \
   -H "Authorization: Bearer kl_…"
 ```
 
+### Table lists
+
+The lists behind the UI's tables page with `limit`, `offset`, and `q`, and
+return `total`, the number of matching rows across every page:
+`/v1/monitors`, `/v1/alerts`, `/v1/notifications/channels`,
+`/v1/notifications/deliveries`, `/v1/users`, `/v1/projects`,
+`/v1/projects/:id/keys` (also `type=api|mcp`), `/v1/projects/:id/members`, and
+`/v1/backups`.
+
+- `q` keeps rows that contain every word, in any order and case. It never
+  searches delivery errors or webhook URLs.
+- `limit` is 1–100 (alerts 1–500). Without it a route returns every row, except
+  alerts (100 by default) and deliveries (at most 100).
+- Monitors include `lastAlertAt` and `firing`, taken from each monitor's newest
+  alert.
+
+```bash
+curl "http://localhost:8080/v1/alerts?project=<id>&limit=20&offset=20&q=checkout" \
+  -b "better-auth.session_token=…"
+```
+
 ## Ingest responses
 
 `POST /v1/events` returns `{ "accepted", "rejected", "errors" }`; bad lines are
