@@ -82,6 +82,7 @@ export default defineConfig({
           items: [
             { label: "HTTP ingestion", link: "/ingestion/" },
             { label: "Node SDK", link: "/node-sdk/" },
+            { label: "PHP SDK", link: "/php-sdk/" },
             { label: "API reference", link: "/api/" },
           ],
         },
