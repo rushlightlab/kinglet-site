@@ -1,0 +1,53 @@
+---
+title: Choose a deployment
+description: Pick how to run Kinglet — Docker, Docker Compose, Dokploy, Coolify, or a source build — and what every deployment needs.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet ships as one public image, `ghcr.io/rushlightlab/kinglet`, for amd64 and
+arm64. No registry login is needed. Every method below runs that image (or a
+build of the same source) and differs only in who manages the container, the
+proxy, and TLS.
+
+| Method                                          | Use it when                                                    |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| [Docker](/deploy/docker/)                       | you want a quick trial, or already run your own reverse proxy  |
+| [Docker Compose](/deploy/docker-compose/)       | one server, configuration in a file, optional Caddy TLS sample |
+| [Dokploy](/deploy/dokploy/)                     | you already run Dokploy                                        |
+| [Coolify](/deploy/coolify/)                     | you already run Coolify                                        |
+| [Build from source](/deploy/build-from-source/) | you need a custom image or want to develop Kinglet             |
+
+Not sure? Use [Docker Compose](/deploy/docker-compose/) with the Caddy sample on
+a fresh server, or the platform you already have.
+
+## What every deployment needs
+
+- **A volume at `/data`.** It holds the SQLite database, the generated auth
+  secret, and the generated admin password. Without it, a redeploy starts empty.
+- **Port `3000` inside the container.** Map or route to it; change it only with
+  `KINGLET_PORT`.
+- **`KINGLET_BASE_URL`** set to the exact origin in the browser, such as
+  `https://logs.example.com`. A mismatch makes sign-in fail with
+  `403 INVALID_ORIGIN`.
+- **TLS in front of Kinglet** for anything beyond localhost, with
+  `KINGLET_TRUSTED_PROXIES` set to that proxy only.
+- **A pinned version tag**, such as `:0.4.0`. Images are published as `:X.Y.Z`,
+  `:X.Y`, and `:latest`; `:latest` moves with each release.
+
+The full list of variables is in the
+[configuration reference](/self-hosting/#configuration).
+
+<Aside type="caution" title="Security first">
+  Read [Security](/security/) before exposing Kinglet. In particular, trust only your proxy in
+  `KINGLET_TRUSTED_PROXIES` and never the all-private-ranges shortcut.
+</Aside>
+
+## First sign-in
+
+On first boot Kinglet creates an administrator from `KINGLET_ADMIN_EMAIL`
+(default `admin@kinglet.local`) and `KINGLET_ADMIN_PASSWORD`. If you leave the
+password unset, a generated one is printed to the container logs and written to
+`/data/admin-password.txt`. Both variables are ignored once an administrator
+exists. After signing in, create an API key and send a first event as shown in
+the [Quickstart](/quickstart/#3-send-your-first-event).

@@ -1,0 +1,93 @@
+---
+title: Trill examples
+description: Ready-made Trill queries for debugging, monitors, devices and services, and clearing logs.
+---
+
+Copy a query into the search bar, a monitor, or the `q` parameter. Examples that
+use `field.` assume your events send those fields; swap in your own keys. The
+[reference](/trill/reference/) explains every term.
+
+## Debugging
+
+| Goal                                  | Query                                           |
+| ------------------------------------- | ----------------------------------------------- |
+| Everything that went wrong            | `level>=error`                                  |
+| Errors from one service in production | `level>=error service:checkout env:prod`        |
+| A specific failure                    | `"connection refused" service:api`              |
+| The same, minus a noisy source        | `"connection refused" -healthcheck -"/metrics"` |
+| Warnings that aren't timeouts         | `level:warn -timeout`                           |
+| One request across services           | `field.requestId:47e79780`                      |
+| Everything about one user             | `field.userId:cmbi7qho0001`                     |
+| An id you saw somewhere, in any field | `in:all A-42`                                   |
+| Events that carry a stack trace       | `level>=error field.stack:*`                    |
+| Debug output from one module only     | `level:debug field.module:payments`             |
+
+## HTTP services
+
+These assume fields like `method`, `path`, `status`, and `durationMs` on
+request logs.
+
+| Goal                            | Query                                                  |
+| ------------------------------- | ------------------------------------------------------ |
+| Server errors                   | `field.status>=500`                                    |
+| Client errors, except 404s      | `field.status>=400 field.status<500 -field.status:404` |
+| Slow requests                   | `field.durationMs>1000`                                |
+| Slow requests on one route      | `field.path:/api/orders field.durationMs>500`          |
+| Failed sign-ins                 | `field.path:/api/auth/sign-in field.status:401`        |
+| Everything except health checks | `-field.path:/health`                                  |
+
+## Devices, jobs, and pipelines
+
+| Goal                                      | Query                                                  |
+| ----------------------------------------- | ------------------------------------------------------ |
+| Everything from one device                | `field.imei:864351050000101`                           |
+| A device's saves, newest first            | `service:udp field.imei:864351050000101 saved`         |
+| Records that arrived late                 | `field.lagMs>60000`                                    |
+| Batches that were all duplicates          | `field.savedCount:0 field.duplicates>=1`               |
+| Jobs that needed retries                  | `service:worker field.attempts>1`                      |
+| Jobs that never finished                  | `service:worker field.startedAt:* -field.finishedAt:*` |
+| Memory over a threshold, from a heartbeat | `field.data.rss>500`                                   |
+
+## Monitors
+
+A monitor runs its query on a schedule (count monitors) or on every new event
+(match monitors). Some starting points:
+
+| Alert when                       | Kind        | Query                                           | Threshold   |
+| -------------------------------- | ----------- | ----------------------------------------------- | ----------- |
+| Any fatal error                  | match       | `level:fatal`                                   | —           |
+| More than 20 errors in 5 minutes | count above | `level>=error`                                  | 20          |
+| A burst of failed sign-ins       | count above | `field.path:/api/auth/sign-in field.status:401` | 10          |
+| A service goes quiet             | count below | `service:udp saved`                             | 1 in 15 min |
+| Slow responses pile up           | count above | `field.durationMs>2000`                         | 5           |
+
+## Clearing logs
+
+**Clear logs** (in **Settings → Projects → manage**) accepts a Trill query and shows a preview
+of what it would delete. Useful clean-ups:
+
+| Remove                             | Query                        |
+| ---------------------------------- | ---------------------------- |
+| Debug and trace noise              | `level<=debug`               |
+| One service's events               | `service:legacy-importer`    |
+| A test environment                 | `env:staging`                |
+| A load test's traffic              | `field.loadTest:true`        |
+| Events from one misbehaving device | `field.imei:864351050000202` |
+
+## Over the API
+
+`q` is URL-encoded on every endpoint that takes it:
+
+```bash
+# Server errors in the last hour
+curl -G "$KINGLET_URL/v1/events" -H "authorization: Bearer $KINGLET_KEY" \
+  --data-urlencode 'q=field.status>=500'
+
+# How many, per service
+curl -G "$KINGLET_URL/v1/aggregate" -H "authorization: Bearer $KINGLET_KEY" \
+  --data-urlencode 'q=level>=error' -d groupBy=service
+
+# A live tail of slow requests
+curl -N -G "$KINGLET_URL/v1/stream" -H "authorization: Bearer $KINGLET_KEY" \
+  --data-urlencode 'q=field.durationMs>1000'
+```

@@ -1,0 +1,78 @@
+---
+title: Build from source
+description: Build your own Kinglet image from the repository, or run the development servers.
+---
+
+The published image is built from the same repository. Build it yourself when
+you need a custom image; otherwise use the [published image](/deploy/).
+
+## Prerequisites
+
+- Git and Docker with the Compose plugin, for an image build.
+- Node 26+ and pnpm 12 (the version pinned in `package.json`), for development.
+
+## Build and run an image
+
+The repository's `docker-compose.yml` builds the image locally (`build: .`, tagged
+`kinglet:latest`) and runs it on port 8080 with the same `/data` volume layout as
+the published image:
+
+```bash
+git clone https://github.com/rushlightlab/kinglet.git
+cd kinglet
+cp .env.example .env   # then set KINGLET_BASE_URL and the admin variables
+docker compose up -d --build
+```
+
+The compose file loads `.env` when it exists, with two exceptions: it sets
+`KINGLET_DB_PATH` and `KINGLET_RETENTION_DAYS` in its `environment:` block, which
+overrides `.env`, so edit those there. It also publishes `8080` on every
+interface; change the mapping to `"127.0.0.1:8080:3000"` unless other machines
+must reach it.
+
+To build an image for another host, use `docker build -t kinglet:<tag> .` and
+deploy it like the published image with any method in [Deploy](/deploy/). For
+the Caddy TLS sample, replace its `image:` line with `build: ..` and
+`image: kinglet:latest`, as the comment in `deploy/docker-compose.tls.yml` shows,
+and run it from `deploy/` in the checkout so `..` is the repository root.
+
+## Upgrade
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Back up `/data` first; migrations run on boot. See the
+[upgrade notes](/self-hosting/#upgrades).
+
+## Development servers
+
+```bash
+pnpm install
+pnpm dev
+```
+
+The API listens on `:3000` and the UI on `:5173` (Vite, proxying `/v1` and
+`/api/auth`). The
+development API stores its database in `apps/api/data/`, and the generated admin
+password in `apps/api/data/admin-password.txt`. Sign in at
+`http://localhost:5173`.
+
+If port 3000 is taken, move both servers:
+
+```bash
+KINGLET_PORT=3100 KINGLET_API_URL=http://localhost:3100 pnpm dev
+```
+
+The repository README covers tests, demo log generators, and the release
+workflow.
+
+## Troubleshooting
+
+- **Code changes do not show up in the container.** Rebuild with
+  `docker compose up -d --build`; a plain `up -d` reuses the existing image.
+- **`address already in use` on 8080.** Change the host side of the `ports:`
+  mapping in `docker-compose.yml`, and `KINGLET_BASE_URL` with it.
+- **Sign-in returns `403 INVALID_ORIGIN`.** `KINGLET_BASE_URL` does not match the
+  browser origin.

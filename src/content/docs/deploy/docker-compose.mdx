@@ -1,0 +1,139 @@
+---
+title: Docker Compose
+description: Run Kinglet on one server with Docker Compose, with or without the Caddy TLS sample.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Use this when Docker runs directly on the server. On Dokploy or Coolify, follow
+their pages instead: those platforms route through their own proxy and must not
+publish a host port.
+
+## Prerequisites
+
+- Docker Engine with the Compose plugin (`docker compose`).
+- For HTTPS: a domain whose DNS points at the server, and ports 80 and 443 open.
+
+## Plain Compose
+
+Create `docker-compose.yml`:
+
+```yaml title="docker-compose.yml"
+services:
+  kinglet:
+    image: ghcr.io/rushlightlab/kinglet:0.4.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:3000"
+    env_file: .env
+    volumes:
+      - kinglet-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  kinglet-data:
+```
+
+Create `.env` next to it (mode `600`, out of Git):
+
+```dotenv title=".env"
+KINGLET_BASE_URL=http://localhost:8080
+KINGLET_ADMIN_EMAIL=you@example.com
+KINGLET_ADMIN_PASSWORD=<strong-password>
+```
+
+Start it:
+
+```bash
+docker compose up -d
+```
+
+If you left the admin password unset, read the generated one with
+`docker compose exec kinglet cat /data/admin-password.txt`.
+
+The port is bound to loopback. To serve the public, put a TLS proxy in front, or
+use the Caddy sample below.
+
+## HTTPS with Caddy
+
+The repository's [`deploy/`](https://github.com/rushlightlab/kinglet/tree/main/deploy)
+folder has a ready-made stack: `docker-compose.tls.yml` runs Kinglet and Caddy,
+and `Caddyfile` configures Caddy. Caddy obtains and renews certificates, sets
+HSTS, and is the only container that publishes ports (80 and 443). Kinglet is
+reachable only over the Compose network.
+
+1. Copy `deploy/docker-compose.tls.yml` and `deploy/Caddyfile` into one directory
+   on the server.
+2. Point your domain's DNS at the server.
+3. Create `.env` in that directory:
+
+   ```dotenv title=".env"
+   KINGLET_DOMAIN=logs.example.com
+   KINGLET_BASE_URL=https://logs.example.com
+   KINGLET_ADMIN_EMAIL=you@example.com
+   KINGLET_ADMIN_PASSWORD=<strong-password>
+   ```
+
+4. Start the stack:
+
+   ```bash
+   docker compose -f docker-compose.tls.yml up -d
+   ```
+
+5. Open `https://logs.example.com`.
+
+The sample gives Caddy the fixed address `172.30.0.10` on a dedicated
+`172.30.0.0/24` network and sets `KINGLET_TRUSTED_PROXIES=172.30.0.10/32`, so
+proxy trust is already narrow. If you change the subnet, change the Caddy
+address and `KINGLET_TRUSTED_PROXIES` with it.
+
+<Aside type="note" title="Adding variables to the TLS sample">
+  The sample reads `.env` only to fill the `${...}` values in its `environment:` block. To set
+  another variable, such as the S3 backup settings, add it to that block. The sample already sets
+  `KINGLET_RETENTION_DAYS: 14` there; edit that line to change retention.
+</Aside>
+
+## Environment variables
+
+| Variable                                         | Notes                                                                             |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `KINGLET_BASE_URL`                               | Exact public origin. The TLS sample refuses to start without it.                  |
+| `KINGLET_DOMAIN`                                 | TLS sample only: the hostname Caddy serves and requests a certificate for.        |
+| `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only while no administrator exists.                                          |
+| `BETTER_AUTH_SECRET`                             | Optional on one instance; generated in `/data` otherwise.                         |
+| `KINGLET_TRUSTED_PROXIES`                        | Empty without a proxy; the proxy's `/32` with one. Set already in the TLS sample. |
+
+See the [configuration reference](/self-hosting/#configuration) for retention,
+caps, search, and S3 backups.
+
+## Upgrade
+
+Back up `/data`, change the image tag in the compose file, then:
+
+```bash
+docker compose pull && docker compose up -d
+# TLS stack:
+docker compose -f docker-compose.tls.yml pull && docker compose -f docker-compose.tls.yml up -d
+```
+
+Migrations run on boot; read the [upgrade notes](/self-hosting/#upgrades) first.
+
+<Aside type="tip" title="Continuous backups">
+  Either compose file can add a Litestream sidecar that replicates `/data/kinglet.db`. See
+  [Litestream](/backups/#litestream-advanced).
+</Aside>
+
+## Troubleshooting
+
+- **Sign-in returns `403 INVALID_ORIGIN`.** `KINGLET_BASE_URL` does not match the
+  browser origin. Fix `.env` and run `docker compose up -d` again.
+- **Caddy has no certificate.** DNS does not point at the server yet, or ports
+  80/443 are blocked. Check `docker compose -f docker-compose.tls.yml logs caddy`.
+- **`Pool overlaps with other one on this address space`.** Another Docker
+  network already uses `172.30.0.0/24`. Pick a free subnet and update the Caddy
+  address and `KINGLET_TRUSTED_PROXIES` to match.
+- **`address already in use`.** Another service holds the host port (8080, or
+  80/443 for Caddy). Free it or map a different host port.

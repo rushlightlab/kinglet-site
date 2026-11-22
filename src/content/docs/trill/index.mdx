@@ -1,0 +1,74 @@
+---
+title: Trill
+description: Trill is Kinglet's search language — one short syntax for searching, monitoring, and clearing logs.
+---
+
+import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+
+**Trill** is how you ask Kinglet for events. A Trill query is a list of terms
+separated by spaces, and an event matches when it satisfies every term:
+
+```
+level>=warn service:api timeout -healthcheck
+```
+
+That reads as: _warnings or worse, from the `api` service, whose message
+contains "timeout" but not "healthcheck"._
+
+The same query works everywhere Kinglet takes a filter:
+
+- **The log view.** The search bar, with autocomplete, the live tail, and the
+  volume histogram.
+- **The API.** The `q` parameter on `GET /v1/events`, `/v1/aggregate`,
+  `/v1/histogram`, and the `/v1/stream` live tail.
+- **Monitors.** A monitor's query decides which events it counts or alerts on.
+- **Clearing logs.** Delete exactly the events a query matches, after a preview.
+- **The MCP server.** AI clients search and count with the same syntax.
+
+## A quick tour
+
+| You want                                       | Trill                               |
+| ---------------------------------------------- | ----------------------------------- |
+| Errors and worse                               | `level>=error`                      |
+| One service, one environment                   | `service:checkout env:prod`         |
+| Messages containing a phrase                   | `"connection refused"`              |
+| …but not health checks                         | `"connection refused" -healthcheck` |
+| A value in the event's structured fields       | `field.orderId:A-42`                |
+| Slow requests                                  | `field.durationMs>1000`             |
+| Anything mentioning a value, message or fields | `in:all 864351050000101`            |
+
+Terms combine freely, in any order: `service:udp level>=warn field.imei:8643…`.
+
+## Message, fields, and the index
+
+Every Kinglet event has a **message** (the text line) and optional **fields**
+(a JSON object sent alongside it). Trill searches both, in different ways:
+
+- **Free text** like `timeout` or `"conn refused"` matches the **message**, through
+  the [search index](/storage/#search-index) when one exists.
+- **Field filters** like `field.status>=500` match **values in the fields**, exactly.
+- **`in:fields`** or **`in:all`** makes free text search the fields' keys and
+  values too, for when you don't know which field holds what you're after.
+
+Field filters and `in:fields` scan the events in the selected project and time
+window instead of using the index. That's about 0.1 s for a day of a
+1M-event project, and a few seconds for two weeks. Narrow the window, or add
+`service:`, `level`, or message text, to keep them fast.
+
+<CardGrid>
+  <Card title="Syntax reference" icon="document">
+    Every term, operator, and rule. [Read the reference →](/trill/reference/)
+  </Card>
+  <Card title="Examples" icon="rocket">
+    Ready-made queries for debugging, monitors, and clean-up. [Browse examples →](/trill/examples/)
+  </Card>
+  <Card title="The log view" icon="magnifier">
+    Autocomplete, the live tail, the histogram, and click-to-filter. [Use the log view
+    →](/trill/log-view/)
+  </Card>
+</CardGrid>
+
+<Aside type="note" title="Why “Trill”?">
+  Kinglets are tiny songbirds, and a trill is their fast, high song: short, quick, and to the point,
+  like the queries.
+</Aside>

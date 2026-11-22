@@ -5,40 +5,42 @@ description: Harden a self-hosted Kinglet instance with TLS, narrow proxy trust,
 
 import { Aside } from "@astrojs/starlight/components";
 
-Kinglet is built for a small, trusted team rather than an open multi-tenant
-service. Most of the security work is deployment hygiene: terminate TLS, trust
-only your proxy, keep secrets out of logs, use least-privilege accounts and
-scoped keys, and keep the image and database healthy.
+Kinglet is built for a small, trusted team, not an open multi-tenant service.
+Most of the security work is deployment hygiene: terminate TLS, trust only your
+proxy, keep secrets out of logs, use least-privilege accounts and scoped keys,
+and keep the image and database healthy.
 
 <Aside type="caution" title="Before you expose Kinglet">
   At minimum: set `KINGLET_BASE_URL` to the public HTTPS origin, put Kinglet behind a TLS reverse
-  proxy, set a strong `BETTER_AUTH_SECRET`, set a strong bootstrap admin password, and narrow
-  `KINGLET_TRUSTED_PROXIES` to only your proxy. The [self-hosting guide](/self-hosting/) covers
-  installation; this page covers the security decisions.
+  proxy, keep the generated `BETTER_AUTH_SECRET` (or set one explicitly for several instances), set
+  a strong bootstrap admin password, and narrow `KINGLET_TRUSTED_PROXIES` to only your proxy.
+  [Deploy](/deploy/) covers installation; this page covers the security decisions.
 </Aside>
 
 ## Reverse proxy and client IPs
 
-`KINGLET_TRUSTED_PROXIES` is a list of **proxies** allowed to set
-`X-Forwarded-For`. It is not a list of client networks. Kinglet uses the resolved
-client IP for the sign-in rate limit and the stored session IP.
+Kinglet uses the client IP for the sign-in rate limit (20 attempts per minute
+per IP) and the stored session IP.
 
-Do:
+- **Empty** (the default): Kinglet uses the connecting socket's address. Use this
+  when clients reach Kinglet directly. Behind a proxy, every user then shares the
+  proxy's address and one rate-limit bucket.
+- **Set**: Kinglet reads `X-Forwarded-For` from right to left, skips every
+  address inside the listed ranges, and uses the first address outside them as
+  the client IP. If every address is listed, the request has no client IP and
+  shares one bucket with all such requests.
 
-- Set it to the proxy address or the proxy's Docker network. For a Caddy
-  container on a dedicated network, `172.30.0.10/32` is enough.
-- Leave it empty when Kinglet is reached directly. The socket address is used.
-- Make the proxy set or sanitize `X-Forwarded-For`; do not accept a
-  client-supplied chain from an untrusted hop.
+The list is not checked against the connecting socket. Anyone who can reach
+Kinglet's port directly can therefore choose the IP Kinglet records, so:
 
-Don't:
-
-- Use `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`. Those ranges contain your users
-  (LAN, VPN, Tailscale), so Kinglet treats their addresses as proxy hops. A
-  private-range client can be stripped to no IP, and a forged public prefix can
-  become the recorded client IP.
-- Treat a private network as automatically trusted. Trust the proxy process, not
-  the network it happens to share with clients.
+- Keep port `3000` reachable only by the proxy, and have the proxy set or append
+  to `X-Forwarded-For` rather than pass a client-supplied chain through.
+- List the proxy's own address as a `/32`. For a Caddy container on a dedicated
+  network, `172.30.0.10/32` is enough.
+- Never list `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`. Those ranges contain your
+  users (LAN, Docker, many VPNs), so Kinglet skips their addresses: a
+  private-range client ends up with no IP, and a forged public address in front
+  of it becomes the recorded client IP.
 
 Example Caddy network (direct Compose):
 
@@ -62,20 +64,23 @@ services:
 
 ### Traefik and platform proxies
 
-Dokploy and Coolify put a platform proxy in front of Kinglet (Traefik in the
-default setups; check your instance). The variable is still the proxy address,
-not a fixed IP. Find the proxy container and the network it shares with Kinglet:
+Dokploy and Coolify put Traefik in front of Kinglet on a network that other apps
+share. List the proxy container's address as a `/32`, not that network: listing
+the subnet makes Kinglet skip every neighbouring app's address. Neighbours on
+that network can also reach port `3000` directly, so only deploy apps you trust
+alongside Kinglet. Their deploy pages show how to find the address:
+[Dokploy](/deploy/dokploy/#trusted-proxy), [Coolify](/deploy/coolify/#trusted-proxy).
+
+For your own Traefik or another proxy container, find its address with:
 
 ```bash
 docker ps --format '{{.Names}}' | grep -Ei 'traefik|caddy'
 docker inspect <proxy-container> --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'
-docker network inspect <proxy-network> --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
 ```
 
-Set `KINGLET_TRUSTED_PROXIES` to the proxy's address with `/32` if it is stable,
-or to the dedicated Docker network CIDR if that network contains only proxy and
-application containers. A host LAN/VPN range is not a proxy network. On Dokploy,
-the network is commonly `dokploy-network`; inspect it rather than guessing.
+A dedicated Docker network CIDR is acceptable only when that network contains
+nothing but the proxy and Kinglet. A host LAN/VPN range is never a proxy
+network.
 
 ## Common deployments
 
@@ -100,12 +105,8 @@ Cloudflare's ranges are published at
 paste a stale copied list. Adding them only helps if the XFF chain still contains
 the visitor: if your proxy overwrites `X-Forwarded-For` with the immediate peer,
 Kinglet sees Cloudflare's address instead. That still works for rate limiting,
-but it is not visitor-level attribution. Kinglet currently reads
-`X-Forwarded-For`; Cloudflare's `CF-Connecting-IP` is not used unless you add a
-custom header policy in the app.
-
-Do not use `10.0.0.0/8`, `172.16.0.0/12`, or `192.168.0.0/16` as a shortcut.
-Those are client networks, not proxies.
+but it is not visitor-level attribution. Kinglet reads only `X-Forwarded-For`,
+not Cloudflare's `CF-Connecting-IP`.
 
 ## TLS and network exposure
 
@@ -113,13 +114,12 @@ Those are client networks, not proxies.
   Session cookies become `Secure` only when the base URL is HTTPS.
 - Terminate TLS at Caddy, nginx, or your platform proxy. Publish only 80/443 on
   the proxy and keep Kinglet's `3000` port internal.
-- The one-command Docker example publishes `8080` on every interface. For a local
-  trial, bind it to loopback instead:
-
-  ```bash
-  -p 127.0.0.1:8080:3000
-  ```
-
+- The Docker examples bind `127.0.0.1:8080`. Drop the `127.0.0.1:` prefix only
+  behind TLS; the source build's `docker-compose.yml` publishes `8080` on every
+  interface.
+- Scripts should authenticate with a Bearer key. Cookie-authenticated `/v1`
+  requests other than `GET`/`HEAD`/`OPTIONS` must send `X-Kinglet-Request: 1`, and
+  a cross-origin `Origin` is rejected (CSRF protection).
 - Do not expose Kinglet directly to the internet without TLS. If you use the
   Caddy sample in `deploy/`, keep the Kinglet service unpublished and route to
   it over the Compose network.
@@ -152,12 +152,13 @@ Use the smallest role that works:
 - Disable an account before deleting it when you may need to restore access.
   Disabling blocks sign-in and revokes keys owned by that user; enabling the
   account does not restore them.
-- Role changes and account deletion delete sessions and keys owned by the user.
+- A role change deletes the user's sessions; a demotion (to viewer, or admin to
+  member) also revokes the keys they created. Account deletion removes both.
   Mutating requests bypass the session cookie cache; read-only requests can use a
-  signed cache for up to 60 seconds. If you need immediate read revocation, sign
-  the user out or delete the sessions.
-- After a password reset, check the key list and revoke any keys that user
-  created. Treat account recovery as a full credential rotation.
+  signed cache for up to 60 seconds. For immediate read revocation, sign the user
+  out or delete the sessions.
+- A password reset revokes the user's keys and sessions. Treat account recovery
+  as a full credential rotation.
 
 ## API keys
 
@@ -175,29 +176,28 @@ Use the smallest role that works:
   that is sending more than expected.
 
 <Aside type="note" title="Offboarding a project member">
-  Removing a project member revokes the API keys that member created for that project. A password
-  reset or account disable revokes keys owned by the target. Still review the project key list after
-  offboarding, especially for keys that were rotated or shared outside the workspace.
+  Removing a project member revokes the keys that member created for that project. Still review the
+  project key list afterwards, especially for keys that were shared outside the workspace.
 </Aside>
 
 ## MCP keys
 
-MCP keys (`km_...`) are project-bound machine credentials for AI clients. They
-are separate from API keys: their scopes are `logs.read`, `monitors.read`, and
-`monitors.write`, they never inherit a human role, and they cannot reach
-projects, users, keys, settings, backups, or admin routes. Create and revoke
-them under **Settings → Projects → open a project → MCP keys**; revocation and
-scope changes apply on the next request.
+MCP keys (`km_...`) are project-bound credentials for AI clients, separate from
+API keys. Their scopes are `logs.read`, `monitors.read`, and `monitors.write`;
+they never inherit a human role and cannot reach projects, users, keys,
+settings, backups, or admin routes. Revocation and scope changes apply on the
+next request.
 
-Log and monitor results from MCP tools leave your server and go to the AI
-provider configured in the client. Point the key at a project whose contents are
-appropriate for that provider, treat event text as untrusted input (prompt
-injection), and grant `monitors.write` only when the client should change
-monitors. MCP monitor writes are disabled by default; set
-`KINGLET_MCP_ALLOW_MONITOR_WRITES=1` only when the client requires an explicit
-approval policy for tool calls. Monitor reads return channel ids, names, types,
-and health only; webhook URLs are never returned, and monitor writes accept
-channel ids only. See [MCP server](/mcp/) for client setup.
+- MCP results leave your server for the client's AI provider. Point the key at a
+  project whose contents are appropriate for that provider.
+- Treat event text as untrusted input (prompt injection).
+- Monitor writes need both the `monitors.write` scope and
+  `KINGLET_MCP_ALLOW_MONITOR_WRITES=1` on the server. Enable the variable only
+  when the client requires explicit approval for tool calls.
+- Monitor and channel reads never return webhook URLs; writes accept channel
+  ids only.
+
+See [MCP server](/mcp/#security) for setup and details.
 
 ## Webhooks and alerts
 
@@ -207,16 +207,19 @@ channel ids only. See [MCP server](/mcp/) for client setup.
   suspicious.
 - Prefer HTTPS webhook URLs and a receiver you control. Do not put secrets in
   event messages that may be forwarded to a chat channel.
-- `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1` is an explicit SSRF escape hatch. Enable it
-  only when every project member is trusted with internal network reachability,
-  and add egress rules at the container or host level.
-- Shared notification-channel URLs are admin-only secrets. Legacy inline monitor
-  URLs are also admin-only: member monitor responses mask them, members cannot
-  create new inline webhook channels, and deleting or rotating a channel removes
-  the legacy copy. Notification text is sanitized before Discord, Slack, or
-  webhook delivery, including escaping existing backslashes before markdown
-  escapes. Stored delivery errors are sanitized and exposed as `notifyError`
-  only to administrators; members, viewers, and MCP keys receive `null`.
+- Private, loopback, and metadata webhook targets are blocked by default,
+  including after DNS resolution, and redirects are refused.
+  `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1` lifts that block. Only admins can set channel
+  URLs, so enable it only if every admin may reach internal hosts, and add egress
+  rules at the container or host level.
+- Notification-channel URLs, including legacy inline monitor URLs, are
+  admin-only secrets. Member monitor responses mask them, members cannot create
+  inline webhook channels, and deleting or rotating a channel removes the legacy
+  copy.
+- Notification text is sanitized (markdown and backslashes escaped) before
+  Discord, Slack, or webhook delivery. Delivery errors are sanitized and shown as
+  `notifyError` to administrators only; everyone else, including MCP keys, gets
+  `null`.
 - Use a separate notification channel for production alerts, and review who can
   edit monitors and channels.
 
@@ -227,26 +230,22 @@ channel ids only. See [MCP server](/mcp/) for client setup.
 - Set `KINGLET_MAX_EVENTS_PER_PROJECT` and `KINGLET_MAX_DB_MB` so one project
   cannot fill the shared database. A full database makes ingest fail for every
   project.
-- Back up the whole `/data` volume, including `kinglet.db`, `-wal`, and `-shm`
-  while the service runs. Do not copy only the `.db` file from a live WAL store.
-  Litestream or the platform's volume snapshot is safer.
+- Back up with the built-in [S3 snapshots](/backups/), Litestream, or an atomic
+  volume snapshot. A plain file copy of a running database can be inconsistent;
+  stop Kinglet first if you copy files.
 - Test a restore before you need it. The auth secret and admin password live in
   the same volume.
 - S3 backup credentials and the optional backup passphrase are read from the
   environment only; they are never stored in the database. Keep them in your
   platform's secret store.
-- Snapshot manifests are HMAC-signed. Restore rejects unsigned or tampered
-  manifests, and when `KINGLET_BACKUP_PASSPHRASE` is set it also rejects an
-  unencrypted snapshot. The legacy compatibility flags are for old snapshots
-  only. `KINGLET_BACKUP_MAX_SNAPSHOT_MB` bounds restore download and decode size.
-- Restore clears sessions and verification rows fail-closed: if clearing fails,
-  the process refuses to serve the restored database. The newest three
-  pre-restore copies are retained and older ones are pruned.
+- Restore rejects unsigned or tampered manifests, rejects unencrypted snapshots
+  when `KINGLET_BACKUP_PASSPHRASE` is set, caps download size, and clears
+  sessions fail-closed. Details are in [Backups & archive](/backups/#security).
 
 ## Updates and image pinning
 
-`:latest` is convenient for a trial, not a production contract. Pin a release
-tag, or better, a digest:
+`:latest` is for a trial, not production. Pin a release tag, or better, a
+digest:
 
 ```yaml
 services:
