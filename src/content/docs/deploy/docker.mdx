@@ -44,6 +44,8 @@ Pass variables with `-e`, or keep them in a file and add `--env-file .env`:
 KINGLET_BASE_URL=https://logs.example.com
 KINGLET_ADMIN_EMAIL=you@example.com
 KINGLET_ADMIN_PASSWORD=<strong-password>
+# Encrypts notification channel secrets: openssl rand -base64 32
+KINGLET_SECRET_KEY=<generated key>
 # Only behind a reverse proxy: the proxy's address, nothing wider.
 # KINGLET_TRUSTED_PROXIES=<proxy-ip>/32
 ```
@@ -52,6 +54,9 @@ KINGLET_ADMIN_PASSWORD=<strong-password>
   public sign-in.
 - `BETTER_AUTH_SECRET` is optional on a single instance: one is generated and
   kept in `/data/auth-secret.txt`.
+- `KINGLET_SECRET_KEY` encrypts notification channel secrets and is needed to
+  add channels. Keep a copy outside `/data`; see
+  [Encrypted channel secrets](/self-hosting/#encrypted-channel-secrets).
 - `KINGLET_TRUSTED_PROXIES` stays empty when clients reach Kinglet directly. See
   [Common deployments](/security/#common-deployments) for the value behind each
   proxy.

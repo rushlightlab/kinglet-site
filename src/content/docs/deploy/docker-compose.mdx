@@ -43,6 +43,8 @@ Create `.env` next to it (mode `600`, out of Git):
 KINGLET_BASE_URL=http://localhost:8080
 KINGLET_ADMIN_EMAIL=you@example.com
 KINGLET_ADMIN_PASSWORD=<strong-password>
+# Encrypts notification channel secrets: openssl rand -base64 32
+KINGLET_SECRET_KEY=<generated key>
 ```
 
 Start it:
@@ -104,6 +106,7 @@ address and `KINGLET_TRUSTED_PROXIES` with it.
 | `KINGLET_DOMAIN`                                 | TLS sample only: the hostname Caddy serves and requests a certificate for.        |
 | `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only while no administrator exists.                                          |
 | `BETTER_AUTH_SECRET`                             | Optional on one instance; generated in `/data` otherwise.                         |
+| `KINGLET_SECRET_KEY`                             | Encrypts channel secrets; needed to add notification channels.                    |
 | `KINGLET_TRUSTED_PROXIES`                        | Empty without a proxy; the proxy's `/32` with one. Set already in the TLS sample. |
 
 See the [configuration reference](/self-hosting/#configuration) for retention,
