@@ -33,6 +33,8 @@ const kingletCodeTheme = {
 export default defineConfig({
   site: SITE,
   output: "static",
+  // Old route of the query language page, now the Trill section.
+  redirects: { "/query-language/": "/trill/" },
   integrations: [
     starlight({
       title: "Kinglet",
@@ -53,7 +55,26 @@ export default defineConfig({
           items: [
             { label: "Overview", link: "/overview/" },
             { label: "Quickstart", link: "/quickstart/" },
-            { label: "Query language", link: "/query-language/" },
+          ],
+        },
+        {
+          label: "Search with Trill",
+          items: [
+            { label: "Trill", link: "/trill/" },
+            { label: "Syntax reference", link: "/trill/reference/" },
+            { label: "Examples", link: "/trill/examples/" },
+            { label: "The log view", link: "/trill/log-view/" },
+          ],
+        },
+        {
+          label: "Deploy",
+          items: [
+            { label: "Choose a deployment", link: "/deploy/" },
+            { label: "Docker", link: "/deploy/docker/" },
+            { label: "Docker Compose", link: "/deploy/docker-compose/" },
+            { label: "Dokploy", link: "/deploy/dokploy/" },
+            { label: "Coolify", link: "/deploy/coolify/" },
+            { label: "Build from source", link: "/deploy/build-from-source/" },
           ],
         },
         {

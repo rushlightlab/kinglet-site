@@ -92,5 +92,7 @@ Whatever the size:
   allows 600 requests per minute per API key, so give each service or instance
   its own key.
 - If you do not need substring search, `KINGLET_SEARCH=words` is the biggest
-  single lever: 1.5–2× the sustained rate and ~22% less disk. See [Search index](/storage/#search-index).
+  single lever: about 20% faster raw ingest, 1.5–2× the sustained rate under
+  dashboard load in the runs above, and ~22% less disk. See
+  [Search index](/storage/#search-index).
 - Shorter retention shrinks disk linearly and keeps long-window queries fast.

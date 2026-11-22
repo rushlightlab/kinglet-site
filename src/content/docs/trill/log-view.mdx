@@ -1,0 +1,74 @@
+---
+title: The log view
+description: Search with autocomplete, follow the live tail, read the histogram, and filter from an event.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The log view is where Trill queries run interactively. Everything here also
+lives in the URL, so a link reopens the same search and time window.
+
+## Search and autocomplete
+
+Type a [Trill](/trill/) query in the search bar. Results update as you type
+and immediately when you press **Enter**.
+
+Autocomplete suggests as you type:
+
+- **Terms:** `level>=`, `service:`, `env:`, `field.`, `in:fields`, `in:all`.
+- **Values:** level names after `level:`, and the services and environments
+  seen recently after `service:` and `env:`.
+- **Fields:** after `field.`, the keys found in the last 24 hours of events,
+  with their types. After `field.<key>:`, that field's most common values.
+  Typing a bare word that names a field, like `imei`, offers `field.imei:`.
+
+| Key              | Does                                               |
+| ---------------- | -------------------------------------------------- |
+| `↓` / `↑`        | Move through suggestions (`↓` also opens them)     |
+| `Tab`            | Accept the highlighted suggestion, or the first    |
+| `Enter`          | Accept a highlighted suggestion; otherwise search  |
+| `Ctrl` + `Space` | Open suggestions                                   |
+| `Esc`            | Close suggestions; press again to clear the search |
+
+Below the bar:
+
+- **Level chips** toggle a `level:` term.
+- **Text in** sets where free text looks: **message** (default), **fields**,
+  or **both**. It writes `in:fields` or `in:all` into the query.
+- **Clear** (the × in the search bar) empties the search.
+- **Saved searches** keep up to 8 queries in this browser. Click one to apply
+  it, or its × to remove it.
+
+## Time window
+
+Pick a range from 5 minutes to 30 days, or enter exact start and end times.
+To zoom, drag across the histogram to select a range (drag the handles to
+refine it), then press **Zoom In** or Enter; clear it from the same picker. A
+search window is at most 31 days.
+
+## Live tail
+
+**Live** streams new events over SSE as they arrive, filtered by the same
+query, with no polling. **Follow** keeps the newest event in view. The optional
+refresh rate in the time picker (off by default) re-queries the window every
+15 seconds, 1 minute, or 5 minutes, and rescales with the window.
+
+## Histogram
+
+The histogram shows event volume over the window, stacked by level, for the
+events that **match the query**. Click a coloured level segment in a bar to
+filter to that level.
+
+## Event drawer
+
+Click any row to open the event: its time, level, service, env, the API key
+that ingested it, its UUID v7 id (copyable), and the full message.
+
+Its **fields** are listed one per row, nested keys flattened (`data.rss`). Hover
+a field and click its filter button to add the matching `field.` term to the
+search. The **raw JSON** toggle shows the original object.
+
+<Aside type="tip" title="Usage by key">
+  `key:<id>` matches events ingested by one API key. Open a key's actions in
+  **Settings → Projects → manage** and choose **View usage** to apply it.
+</Aside>

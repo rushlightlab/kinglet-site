@@ -11,7 +11,10 @@ database with the same code. Schema and queries are defined once with
 [Drizzle ORM](https://orm.drizzle.team); migrations live in
 `apps/api/drizzle` and are applied automatically on boot.
 
-**sqlite (default)** — a single local database (plus WAL/SHM sidecars while running), zero config, zero services:
+## Local SQLite (default)
+
+A single local database file (plus WAL/SHM sidecars while running), with zero
+config and zero services:
 
 ```bash
 KINGLET_DB_PATH=/data/kinglet.db
@@ -19,7 +22,7 @@ KINGLET_DB_PATH=/data/kinglet.db
 
 WAL mode and the FTS5 trigram index are configured automatically.
 
-### Search index
+## Search index
 
 `KINGLET_SEARCH` picks how message text is indexed. The index is the largest
 single cost of ingest, so this is the main knob for high-volume installs.
@@ -36,15 +39,19 @@ matches are found first), but a rare term or a count scans every event in the
 window: roughly 0.5 s with half a million events in range. Changing the mode rebuilds (or drops)
 the index once at boot. The live tail always matches substrings.
 
-**Turso** — point at your database; nothing else changes:
+## Turso and remote libSQL
+
+Point at your database; nothing else changes:
 
 ```bash
 KINGLET_DB_PATH=libsql://your-db.turso.io
 KINGLET_DB_AUTH_TOKEN=eyJ…
 ```
 
-With `KINGLET_STORAGE=auto` (the default), a plain path uses the local file and
-`libsql://`, `https://`, `wss://`, or `file:` URLs use the libSQL transport.
+With `KINGLET_STORAGE=auto` (the default), a plain path or `file:` URL is a local
+database; `libsql://`, `http(s)://`, and `ws(s)://` URLs are remote (no
+snapshots). Some hosted libSQL builds lack the FTS5 trigram tokenizer; Kinglet
+detects that and falls back to `words` search with a console warning.
 
 <Aside type="note" title="One engine, two transports">
   Earlier versions had separate better-sqlite3 and libSQL drivers. They are now one libSQL client —
@@ -54,12 +61,12 @@ With `KINGLET_STORAGE=auto` (the default), a plain path uses the local file and
 ### Notes for hosted Turso
 
 ```bash
-docker run -d --name kinglet -p 8080:3000 \
+docker run -d --name kinglet -p 127.0.0.1:8080:3000 \
   -e KINGLET_DB_PATH=libsql://your-db.turso.io \
   -e KINGLET_DB_AUTH_TOKEN=eyJ… \
   -e KINGLET_ADMIN_EMAIL=you@example.com \
   -e KINGLET_ADMIN_PASSWORD=change-me-please \
-  ghcr.io/rushlightlab/kinglet:latest
+  ghcr.io/rushlightlab/kinglet:0.4.0
 ```
 
 - **One Kinglet instance per database.** Ingest assumes a single writer.

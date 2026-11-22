@@ -1,0 +1,179 @@
+---
+title: Trill reference
+description: Every Trill term and operator, how values are compared, and the limits.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+A Trill query is a list of **terms** separated by spaces. An event matches when
+it satisfies **every** term: terms are combined with AND, and order doesn't
+matter.
+
+## Terms at a glance
+
+| Term                    | Matches                                        | Example                                    |
+| ----------------------- | ---------------------------------------------- | ------------------------------------------ |
+| `word`                  | the message contains `word`                    | `timeout`                                  |
+| `"a phrase"`            | the message contains the phrase                | `"connection refused"`                     |
+| `-word`                 | the message does **not** contain `word`        | `-healthcheck`                             |
+| `level:<name>`          | exactly this level                             | `level:error`                              |
+| `level>=<name>`         | this level or worse (also `>`, `<`, `<=`)      | `level>=warn`                              |
+| `service:<name>`        | this service                                   | `service:checkout`                         |
+| `env:<name>`            | this environment                               | `env:prod`                                 |
+| `key:<id>`              | ingested by this API key                       | `key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30` |
+| `field.<path>:<value>`  | a field equals the value                       | `field.imei:864351050000101`               |
+| `field.<path>>=<n>`     | a numeric field compares (also `>`, `<`, `<=`) | `field.status>=500`                        |
+| `field.<path>:*`        | the field exists                               | `field.error:*`                            |
+| `-field.<path>:<value>` | the field does **not** equal the value         | `-field.reason:duplicate`                  |
+| `in:fields`, `in:all`   | free text also searches field keys and values  | `in:fields timeout`                        |
+
+## Free text
+
+A bare word or a quoted phrase matches events whose **message** contains it:
+
+```
+timeout
+"connection refused"
+'heart beat'
+```
+
+- **Case doesn't matter.** `Timeout`, `timeout`, and `TIMEOUT` are the same term.
+- **Quotes group words.** Use double or single quotes. There's no escape character:
+  to search for a `"`, wrap the phrase in single quotes, and the other way round.
+- **Prefix `-` to exclude.** `-healthcheck` drops every event whose message
+  contains it; `-"connection refused"` excludes a phrase.
+
+How a term matches depends on the server's [search index](/storage/#search-index):
+
+| `KINGLET_SEARCH`        | `time` finds                          | Notes                                                          |
+| ----------------------- | ------------------------------------- | -------------------------------------------------------------- |
+| `substring` _(default)_ | `timeout`, `runtime`, `timestamp`     | Any position. Terms shorter than 3 characters scan the window. |
+| `words`                 | `timeout`, `timestamp`, not `runtime` | Whole words and word prefixes.                                 |
+| `off`                   | `timeout`, `runtime`, `timestamp`     | No index; every text term scans the window.                    |
+
+## Level
+
+Levels, least to most severe: `trace`, `debug`, `info`, `warn`, `error`, `fatal`.
+
+```
+level:error       exactly error
+level>=warn       warn, error, fatal
+level<info        trace, debug
+```
+
+The operators are `:` (or `=`), `>`, `>=`, `<`, and `<=`. Level names ignore case.
+
+## Service, environment, and API key
+
+```
+service:checkout
+env:prod
+service:"billing worker"
+key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30
+```
+
+- **`service` and `env` match the whole name.** Kinglet stores both in lowercase
+  at ingest, and Trill compares them the same way, so `service:API` and
+  `service:api` are equal.
+- **`key:<id>`** (or `api_key:<id>`) matches events ingested by that API key,
+  using the key id shown in **Settings → Projects**. It needs the full UUID; a
+  shortened id is searched as free text.
+- **One of each.** A query holds one `service`, one `env`, one `key`, and one
+  `level` condition. If you write two, the last one wins.
+
+## Field filters
+
+When an event is sent with `fields`, `field.<path>` filters on them:
+
+```json
+{
+  "message": "RUPTELA 864351050000101 · 3 records saved",
+  "fields": {
+    "imei": "864351050000101",
+    "savedCount": 3,
+    "durationMs": 1450,
+    "ack": true,
+    "data": { "rss": 251 }
+  }
+}
+```
+
+```
+field.imei:864351050000101      equals
+field.savedCount>=1             number comparison
+field.data.rss>250              nested key
+field.ack:true                  boolean
+field.error:*                   the field exists, whatever its value
+-field.reason:"already saved"   does not equal
+```
+
+### Paths
+
+- Write the key after `field.` (`fields.` works too). Join nested keys with dots,
+  up to 4 levels: `field.data.rss`.
+- Keys may contain letters, digits, `_`, and `-`, and **are case-sensitive**:
+  `field.durationMs` and `field.durationms` are different keys. Keys with other
+  characters can't be filtered by name; use `in:fields` instead.
+
+### How values compare
+
+| Operator          | Behaviour                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `:` or `=`        | Equals. Compares the value as text, ignoring case: `field.protocol:ruptela` matches `"RUPTELA"`, `field.savedCount:3` matches `3`. |
+| `>` `>=` `<` `<=` | Numeric. Only matches fields that are JSON **numbers**: a number stored as a string (`"500"`) doesn't match.                       |
+| `:*`              | Exists. Matches any value, including `null`, objects, and arrays.                                                                  |
+| `-` prefix        | Negates. Also keeps events that don't have the field at all.                                                                       |
+
+- `true`, `false`, and `null` match JSON booleans and null by name.
+- An event without the field never matches a positive filter.
+- For objects and arrays, use `:*` (exists); equality on them compares their JSON text.
+
+## Search scope: `in:`
+
+By default, free text searches only the message. `in:` changes that for every
+free-text term in the query:
+
+| Term                     | Free text searches                   |
+| ------------------------ | ------------------------------------ |
+| `in:message` _(default)_ | the message, through the index       |
+| `in:fields`              | the fields' keys and values, as text |
+| `in:all`                 | the message **or** the fields        |
+
+```
+in:fields timeout          any field key or value contains "timeout"
+in:all 864351050000101     the message or a field contains the IMEI
+in:all -staging            neither the message nor the fields mention "staging"
+```
+
+`in:fields` matches the stored JSON text, so it also finds key names: `in:fields
+imei` matches every event with an `imei` field. It ignores field filters, which
+always look at their own key.
+
+## Rules worth knowing
+
+- **AND only.** There is no `OR` or grouping yet. To see two services, run two
+  searches, or drop the service term and narrow with others.
+- **Last wins.** For `level`, `service`, `env`, `key`, and `in:`, the last term of
+  each kind applies.
+- **Unrecognized terms are free text.** A term that isn't valid Trill, like
+  `level>=bogus` or `field.status>abc`, is searched as plain text. It doesn't
+  cause an error.
+- **Quotes don't make text.** `"service:api"` is still a service filter.
+- **Only text and fields negate.** `-level>=warn`, `-service:api`, and
+  `-env:prod` are treated as text exclusions. Use the opposite comparison
+  instead, such as `level<warn`.
+
+## Limits
+
+| Limit        | Value                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Query length | 500 characters                                                                                                                                       |
+| Terms        | 32                                                                                                                                                   |
+| Time window  | 31 days per search, count, or histogram; longer ranges are clamped to the 31 days before `to`. The live tail and clearing logs have no window limit. |
+| Field depth  | 4 levels (`field.a.b.c.d`)                                                                                                                           |
+
+<Aside type="tip">
+  Kinglet's MCP server describes this syntax to AI clients in its [`search_events`
+  tool](/mcp/#tools), and `get_histogram` and `count_events` use the same syntax. You can ask for
+  "errors from udp with a lag over a minute" and let the client write the Trill.
+</Aside>

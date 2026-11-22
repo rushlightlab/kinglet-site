@@ -9,9 +9,9 @@ Everything speaks HTTP, so everything can log to Kinglet. One endpoint accepts
 batches of events, authenticated with a project API key.
 
 <Aside type="tip" title="Using Node.js?">
-  [`@kinglet/sdk-node`](/node-sdk/) wraps the same endpoint with buffering and retries: `npm install
-  @kinglet/sdk-node`. The dependency-free client below shows what it does under the hood, for other
-  runtimes or when you want no dependency at all.
+  [`@kinglet/sdk-node`](/node-sdk/#install) wraps the same endpoint with buffering and retries. The
+  dependency-free client below shows what it does under the hood, for other runtimes or when you
+  want no dependency at all.
 </Aside>
 
 ## Endpoint
@@ -64,12 +64,12 @@ than a handful of events.
 
 | Field                        | Required | Notes                                                                                                                             |
 | ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `message` (or `msg`)         | yes      | the log line, up to 8,000 characters                                                                                              |
-| `level`                      | no       | `trace`…`fatal`, or a number 0–5; unknown values default to `info`                                                                |
+| `message` (or `msg`)         | yes      | the log line; longer than 8,000 characters is truncated. A blank `message` hides `msg`                                            |
+| `level`                      | no       | `trace`…`fatal` (also `warning`, `err`, `critical`), or a number clamped to 0–5; unknown values default to `info`                 |
 | `ts` (or `time`/`timestamp`) | no       | epoch ms, epoch seconds (auto-detected), or ISO string; defaults to now, clamped to the last 31 days and 5 minutes of future skew |
 | `service`                    | no       | lowercased automatically (max 128 chars), shown and filterable in the UI                                                          |
 | `env`                        | no       | lowercased automatically (max 64 chars), e.g. `prod`, `staging`                                                                   |
-| `fields`                     | no       | arbitrary JSON object up to 32 KB serialized; larger values are stored as `{"_kinglet_truncated":true}`                           |
+| `fields`                     | no       | JSON object up to 32 KB serialized; larger values are stored as `{"_kinglet_truncated":true}`, and a non-object rejects the event |
 
 Anything else is ignored, so you can spread a log record into the event without
 cleaning it first.
@@ -84,14 +84,15 @@ Invalid events don't fail the batch. Partial failures return `200` with
 `rejected` set and up to three messages in `errors`. If **every** event is
 invalid, the response is `422` with the same shape.
 
-| Status | Meaning                                                    |
-| ------ | ---------------------------------------------------------- |
-| `401`  | missing, malformed, or revoked API key                     |
-| `403`  | key is valid but lacks the `ingest` scope                  |
-| `413`  | body over 8 MB                                             |
-| `422`  | every event in the batch was rejected — read `errors`      |
-| `429`  | rate limit (600 batches/minute) or the project's event cap |
-| `507`  | local database size cap reached                            |
+| Status | Meaning                                                                           |
+| ------ | --------------------------------------------------------------------------------- |
+| `400`  | invalid JSON body (send NDJSON with an `ndjson` content type)                     |
+| `401`  | missing, malformed, or revoked API key                                            |
+| `403`  | key lacks the `ingest` scope, or it is an MCP (`km_`) key                         |
+| `413`  | body over 8 MB                                                                    |
+| `422`  | every event in the batch was rejected — read `errors`                             |
+| `429`  | rate limit (600 batches/minute) or the project's event cap                        |
+| `507`  | the local database cap or the project's storage cap (`KINGLET_MAX_PROJECT_DB_MB`) |
 
 Retry `429` and `5xx` with backoff; don't retry other `4xx`.
 
@@ -209,6 +210,7 @@ export class KingletLogger {
 
   private async send(): Promise<void> {
     const batch = this.queue.splice(0, this.batchSize);
+    let retry = true;
     try {
       const response = await fetch(this.endpoint, {
         method: "POST",
@@ -220,19 +222,30 @@ export class KingletLogger {
         signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) {
+        // Only rate limits and server errors can succeed later.
+        retry = response.status === 429 || response.status >= 500;
         throw new Error(`Kinglet ${response.status}: ${await response.text()}`);
       }
     } catch (error) {
-      this.queue.unshift(...batch); // retry on the next flush
-      if (this.queue.length > this.maxQueue) this.queue.length = this.maxQueue;
+      if (retry) {
+        this.queue.unshift(...batch); // retry on the next flush
+        if (this.queue.length > this.maxQueue) {
+          this.queue.splice(0, this.queue.length - this.maxQueue); // drop oldest
+        }
+      }
       this.options.onError?.(error);
     }
   }
 
   async close(): Promise<void> {
     clearInterval(this.timer);
-    await this.flush();
-    if (this.queue.length > 0) await this.flush();
+    if (this.inFlight) await this.inFlight;
+    // Drain the queue; stop if a flush makes no progress (server unreachable).
+    while (this.queue.length > 0) {
+      const before = this.queue.length;
+      await this.flush();
+      if (this.queue.length >= before) break;
+    }
   }
 }
 ```
@@ -287,7 +300,7 @@ import urllib.request
 def ship(*events: dict) -> dict:
     body = "\n".join(json.dumps(event) for event in events).encode()
     request = urllib.request.Request(
-        f"{os.environ['KINGLET_URL']}/v1/events",
+        f"{os.environ['KINGLET_URL'].rstrip('/')}/v1/events",
         data=body,
         method="POST",
         headers={
@@ -314,7 +327,7 @@ list instead of sending per record.
 without extra work.
 
 ```go title="kinglet.go"
-package main
+package kinglet
 
 import (
 	"bytes"
@@ -452,9 +465,11 @@ timeout_secs = 1
 ```
 
 [Fluent Bit](https://docs.fluentbit.io/manual/data-pipeline/outputs/http) works
-the same way: use its HTTP output with `Format json_lines` and a
-`Header Authorization Bearer kl_…`. Keep compression off, and make sure records
-carry a `message` (or `msg`) key.
+the same way: use its HTTP output with `Format json_lines`,
+`json_date_key timestamp`, `json_date_format iso8601`, and a
+`Header Authorization Bearer kl_…`. Without the date settings, Fluent Bit writes
+the time under `date`, which Kinglet ignores. Keep compression off, and make
+sure records carry a `message` (or `msg`) key.
 
 <Aside type="note" title="Roadmap">
   Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so OpenTelemetry
@@ -467,8 +482,9 @@ carry a `message` (or `msg`) key.
 - Request body: 8 MB
 - Events per batch: 10,000 (extras are dropped and reported with `truncated`)
 - Rate limit: 600 batches/minute per API key
-- Default caps: 1,000,000 retained events per project and 4 GB for a local
-  database (`KINGLET_MAX_EVENTS_PER_PROJECT`, `KINGLET_MAX_DB_MB`; `0` disables)
+- Default caps: 1,000,000 events and 1 GB per project, and 4 GB for a local
+  database (`KINGLET_MAX_EVENTS_PER_PROJECT`, `KINGLET_MAX_PROJECT_DB_MB`,
+  `KINGLET_MAX_DB_MB`; `0` disables)
 - Retention: `KINGLET_RETENTION_DAYS`, default 14
 
 Common causes of an empty live tail:
@@ -477,7 +493,7 @@ Common causes of an empty live tail:
 | -------------------------------- | ---------------------------------------------------------------------------------- |
 | `401`                            | the key was revoked, or `KINGLET_KEY` is empty in the process that sends           |
 | `403`                            | the key was created without the `ingest` scope                                     |
-| `422` with `missing message`     | the event used `msg` with an empty string, or the body shape isn't NDJSON/JSON     |
+| `422` with `missing message`     | `message`/`msg` is missing or blank (a blank `message` hides `msg`)                |
 | `429`                            | you are sending per log line instead of batching; also check the project event cap |
 | events land in the wrong project | each key is bound to its project — use one key per app/environment                 |
 | events disappeared               | timestamps older than 31 days are clamped, and retention deletes old rows          |
