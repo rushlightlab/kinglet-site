@@ -19,8 +19,9 @@ accounts.
 
 ## First boot
 
-When no administrator exists — first boot, or recovery from a database with no
-admin account — Kinglet creates or promotes one:
+When no active administrator exists — first boot, recovery from a database with
+no admin account, or when every existing administrator is disabled — Kinglet
+creates or promotes (and re-enables) one:
 
 | Env var                  | Default               | Notes                                                                  |
 | ------------------------ | --------------------- | ---------------------------------------------------------------------- |
@@ -48,7 +49,8 @@ Your own password lives in **Account settings** in the user menu.
 Admins can reset a user's password, change their role, disable or enable the
 account, or delete it from **Settings → Users**.
 
-- **Change role** switches a user between member and viewer.
+- **Change role** updates a user between `admin`, `member`, and `viewer` (as
+  long as at least one active administrator remains).
 - **Reset password** generates a compliant password, shows it once, signs the
   user out everywhere, and revokes keys they created.
 - **Disable** blocks sign-in and revokes keys minted by that user. Enabling the
@@ -59,11 +61,11 @@ account, or delete it from **Settings → Users**.
 
 ## Roles
 
-| Role       | Can do                                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------ |
-| **admin**  | everything: projects, users, keys, logs, monitors. Cannot be deleted or disabled; the last admin cannot be demoted |
-| **member** | read/write logs, manage monitors, manage API keys                                                                  |
-| **viewer** | read logs, monitors, and project metadata                                                                          |
+| Role       | Can do                                                                                                                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **admin**  | everything: projects, users, keys, logs, monitors, notification channels, backups/archive/restore, and system endpoints. Cannot be deleted or disabled; the last admin cannot be demoted |
+| **member** | read/write logs, manage monitors, manage API keys                                                                                                                                        |
+| **viewer** | read logs, monitors, and project metadata                                                                                                                                                |
 
 Roles map to explicit permission keys (`logs.read`, `monitors.write`,
 `keys.write`, `users.read`, …) internally, so custom roles later are a data
@@ -155,7 +157,10 @@ list projects, manage monitors, or touch users.
 
 ## How auth is resolved
 
-1. `Authorization: Bearer kl_…` → project-scoped API key
+1. `Authorization: Bearer kl_…` or `Bearer km_…` (or `?key=` on `/v1/stream`) →
+   project-scoped API key or MCP key. If a token is supplied and invalid, the
+   request fails with `401` immediately rather than falling back to a session
+   cookie.
 2. `better-auth.session_token` cookie → signed-in user, with role permissions
 
 Browser routes accept the cookie; project-scoped calls use `?project=<id>`.

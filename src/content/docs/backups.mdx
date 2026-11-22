@@ -81,8 +81,9 @@ Until the four required values are present, the Backups tab shows a
 **Connect a bucket** setup card instead of status, scheduling, snapshots, and
 archive controls. If only some are set, or a value is invalid, Kinglet logs one
 warning at boot naming the variables (never their values) and leaves backups
-disabled. On remote libSQL/Turso the panel shows the storage problem instead of
-snapshot controls; log archive remains available.
+disabled. On remote libSQL/Turso, the **Connect a bucket** card includes a
+remote-storage notice until S3 is configured; once configured, the **Log
+archive** section is available while snapshot operations return `409`.
 
 ## Encryption
 
@@ -120,13 +121,17 @@ Open **Settings → Backups**. Scheduled snapshots are off by default; manual ru
 remain available when the schedule is off.
 
 - Choose a preset or enter a custom **5-field cron** expression
-  (`minute hour day month weekday`). Seconds fields are rejected.
+  (`minute hour day month weekday`) or macro (`@hourly`, `@daily`, `@weekly`,
+  `@monthly`). Seconds fields, `?`, and expressions that restrict both
+  day-of-month and day-of-week are rejected.
 - Pick a timezone, or click **use my timezone**. The initial value comes from
   `KINGLET_TIMEZONE`, then the server timezone.
 - Runs closer than 15 minutes apart are rejected.
 - The schedule preview shows a human description and the next three run times.
 - On boot, if the last successful run predates the previous scheduled slot,
   Kinglet runs one catch-up snapshot. It does not replay every missed slot.
+- Failed scheduled or catch-up snapshots automatically retry after **5 min,
+  15 min, and 60 min**.
 
 Presets:
 
@@ -146,13 +151,14 @@ times N; real snapshots are smaller because they are compressed.
 
 ## Snapshots
 
-A run copies the database with `VACUUM INTO`, compresses it with zstd, optionally
-age-encrypts it, and streams a multipart upload using
-`KINGLET_BACKUP_PART_SIZE_MB` (default 8 MiB, minimum 5). It then verifies the
-uploaded object with `HEAD`, comparing its size and SHA-256 metadata before
-writing the manifest. **The manifest is written last**; a snapshot without one
-is not listed. Orphan snapshot objects without a manifest are cleaned up after
-24 hours.
+A run checks that the data directory has at least `databaseSize + max(32 MiB,
+0.5 × databaseSize)` of free space, copies the database with `VACUUM INTO`,
+compresses it with zstd, optionally age-encrypts it, and streams a multipart
+upload using `KINGLET_BACKUP_PART_SIZE_MB` (default 8 MiB, minimum 5). It then
+verifies the uploaded object with `HEAD`, comparing its size and SHA-256
+metadata before writing the manifest. **The manifest is written last**; a
+snapshot without one is not listed. Orphan snapshot objects without a manifest
+are cleaned up after 24 hours.
 
 Bucket layout:
 
@@ -163,8 +169,8 @@ Bucket layout:
 ```
 
 The Snapshots table shows the trigger, size, contents, encryption, and state.
-**Refresh from bucket** reconciles the cache; the server also does so when a
-list request finds the cache older than 60 seconds.
+**Refresh snapshots from bucket** reconciles the cache; the server also does so
+when a list request finds the cache older than 60 seconds.
 
 - **Download** requests a presigned URL that expires after **5 minutes**. The
   download is recorded on the snapshot. Encrypted snapshots download as `.age`.
@@ -179,20 +185,22 @@ list request finds the cache older than 60 seconds.
 
 ## Restore
 
-Restore is staged, not immediate. Select a snapshot and choose **Restore**; the
-confirmation dialog calls it **Stage restore**.
+Restore is staged, not immediate. Select a snapshot and choose **Restore
+(staged)**; the confirmation dialog calls it **Stage restore**.
 
-1. Kinglet verifies the manifest signature, then checks the stored object
-   against the manifest's expected size. The object and database sizes in the
-   manifest must not exceed `KINGLET_BACKUP_MAX_SNAPSHOT_MB`.
+1. Kinglet verifies the manifest signature, checks the stored object against the
+   manifest's expected size, and confirms the data directory has at least
+   `objectBytes + databaseBytes + max(64 MiB, 0.25 × databaseBytes)` of free
+   space. The object and database sizes in the manifest must not exceed
+   `KINGLET_BACKUP_MAX_SNAPSHOT_MB`.
 2. It downloads the object, checks the download size and SHA-256, then decrypts
    (if needed) and decompresses it.
 3. The staged database must pass `PRAGMA integrity_check`, and its schema must
    not be newer than the running build.
 4. The verified database is written under `<data-dir>/restore/`, a
    `pending.json` marker is written, and the server enters maintenance mode.
-   Non-`GET` requests under `/v1` return `503` with `Retry-After: 30` until the
-   restart.
+   Requests under `/v1` other than `GET`/`HEAD`/`OPTIONS` return `503` with
+   `Retry-After: 30` until the restart.
 
 The restore is applied **at the next boot**, before the database opens. Kinglet
 copies the current database to `<data-dir>/pre-restore-<timestamp>.db`, removes
@@ -224,10 +232,12 @@ next boot applies it.
 node apps/api/dist/restore/cli.js --latest
 node apps/api/dist/restore/cli.js --id <snapshot-id>
 node apps/api/dist/restore/cli.js --key snapshots/<snapshot-id>.db.zst
+# or via pnpm:
+pnpm --filter @kinglet/api restore -- --latest
 ```
 
-Use `--key snapshots/<snapshot-id>.db.zst.age` for an encrypted snapshot. The
-CLI reads the same `KINGLET_BACKUP_S3_*`, `KINGLET_BACKUP_PASSPHRASE`, and
+Use `--key snapshots/<snapshot-id>.db.zst.age` (or the full object key under
+your configured prefix) for an encrypted snapshot. The CLI reads the same `KINGLET_BACKUP_S3_*`, `KINGLET_BACKUP_PASSPHRASE`, and
 `KINGLET_DB_PATH` variables as the server; outside Docker, set `KINGLET_DB_PATH`
 to the same absolute path the server uses. In Docker:
 
@@ -290,17 +300,20 @@ archive prefix to expire them.
 ### Import archived events
 
 Import is an admin API operation (`backups.restore`). It lists the project's
-parts, downloads each through a short-lived presigned URL, decrypts and
-decompresses it, verifies the uncompressed NDJSON checksum against the
-`archive_parts` cache (or the deterministic key suffix), and inserts events in
-chunks. Oversized messages/fields and far-future timestamps are skipped. Re-
-imports are idempotent on the event `uid`; duplicates are reported as skipped.
-Encrypted parts require `KINGLET_BACKUP_PASSPHRASE`. While a passphrase is set,
-unencrypted parts are refused, because only age encryption proves a part came
-from this instance. Set `KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS=1` only to
-import parts written before you added the passphrase. A clear or project delete
-that overlaps an archive run waits for the part being uploaded and drops it, so
-the removed events do not reappear in the bucket.
+parts, downloads each through a short-lived presigned URL (10-second timeout per
+part), decrypts and decompresses it (capped at 1 GiB decompressed per part),
+verifies the uncompressed NDJSON checksum against the `archive_parts` cache (or
+the deterministic key suffix), and inserts events in chunks. Events with a
+message > 8,000 chars, `fields` > 32,768 bytes, `service` > 128 chars, `env` >
+64 chars, `uid` > 128 chars, or a timestamp > 5 minutes in the future are
+skipped. Re-imports are idempotent on the event `uid`; duplicates are reported
+as skipped. Encrypted parts require `KINGLET_BACKUP_PASSPHRASE`. While a
+passphrase is set, unencrypted parts are refused, because only age encryption
+proves a part came from this instance. Set
+`KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS=1` only to import parts written
+before you added the passphrase. A clear or project delete that overlaps an
+archive run waits for the part being uploaded and drops it, so the removed
+events do not reappear in the bucket.
 
 ```bash
 curl -X POST https://logs.example.com/v1/archive/import \
@@ -409,7 +422,7 @@ region, and credential settings for your provider.
 
 ### The connection test fails
 
-Use **Test connection** on the Backups status card. It writes, reads, and
+Use **Test bucket connection** on the Backups status card. It writes, reads, and
 deletes a small probe object under `<prefix>/_health/`, so it checks put, get,
 and delete access. Listing snapshots and refreshing the cache also need list
 permission. Check the endpoint URL, bucket name, region, access key, secret,

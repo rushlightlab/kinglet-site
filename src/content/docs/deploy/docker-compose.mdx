@@ -57,7 +57,9 @@ If you left the admin password unset, read the generated one with
 `docker compose exec kinglet cat /data/admin-password.txt`.
 
 The port is bound to loopback. To serve the public, put a TLS proxy in front, or
-use the Caddy sample below.
+use the Caddy sample below. The container runs as UID `1000` (`node`), so if you
+replace the named volume with a host bind mount, make sure that directory is
+writable by UID `1000`.
 
 ## HTTPS with Caddy
 
@@ -94,7 +96,8 @@ address and `KINGLET_TRUSTED_PROXIES` with it.
 
 <Aside type="note" title="Adding variables to the TLS sample">
   The sample reads `.env` only to fill the `${...}` values in its `environment:` block. To set
-  another variable, such as the S3 backup settings, add it to that block. The sample already sets
+  another variable — such as `KINGLET_SECRET_KEY` (required to add notification channels) or the S3
+  backup settings — add it to both `.env` and that `environment:` block. The sample already sets
   `KINGLET_RETENTION_DAYS: 14` there; edit that line to change retention.
 </Aside>
 

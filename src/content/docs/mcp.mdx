@@ -217,7 +217,7 @@ pnpm --filter @kinglet/mcp build
 All tools are limited to the key's project and need their matching scope;
 `get_context` works with any valid key. The exception is `list_channels`:
 notification channels are shared across projects, so it lists every channel's
-name, type, and health. The three monitor write tools are
+id, name, type, enabled status, and health. The three monitor write tools are
 advertised only when the key has `monitors.write` **and** the server sets
 `KINGLET_MCP_ALLOW_MONITOR_WRITES=1`; otherwise the client sees the 12 read
 tools. Hiding tools is UX only: the API authorizes every write.
@@ -237,7 +237,7 @@ filter syntax, with examples; `get_histogram` and `count_events` take the same
 | `search_events`     | `logs.read`      | Events for a filter and time range, newest first, with a cursor and optional `fields` |
 | `get_event`         | `logs.read`      | One event by `uid`                                                                    |
 | `get_event_context` | `logs.read`      | One event plus `before`/`after` neighbours in `(ts, id)` order                        |
-| `get_histogram`     | `logs.read`      | Bucket counts for a filter and time range                                             |
+| `get_histogram`     | `logs.read`      | Bucket counts for a filter and time range (`buckets` 1–240, default 60)               |
 | `list_services`     | `logs.read`      | Services with event counts (top 200 by count)                                         |
 | `count_events`      | `logs.read`      | Effective `from`/`to`, total, and optional `service`/`level`/`env` groups             |
 | `list_monitors`     | `monitors.read`  | Monitors, state, last evaluation, and channel summaries                               |
@@ -277,7 +277,8 @@ settings, SQL, or shell: an MCP client cannot delete logs or change access.
 - **Rows:** 50 by default, 200 maximum. `search_events` returns a `nextCursor`
   when more rows are available. Its optional `fields` list (`id`, `uid`, `ts`,
   `level`, `service`, `env`, `message`, `fields`; max 8, unique) projects each
-  event without changing the cursor.
+  event without changing the cursor (when `fields` is set, `level` returns the
+  numeric level `0–5` and `levelName` is omitted).
 - **Context:** `get_event_context` returns the event plus chronological
   `before`/`after` lists; both default to 5 and cap at 20. If the result exceeds
   the 256 KiB cap, retry with smaller `before`/`after`.
@@ -291,9 +292,10 @@ settings, SQL, or shell: an MCP client cannot delete logs or change access.
 - **Response size:** 256 KiB per result. Large list responses are trimmed and
   marked `truncated: true`; a single result that still exceeds the cap returns
   an error asking for a narrower query.
-- **Event content:** messages are capped at 4 KiB and each event's `fields`
-  object at 8 KiB. Filters are limited to 500 characters and 32 terms, and the
-  API clamps search windows to 31 days.
+- **Event content:** messages are truncated at 4 KiB (`…`), and any event whose
+  `fields` object exceeds 8 KiB has `fields` replaced with `null` and
+  `fieldsTruncated: true` set. Filters are limited to 500 characters and 32
+  terms, and the API clamps search windows to 31 days.
 
 ## Troubleshooting
 

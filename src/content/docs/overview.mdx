@@ -15,8 +15,8 @@ with substring and field search — all in one small container.
     our load tests — sized for a small VPS.
   </Card>
   <Card title="Log from anything">
-    NDJSON or JSON over HTTP. curl, Vector, Fluent Bit, or the in-repo Node SDK — if it can POST, it
-    can log to Kinglet.
+    NDJSON or JSON over HTTP. curl, Vector, Fluent Bit, the [Node SDK](/node-sdk/), or the [PHP
+    SDK](/php-sdk/) — if it can POST, it can log to Kinglet.
   </Card>
   <Card title="Fast to search">
     SQLite FTS5 trigram indexing means substring matches (`"timeout"`) just work. [Trill](/trill/)
@@ -24,8 +24,8 @@ with substring and field search — all in one small container.
   </Card>
   <Card title="Alerts that don't cry wolf">
     Watch for instant matches, error-rate spikes, or a cron that went silent — delivered to a
-    webhook, Discord, Slack, Telegram, ntfy, Gotify, Pushover, or email with cooldowns and
-    auto-resolve.
+    webhook, Discord, Slack, Telegram, ntfy, Gotify, Pushover, or email (SMTP, Resend, Plunk) with
+    cooldowns and auto-resolve. See [Monitors & notifications](/alerts/).
   </Card>
   <Card title="Yours to run">
     One Docker image in, optional S3 snapshots out. No phone-home, no telemetry.
@@ -40,7 +40,6 @@ with substring and field search — all in one small container.
 
 - **Node SDK extensions** — a pino transport and a zero-code console preload
   for the existing in-repo SDK.
-- **PHP** — a Monolog handler for Laravel, Symfony, and WordPress.
 - **More receivers** — OTLP for OpenTelemetry pipelines, and syslog so
   nginx/php-fpm ship with zero code changes.
 - **ClickHouse driver** — the same storage interface, for when a single node

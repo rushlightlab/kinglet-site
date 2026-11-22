@@ -301,8 +301,8 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 If it can POST, it can log.
               </h3>
               <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
-                NDJSON over HTTP: curl, Vector, Fluent Bit, the Node SDK, or your own two-line
-                fetch. No agents, no sidecars, no lock-in.
+                NDJSON over HTTP: curl, Vector, Fluent Bit, the Node and PHP SDKs, or your own
+                two-line fetch. No agents, no sidecars, no lock-in.
               </p>
             </article>
 
@@ -341,7 +341,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                   <span class="tick">✓</span> one volume
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
-                  <span class="tick">✓</span> optional S3 snapshots
+                  <span class="tick">✓</span> optional S3 snapshots &amp; archive
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
                   <span class="tick">✓</span> no telemetry
@@ -358,10 +358,11 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 <p style="font-size: 13px; color: var(--muted); margin-top: 12px; max-width: 28rem; line-height: 1.7;">
                   Watch for <span style="color: var(--text)">level:fatal</span>, alert when error
                   rates spike, or get pinged when your cron goes quiet. Cooldowns and auto-resolve
-                  keep it calm. Channels are plain webhook URLs — Discord, Slack, n8n, anything.
+                  keep it calm. Deliver to webhooks, Discord, Slack, Telegram, ntfy, Gotify,
+                  Pushover, or email (SMTP, Resend, Plunk).
                 </p>
-                <a href="/api/" class="text-link" style="margin-top: 20px;">
-                  Explore the API <span aria-hidden="true">↗</span>
+                <a href="/alerts/" class="text-link" style="margin-top: 20px;">
+                  Explore monitors &amp; alerts <span aria-hidden="true">↗</span>
                 </a>
               </div>
               <div class="alert-mock" aria-hidden="true">
@@ -645,6 +646,12 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             <a href="/quickstart/" class="footer-link">
               Quickstart
             </a>
+            <a href="/trill/" class="footer-link">
+              Search with Trill
+            </a>
+            <a href="/alerts/" class="footer-link">
+              Monitors &amp; alerts
+            </a>
             <a href="/ingestion/" class="footer-link">
               HTTP ingestion
             </a>
@@ -659,6 +666,15 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             <div class="footer-head">Project</div>
             <a href="/storage/" class="footer-link">
               Storage backends
+            </a>
+            <a href="/backups/" class="footer-link">
+              Backups &amp; archive
+            </a>
+            <a href="/mcp/" class="footer-link">
+              MCP server
+            </a>
+            <a href="/security/" class="footer-link">
+              Security
             </a>
             <a href="/overview/" class="footer-link">
               Overview

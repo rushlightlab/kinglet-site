@@ -1,0 +1,128 @@
+---
+title: Monitors, alerts & notifications
+description: Watch logs for matches, spikes, or silence and deliver alerts and system events across 10 notification channels.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet monitors evaluate [Trill](/trill/) queries against incoming logs and
+deliver alerts to reusable notification channels. The same channels can also
+receive global system events (backup failures, staged restores, archive runs,
+and system warnings).
+
+## Monitors
+
+Manage monitors per project from **Monitors** in the top navigation, or via
+`/v1/monitors` in the [API reference](/api/#monitors--alerts).
+
+### Monitor kinds
+
+| UI label          | API `kind`    | When it fires                                                                     |
+| ----------------- | ------------- | --------------------------------------------------------------------------------- |
+| **instant match** | `match`       | Immediately when an ingested event matches the Trill query on the live bus        |
+| **spike**         | `count_above` | When matching events in `windowMs` meet or exceed `threshold` (default kind)      |
+| **silence**       | `count_below` | When fewer than `threshold` matching events arrive in `windowMs` (cron/heartbeat) |
+
+`spike` and `silence` monitors evaluate on a schedule (`intervalMs`), support
+cooldowns (`cooldownMs`) to avoid repeated notifications while a condition
+persists, and auto-resolve when the condition clears.
+
+<Aside type="note" title="Match monitors and search mode">
+  `instant match` monitors evaluate incoming events in memory using substring matching, even when
+  `KINGLET_SEARCH=words` is enabled for stored queries.
+</Aside>
+
+### Bounds and defaults
+
+| Setting                        | Default        | Allowed range          |
+| ------------------------------ | -------------- | ---------------------- |
+| `name`                         | —              | 1–128 characters       |
+| `query`                        | —              | Valid Trill query      |
+| `threshold`                    | `1`            | 1–1,000,000            |
+| `windowMs`                     | `300000` (5m)  | 60s – 30d              |
+| `intervalMs`                   | `60000` (1m)   | 10s – 24h              |
+| `cooldownMs`                   | `600000` (10m) | 0 – 7d                 |
+| Channels per monitor           | `0`            | Up to 8                |
+| `KINGLET_ALERT_RETENTION_DAYS` | `90`           | Alert history lifetime |
+
+## Notification channels
+
+Administrators configure reusable channels in **Settings → Notifications**.
+Members can attach any enabled channel to a monitor by id without seeing its
+secret URL or token.
+
+### Supported channel types
+
+| Type       | Target format                                                                         | Notes                                                   |
+| ---------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `webhook`  | `https://<host>/…`                                                                    | JSON `POST` payload                                     |
+| `discord`  | Discord webhook URL                                                                   | Formatted embed/message                                 |
+| `slack`    | Slack incoming webhook URL                                                            | Formatted Slack message                                 |
+| `telegram` | `https://api.telegram.org/bot<token>/sendMessage?chat_id=<chat>`                      | Plain text, official Telegram API only                  |
+| `ntfy`     | `https://ntfy.sh/<topic>` or self-hosted `http(s)` server (optional `?auth=<base64>`) | `?auth=` accepts base64 or base64url `"Bearer <token>"` |
+| `gotify`   | `https://<server>/message?token=<app token>`                                          | Self-hosted Gotify server                               |
+| `pushover` | `https://api.pushover.net/1/messages.json?token=<app>&user=<user>`                    | Official Pushover API only                              |
+| `email`    | `mailto:<address>[,<address>…]` (up to 10 recipients)                                 | Requires `KINGLET_SMTP_HOST` and `KINGLET_SMTP_FROM`    |
+| `resend`   | `https://api.resend.com/emails?key=<re_…>&from=<from>&to=<a,b>`                       | Official Resend API only (up to 10 recipients)          |
+| `plunk`    | `https://api.useplunk.com/v1/send?key=<sk_…>&to=<a,b>`                                | Official Plunk API only (up to 10 recipients)           |
+
+Discord and Slack channels also accept an optional `decoration` flag (off by
+default) to add emoji prefixes to system notifications.
+
+### Encrypted channel secrets
+
+Every stored channel target (webhook URLs, bot tokens, API keys) and legacy
+inline monitor URL is encrypted at rest with AES-256-GCM using
+`KINGLET_SECRET_KEY`.
+
+- Adding or editing a channel target requires `KINGLET_SECRET_KEY` to be set.
+- If the key is changed or lost, affected channels become **locked** and stop
+  sending until their settings are re-entered.
+- See [Encrypted channel secrets](/self-hosting/#encrypted-channel-secrets) for
+  key generation and backup guidance.
+
+### Private targets and SSRF protection
+
+Private, loopback, and cloud metadata addresses are blocked by default
+(including after DNS resolution) and HTTP redirects are refused.
+
+- Set `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1` if you need to reach a self-hosted
+  `webhook`, `ntfy`, or `gotify` target on a private or internal address.
+- `telegram`, `pushover`, `resend`, and `plunk` channels are pinned to their
+  official API hosts regardless of that setting.
+- See [Webhooks and alerts](/security/#webhooks-and-alerts) for full security
+  details.
+
+## System event subscriptions
+
+In addition to per-monitor alerts, each notification channel can subscribe to
+global operational events via its `actions` list:
+
+| Event                   | Default on new channels | When it fires                              |
+| ----------------------- | ----------------------- | ------------------------------------------ |
+| `backup.succeeded`      | Off                     | A scheduled or manual S3 snapshot finishes |
+| `backup.failed`         | **On**                  | An S3 snapshot fails                       |
+| `backup.restore_staged` | **On**                  | A restore is staged and awaiting restart   |
+| `archive.succeeded`     | Off                     | A scheduled or manual log archive finishes |
+| `archive.failed`        | **On**                  | A log archive run fails                    |
+| `system.warning`        | **On**                  | Disk/retention or system-level warnings    |
+
+## Delivery health and history
+
+- **Settings → Notifications** shows each channel's health status and a
+  **Delivery history** table of recent sends.
+- Monitor alerts are capped at **30 sends per minute per channel and project**;
+  sends over that budget are skipped, and the first skipped send is logged as a
+  failed delivery.
+- Delivery history is pruned daily to **30 days** and capped at **1,000 rows**.
+- Sanitized delivery errors are visible only to administrators; members,
+  viewers, and MCP keys receive `null` for error details and masked targets.
+- Set `KINGLET_BASE_URL` to your public HTTPS origin if you want alert
+  notifications to include deep links back to the matching log view.
+
+## Using monitors with MCP
+
+AI clients using an MCP key (`km_…`) can read monitors, alerts, and URL-free
+channel summaries (`monitors.read`). Creating, updating, or deleting monitors
+over MCP requires both the `monitors.write` key scope and
+`KINGLET_MCP_ALLOW_MONITOR_WRITES=1` on the server; see [MCP server](/mcp/).

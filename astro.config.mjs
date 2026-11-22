@@ -90,6 +90,7 @@ export default defineConfig({
           label: "Operating",
           items: [
             { label: "Authentication & projects", link: "/authentication/" },
+            { label: "Monitors & notifications", link: "/alerts/" },
             { label: "Storage backends", link: "/storage/" },
             { label: "Self-hosting", link: "/self-hosting/" },
             { label: "Capacity planning", link: "/capacity/" },

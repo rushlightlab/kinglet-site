@@ -11,21 +11,21 @@ matter.
 
 ## Terms at a glance
 
-| Term                    | Matches                                        | Example                                    |
-| ----------------------- | ---------------------------------------------- | ------------------------------------------ |
-| `word`                  | the message contains `word`                    | `timeout`                                  |
-| `"a phrase"`            | the message contains the phrase                | `"connection refused"`                     |
-| `-word`                 | the message does **not** contain `word`        | `-healthcheck`                             |
-| `level:<name>`          | exactly this level                             | `level:error`                              |
-| `level>=<name>`         | this level or worse (also `>`, `<`, `<=`)      | `level>=warn`                              |
-| `service:<name>`        | this service                                   | `service:checkout`                         |
-| `env:<name>`            | this environment                               | `env:prod`                                 |
-| `key:<id>`              | ingested by this API key                       | `key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30` |
-| `field.<path>:<value>`  | a field equals the value                       | `field.imei:864351050000101`               |
-| `field.<path>>=<n>`     | a numeric field compares (also `>`, `<`, `<=`) | `field.status>=500`                        |
-| `field.<path>:*`        | the field exists                               | `field.error:*`                            |
-| `-field.<path>:<value>` | the field does **not** equal the value         | `-field.reason:duplicate`                  |
-| `in:fields`, `in:all`   | free text also searches field keys and values  | `in:fields timeout`                        |
+| Term                    | Matches                                                                             | Example                                    |
+| ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------ |
+| `word`                  | the message contains `word`                                                         | `timeout`                                  |
+| `"a phrase"`            | the message contains the phrase                                                     | `"connection refused"`                     |
+| `-word`                 | the message does **not** contain `word`                                             | `-healthcheck`                             |
+| `level:<name>`          | exactly this level                                                                  | `level:error`                              |
+| `level>=<name>`         | this level or worse (also `>`, `<`, `<=`)                                           | `level>=warn`                              |
+| `service:<name>`        | this service                                                                        | `service:checkout`                         |
+| `env:<name>`            | this environment                                                                    | `env:prod`                                 |
+| `key:<id>`              | ingested by this API key                                                            | `key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30` |
+| `field.<path>:<value>`  | a field equals the value                                                            | `field.imei:864351050000101`               |
+| `field.<path>>=<n>`     | a numeric field compares (also `>`, `<`, `<=`)                                      | `field.status>=500`                        |
+| `field.<path>:*`        | the field exists                                                                    | `field.error:*`                            |
+| `-field.<path>:<value>` | the field does **not** equal the value (also works with `>`, `>=`, `<`, `<=`, `:*`) | `-field.reason:duplicate`                  |
+| `in:fields`, `in:all`   | free text also searches field keys and values                                       | `in:fields timeout`                        |
 
 ## Free text
 
@@ -45,11 +45,11 @@ timeout
 
 How a term matches depends on the server's [search index](/storage/#search-index):
 
-| `KINGLET_SEARCH`        | `time` finds                          | Notes                                                          |
-| ----------------------- | ------------------------------------- | -------------------------------------------------------------- |
-| `substring` _(default)_ | `timeout`, `runtime`, `timestamp`     | Any position. Terms shorter than 3 characters scan the window. |
-| `words`                 | `timeout`, `timestamp`, not `runtime` | Whole words and word prefixes.                                 |
-| `off`                   | `timeout`, `runtime`, `timestamp`     | No index; every text term scans the window.                    |
+| `KINGLET_SEARCH`        | `time` finds                          | Notes                                                                                                      |
+| ----------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `substring` _(default)_ | `timeout`, `runtime`, `timestamp`     | Any position. Terms shorter than 3 characters scan the window.                                             |
+| `words`                 | `timeout`, `timestamp`, not `runtime` | Whole words and word prefixes (stored queries only; live tail and match monitors always match substrings). |
+| `off`                   | `timeout`, `runtime`, `timestamp`     | No index; every text term scans the window.                                                                |
 
 ## Level
 
@@ -75,9 +75,10 @@ key:0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30
 - **`service` and `env` match the whole name.** Kinglet stores both in lowercase
   at ingest, and Trill compares them the same way, so `service:API` and
   `service:api` are equal.
-- **`key:<id>`** (or `api_key:<id>`) matches events ingested by that API key,
-  using the key id shown in **Settings → Projects**. It needs the full UUID; a
-  shortened id is searched as free text.
+- **`key:<id>`** (or `api_key:<id>`) matches events ingested by that API key.
+  Hover a key's token prefix in **Settings → Projects → manage → keys** to copy
+  its UUID, or click **View usage** in the key menu (for app keys). It needs the
+  full UUID; a shortened id is searched as free text.
 - **One of each.** A query holds one `service`, one `env`, one `key`, and one
   `level` condition. If you write two, the last one wins.
 
@@ -109,8 +110,9 @@ field.error:*                   the field exists, whatever its value
 
 ### Paths
 
-- Write the key after `field.` (`fields.` works too). Join nested keys with dots,
-  up to 4 levels: `field.data.rss`.
+- Write the key after lowercase `field.` (`fields.` works too; uppercase like
+  `FIELD.` falls back to free text). Join nested keys with dots, up to 4 levels
+  and 64 characters per segment: `field.data.rss`.
 - Keys may contain letters, digits, `_`, and `-`, and **are case-sensitive**:
   `field.durationMs` and `field.durationms` are different keys. Keys with other
   characters can't be filtered by name; use `in:fields` instead.
@@ -121,10 +123,12 @@ field.error:*                   the field exists, whatever its value
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `:` or `=`        | Equals. Compares the value as text, ignoring case: `field.protocol:ruptela` matches `"RUPTELA"`, `field.savedCount:3` matches `3`. |
 | `>` `>=` `<` `<=` | Numeric. Only matches fields that are JSON **numbers**: a number stored as a string (`"500"`) doesn't match.                       |
-| `:*`              | Exists. Matches any value, including `null`, objects, and arrays.                                                                  |
-| `-` prefix        | Negates. Also keeps events that don't have the field at all.                                                                       |
+| `:*` or `=*`      | Exists. Matches any value, including `null`, objects, and arrays.                                                                  |
+| `-` prefix        | Negates (`-field.a:b`, `-field.status>=500`, `-field.error:*`). Also keeps events that don't have the field at all.                |
 
 - `true`, `false`, and `null` match JSON booleans and null by name.
+- Empty-string equality (`field.foo:""`) is not supported and falls back to free
+  text; use `field.foo:*` to check existence.
 - An event without the field never matches a positive filter.
 - For objects and arrays, use `:*` (exists); equality on them compares their JSON text.
 
@@ -165,12 +169,12 @@ always look at their own key.
 
 ## Limits
 
-| Limit        | Value                                                                                                                                                |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Query length | 500 characters                                                                                                                                       |
-| Terms        | 32                                                                                                                                                   |
-| Time window  | 31 days per search, count, or histogram; longer ranges are clamped to the 31 days before `to`. The live tail and clearing logs have no window limit. |
-| Field depth  | 4 levels (`field.a.b.c.d`)                                                                                                                           |
+| Limit        | Value                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Query length | 500 characters                                                                                                                                                                                                     |
+| Terms        | 32 whitespace-separated words (a two-word quoted phrase counts as 2)                                                                                                                                               |
+| Time window  | 31 days per search, count, or histogram (defaults to the last hour when omitted); longer ranges clamp to the 31 days before `to`, and `to` clamps to 5 minutes ahead. Live tail and clearing have no window limit. |
+| Field depth  | 4 levels (`field.a.b.c.d`), 64 characters per segment                                                                                                                                                              |
 
 <Aside type="tip">
   Kinglet's MCP server describes this syntax to AI clients in its [`search_events`

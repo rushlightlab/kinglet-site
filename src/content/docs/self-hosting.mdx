@@ -20,35 +20,35 @@ Kinglet is configured entirely through environment variables. For anything
 beyond localhost, set `KINGLET_BASE_URL` to the exact public origin; secure
 cookies, origin checks, and alert links depend on it.
 
-| Env var                            | Default                   | What it does                                                                        |
-| ---------------------------------- | ------------------------- | ----------------------------------------------------------------------------------- |
-| `KINGLET_PORT`                     | `3000`                    | HTTP port inside the container                                                      |
-| `KINGLET_HOST`                     | —                         | Bind address; unset listens on all interfaces                                       |
-| `KINGLET_STORAGE`                  | `auto`                    | `sqlite`, `libsql`, or `auto` (picks by db path scheme)                             |
-| `KINGLET_SEARCH`                   | `substring`               | Search index: `substring`, `words`, or `off` ([trade-offs](/storage/#search-index)) |
-| `KINGLET_DB_PATH`                  | `/data/kinglet.db`        | Local path or `file:` URL; `libsql://`, `http(s)://`, `ws(s)://` → remote libSQL    |
-| `KINGLET_DB_AUTH_TOKEN`            | —                         | Auth token for remote libSQL/Turso                                                  |
-| `KINGLET_BASE_URL`                 | `http://localhost:3000`   | Public HTTPS origin — secure cookies, origin checks, and alert deep links           |
-| `BETTER_AUTH_SECRET`               | _(generated in `/data`)_  | Session signing secret; required with a remote database, or several instances       |
-| `KINGLET_SECRET_KEY`               | —                         | Encrypts stored channel secrets; required to add or change notification channels    |
-| `KINGLET_TRUSTED_PROXIES`          | —                         | CIDRs allowed to set `X-Forwarded-For`                                              |
-| `KINGLET_ADMIN_EMAIL`              | `admin@kinglet.local`     | Bootstrap administrator email (when no administrator exists)                        |
-| `KINGLET_ADMIN_PASSWORD`           | _(generated)_             | Bootstrap administrator password (when no administrator exists)                     |
-| `KINGLET_SESSION_DAYS`             | `30`                      | Web session lifetime                                                                |
-| `KINGLET_RETENTION_DAYS`           | `14`                      | Delete events older than this                                                       |
-| `KINGLET_ALERT_RETENTION_DAYS`     | `90`                      | Delete alert history older than this                                                |
-| `KINGLET_MAX_EVENTS_PER_PROJECT`   | `1000000`                 | Hard cap on retained events per project (`0` = unlimited)                           |
-| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                    | Cap on a project's on-disk event size, indexes included (`0` = unlimited)           |
-| `KINGLET_MAX_DB_MB`                | `4096`                    | Hard cap on local database size in MB (`0` = unlimited)                             |
-| `KINGLET_ALLOW_PRIVATE_WEBHOOKS`   | —                         | Allow private/internal webhook targets (SSRF escape hatch)                          |
-| `KINGLET_SMTP_HOST`                | —                         | SMTP server for email channels; email channels are off without it                   |
-| `KINGLET_SMTP_FROM`                | —                         | Sender address, e.g. `Kinglet <alerts@example.com>`; required with the host         |
-| `KINGLET_SMTP_PORT`                | `587` (`465` when secure) | SMTP port                                                                           |
-| `KINGLET_SMTP_SECURE`              | on for port 465           | TLS from the first byte; otherwise STARTTLS when offered                            |
-| `KINGLET_SMTP_USER`                | —                         | SMTP login user                                                                     |
-| `KINGLET_SMTP_PASSWORD`            | —                         | SMTP password (env-only, never stored)                                              |
-| `KINGLET_SMTP_REQUIRE_TLS`         | on when a user is set     | Refuse to send without TLS; `0` for a trusted local relay                           |
-| `KINGLET_MCP_ALLOW_MONITOR_WRITES` | —                         | Allow MCP keys to create/update/delete monitors; off by default                     |
+| Env var                            | Default                                          | What it does                                                                                                                                         |
+| ---------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KINGLET_PORT`                     | `3000`                                           | HTTP port inside the container                                                                                                                       |
+| `KINGLET_HOST`                     | —                                                | Bind address; unset listens on all interfaces                                                                                                        |
+| `KINGLET_STORAGE`                  | `auto`                                           | `sqlite`, `libsql`, or `auto` (picks by db path scheme)                                                                                              |
+| `KINGLET_SEARCH`                   | `substring`                                      | Search index: `substring`, `words`, or `off` ([trade-offs](/storage/#search-index))                                                                  |
+| `KINGLET_DB_PATH`                  | `data/kinglet.db` (`/data/kinglet.db` in Docker) | Local path or `file:` URL; `libsql://`, `http(s)://`, `ws(s)://` → remote libSQL                                                                     |
+| `KINGLET_DB_AUTH_TOKEN`            | —                                                | Auth token for remote libSQL/Turso                                                                                                                   |
+| `KINGLET_BASE_URL`                 | —                                                | Public HTTPS origin — secure cookies, origin checks, and alert deep links (unset falls back to `http://localhost:<port>` and omits alert deep links) |
+| `BETTER_AUTH_SECRET`               | _(generated in data dir)_                        | Session signing secret (legacy fallback: `KINGLET_AUTH_SECRET`); required with a remote database                                                     |
+| `KINGLET_SECRET_KEY`               | —                                                | Encrypts stored channel secrets; required to add or change notification channels                                                                     |
+| `KINGLET_TRUSTED_PROXIES`          | —                                                | CIDRs allowed to set `X-Forwarded-For`                                                                                                               |
+| `KINGLET_ADMIN_EMAIL`              | `admin@kinglet.local`                            | Bootstrap administrator email (when no active administrator exists)                                                                                  |
+| `KINGLET_ADMIN_PASSWORD`           | _(generated)_                                    | Bootstrap administrator password (when no active administrator exists)                                                                               |
+| `KINGLET_SESSION_DAYS`             | `30`                                             | Web session lifetime                                                                                                                                 |
+| `KINGLET_RETENTION_DAYS`           | `14`                                             | Delete events older than this                                                                                                                        |
+| `KINGLET_ALERT_RETENTION_DAYS`     | `90`                                             | Delete alert history older than this                                                                                                                 |
+| `KINGLET_MAX_EVENTS_PER_PROJECT`   | `1000000`                                        | Hard cap on retained events per project (`0` = unlimited)                                                                                            |
+| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                                           | Cap on a project's on-disk event size in MiB, indexes included (`0` = unlimited)                                                                     |
+| `KINGLET_MAX_DB_MB`                | `4096`                                           | Hard cap on local database size in MiB (`0` = unlimited)                                                                                             |
+| `KINGLET_ALLOW_PRIVATE_WEBHOOKS`   | —                                                | Allow private/internal webhook, ntfy, and Gotify targets (SSRF escape hatch)                                                                         |
+| `KINGLET_SMTP_HOST`                | —                                                | SMTP server for email channels; email channels are off without it                                                                                    |
+| `KINGLET_SMTP_FROM`                | —                                                | Sender address, e.g. `Kinglet <alerts@example.com>`; required with the host                                                                          |
+| `KINGLET_SMTP_PORT`                | `587` (`465` when secure)                        | SMTP port                                                                                                                                            |
+| `KINGLET_SMTP_SECURE`              | on for port 465                                  | TLS from the first byte; otherwise STARTTLS when offered                                                                                             |
+| `KINGLET_SMTP_USER`                | —                                                | SMTP login user                                                                                                                                      |
+| `KINGLET_SMTP_PASSWORD`            | —                                                | SMTP password (env-only, never stored)                                                                                                               |
+| `KINGLET_SMTP_REQUIRE_TLS`         | on when a user is set                            | Refuse to send without TLS; `0` for a trusted local relay                                                                                            |
+| `KINGLET_MCP_ALLOW_MONITOR_WRITES` | —                                                | Allow MCP keys to create/update/delete monitors; off by default                                                                                      |
 
 ### Encrypted channel secrets
 
@@ -77,11 +77,13 @@ Set the output as `KINGLET_SECRET_KEY` and restart.
 
 ### Secrets
 
-`BETTER_AUTH_SECRET` is optional on a single instance with a local database:
-Kinglet generates one on first boot and keeps it in `/data/auth-secret.txt`.
-Set it explicitly (32+ random bytes) when several instances share a database,
-and always with a remote database such as Turso, where there is nowhere local to
-keep a generated one (Kinglet won't start without it):
+`BETTER_AUTH_SECRET` is optional with a local database: Kinglet generates one on
+first boot and keeps it in `<dataDir>/auth-secret.txt` (`/data/auth-secret.txt`
+in Docker). Set it explicitly (32+ random bytes) so sessions survive container
+rebuilds without a persisted secret file, and always with a remote database such
+as Turso, where there is nowhere local to keep a generated one (Kinglet won't
+start without it). `KINGLET_AUTH_SECRET` is accepted as a legacy fallback when
+`BETTER_AUTH_SECRET` is unset:
 
 ```bash
 openssl rand -base64 32
@@ -103,20 +105,22 @@ per-platform values in [Common deployments](/security/#common-deployments).
 ### S3 backups (optional)
 
 S3-compatible backups are configured entirely through the environment. The
-Backups tab and scheduler stay disabled until the required values are present
-and valid; a partial or invalid configuration logs one warning at boot naming
-the variables (never their values). Setup is in [Backups & archive](/backups/).
+scheduler stays off until the required values are present and valid (the
+**Backups** tab in Settings remains visible to admins and shows a **Connect a
+bucket** setup card); a partial or invalid configuration logs one warning at
+boot naming the variables (never their values). Setup is in
+[Backups & archive](/backups/).
 
 | Env var                                      | Default          | What it does                                                                      |
 | -------------------------------------------- | ---------------- | --------------------------------------------------------------------------------- |
 | `KINGLET_TIMEZONE`                           | server time zone | Time zone for backup and archive schedules; invalid values warn and fall back     |
 | `KINGLET_BACKUP_S3_BUCKET`                   | —                | Bucket name (required for backups)                                                |
-| `KINGLET_BACKUP_S3_ENDPOINT`                 | —                | S3-compatible endpoint URL (required)                                             |
+| `KINGLET_BACKUP_S3_ENDPOINT`                 | —                | S3-compatible endpoint URL (required; HTTPS only except loopback)                 |
 | `KINGLET_BACKUP_S3_REGION`                   | `auto`           | SigV4 region                                                                      |
 | `KINGLET_BACKUP_S3_ACCESS_KEY_ID`            | —                | Access key id (required)                                                          |
 | `KINGLET_BACKUP_S3_SECRET_ACCESS_KEY`        | —                | Secret access key (required)                                                      |
 | `KINGLET_BACKUP_S3_SESSION_TOKEN`            | —                | Session token for temporary credentials                                           |
-| `KINGLET_BACKUP_S3_PREFIX`                   | `kinglet`        | Key prefix for snapshot objects                                                   |
+| `KINGLET_BACKUP_S3_PREFIX`                   | `kinglet`        | Key prefix for snapshot and archive objects                                       |
 | `KINGLET_BACKUP_S3_FORCE_PATH_STYLE`         | `false`          | Use path-style bucket URLs                                                        |
 | `KINGLET_BACKUP_S3_SSE`                      | `AES256`         | Server-side encryption: `AES256`, `aws:kms`, or `none`                            |
 | `KINGLET_BACKUP_S3_KMS_KEY_ID`               | —                | KMS key id; required when `KINGLET_BACKUP_S3_SSE=aws:kms`                         |
