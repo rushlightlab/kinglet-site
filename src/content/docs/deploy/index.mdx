@@ -30,6 +30,9 @@ a fresh server, or the platform you already have.
 - **`KINGLET_BASE_URL`** set to the exact origin in the browser, such as
   `https://logs.example.com`. A mismatch makes sign-in fail with
   `403 INVALID_ORIGIN`.
+- **`KINGLET_SECRET_KEY`** from `openssl rand -base64 32`, kept somewhere safe
+  outside `/data`. It encrypts notification channel secrets; without it,
+  channels can't be added.
 - **TLS in front of Kinglet** for anything beyond localhost, with
   `KINGLET_TRUSTED_PROXIES` set to that proxy only.
 - **A pinned version tag**, such as `:0.4.0`. Images are published as `:X.Y.Z`,

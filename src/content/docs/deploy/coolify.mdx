@@ -46,6 +46,8 @@ Under **Environment Variables**, add:
 KINGLET_BASE_URL=https://logs.example.com
 KINGLET_ADMIN_EMAIL=you@example.com
 KINGLET_ADMIN_PASSWORD=<strong-password>
+# Encrypts notification channel secrets: openssl rand -base64 32
+KINGLET_SECRET_KEY=<generated key>
 KINGLET_TRUSTED_PROXIES=<coolify-proxy-ip>/32
 ```
 

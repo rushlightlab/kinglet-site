@@ -192,6 +192,31 @@ project.
   env, monitor, level, query, count/threshold/window, a code block for the sample
   event, a link back to Kinglet, and a timestamp.
 - `slack` channels receive the same information as an attachment.
+- `telegram`, `ntfy`, `gotify`, and `pushover` channels receive a plain-text
+  title and body with the state, monitor, project, query, count, sample, and a
+  link back to Kinglet. ntfy, Gotify, and Pushover set a higher priority when a
+  monitor fires.
+- `email` (SMTP), `resend`, and `plunk` channels send an HTML email (rendered
+  with React Email) with a plain-text copy.
+
+Each channel stores one secret target URL. The UI builds it from per-service
+fields; over the API, send it as `url` with the matching `type`:
+
+| Type       | `url`                                                                     |
+| ---------- | ------------------------------------------------------------------------- |
+| `ntfy`     | `https://ntfy.sh/<topic>`, optional `?auth=<base64url("Bearer <token>")>` |
+| `gotify`   | `https://<server>/message?token=<app token>`                              |
+| `telegram` | `https://api.telegram.org/bot<token>/sendMessage?chat_id=<chat>`          |
+| `pushover` | `https://api.pushover.net/1/messages.json?token=<app>&user=<user>`        |
+| `email`    | `mailto:<address>[,<address>…]`, up to 10 (needs `KINGLET_SMTP_*`)        |
+| `resend`   | `https://api.resend.com/emails?key=<re_…>&from=<from>&to=<a,b>`           |
+| `plunk`    | `https://api.useplunk.com/v1/send?key=<sk_…>&to=<a,b>`                    |
+
+Telegram, Pushover, Resend, and Plunk targets must use their official hosts.
+`GET /v1/notifications/capabilities` (admin) reports whether email over SMTP
+is available and its sender address, and whether `KINGLET_SECRET_KEY` is set
+(`secrets.configured`). Without the key, creating a channel or changing its
+target returns `400`; channel responses include `encrypted` and `locked`.
 
 ## Limits
 
