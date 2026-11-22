@@ -162,8 +162,10 @@ Use the smallest role that works:
   Mutating requests bypass the session cookie cache; read-only requests can use a
   signed cache for up to 60 seconds. For immediate read revocation, sign the user
   out or delete the sessions.
-- A password reset revokes the user's keys and sessions. Treat account recovery
-  as a full credential rotation.
+- A password reset revokes the user's keys and sessions. Changing your own
+  password signs out your other sessions and, unless you untick "also revoke my
+  keys" (`revokeApiKeys: false` in the API), deletes the API and MCP keys you
+  created. Treat account recovery as a full credential rotation.
 
 ## API keys
 

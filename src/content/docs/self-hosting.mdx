@@ -38,7 +38,7 @@ cookies, origin checks, and alert links depend on it.
 | `KINGLET_RETENTION_DAYS`           | `14`                      | Delete events older than this                                                       |
 | `KINGLET_ALERT_RETENTION_DAYS`     | `90`                      | Delete alert history older than this                                                |
 | `KINGLET_MAX_EVENTS_PER_PROJECT`   | `1000000`                 | Hard cap on retained events per project (`0` = unlimited)                           |
-| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                    | Hard cap on retained event bytes per project (`0` = unlimited)                      |
+| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                    | Cap on a project's on-disk event size, indexes included (`0` = unlimited)           |
 | `KINGLET_MAX_DB_MB`                | `4096`                    | Hard cap on local database size in MB (`0` = unlimited)                             |
 | `KINGLET_ALLOW_PRIVATE_WEBHOOKS`   | —                         | Allow private/internal webhook targets (SSRF escape hatch)                          |
 | `KINGLET_SMTP_HOST`                | —                         | SMTP server for email channels; email channels are off without it                   |
@@ -123,7 +123,7 @@ the variables (never their values). Setup is in [Backups & archive](/backups/).
 | `KINGLET_BACKUP_PASSPHRASE`                  | —                | Optional age passphrase; when set, restores require age-encrypted snapshots       |
 | `KINGLET_BACKUP_MANIFEST_SECRET`             | S3 secret        | Stable HMAC key for manifests; set a dedicated value when rotating S3 credentials |
 | `KINGLET_BACKUP_ALLOW_UNSIGNED_MANIFESTS`    | `0`              | Legacy compatibility for pre-signing manifests; leave off for new deployments     |
-| `KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS` | `0`              | Legacy compatibility for unencrypted snapshots while a passphrase is configured   |
+| `KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS` | `0`              | Legacy: unencrypted snapshots and archive parts while a passphrase is configured  |
 | `KINGLET_BACKUP_MAX_SNAPSHOT_MB`             | `8192`           | Absolute restore size cap in MiB; larger snapshots are rejected before download   |
 | `KINGLET_BACKUP_PART_SIZE_MB`                | `8`              | Multipart part size in MiB (minimum 5)                                            |
 

@@ -27,7 +27,7 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/api/auth/sign-in/email`          | `POST`           | Sign in — sets the session cookie                                             |
 | `/api/auth/sign-out`               | `POST`           | Sign out                                                                      |
 | `/api/auth/get-session`            | `GET`            | Current Better Auth session                                                   |
-| `/api/auth/change-password`        | `POST`           | Change your password                                                          |
+| `/api/auth/change-password`        | `POST`           | Change your password; with `revokeOtherSessions` it also deletes your keys    |
 | `/v1/me`                           | `GET`            | Current user + permissions                                                    |
 | `/v1/projects`                     | `GET`/`POST`     | List assigned projects / create a project (admin)                             |
 | `/v1/projects/:id`                 | `PATCH`          | Rename a project (admin) — body `{ "name": "…" }`                             |
@@ -227,12 +227,21 @@ target returns `400`; channel responses include `encrypted` and `locked`.
 - `from`/`to` are epoch ms and default to the last hour. The window is capped at
   31 days ending at `to`, and `to` at 5 minutes in the future. `GET /v1/events`
   returns 200 events by default.
-- Alerts: `limit` 1–500. Monitors: 100 per project.
+- Alerts: `limit` 1–500. Monitors: 100 per project. Keys: 25 per person per
+  project (`409` beyond that).
 - Caps: 1,000,000 events and 1 GB per project, 4 GB for a local database by
-  default (`0` disables each). Beyond them ingest returns `429` (event cap) or
-  `507` (storage caps).
+  default (`0` disables each). The project cap counts on-disk size, search index
+  included. Beyond them ingest returns `429` (event cap) or `507` (storage
+  caps).
+- Ingest: 600 batches per minute per key or user, and 4 requests in flight per
+  key or session (16 across one person's keys); over a limit returns `429`
+  before the body is read.
 - SSE: at most 200 concurrent streams per process, 100 per project, and 10 per
-  user or key; slow consumers are dropped, and MCP keys cannot open a stream.
+  person. Streams opened with a key count against the person who created it.
+  Slow consumers are dropped, and MCP keys cannot open a stream.
+- Monitor alerts: at most 30 sends per minute per channel and project. Sends
+  over that are skipped, and the first skipped one is logged as a failed
+  delivery.
 - Sign-in: 20 attempts per minute per client IP; other `/api/auth/*` endpoints
   allow 300 per minute.
 
