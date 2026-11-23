@@ -3,7 +3,7 @@ title: Quickstart
 description: Run Kinglet with Docker, Docker Compose, Dokploy, Coolify, or from source, then send your first log.
 ---
 
-import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+import { Aside, CardGrid, LinkCard, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 Kinglet is self-hosted and ships as one public image, so no registry login or
 build is needed. Pick how you want to run it; each tab is the shortest path, and
@@ -20,7 +20,7 @@ docker run -d --name kinglet \
   -p 127.0.0.1:8080:3000 \
   -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
-  ghcr.io/rushlightlab/kinglet:0.4.0
+  ghcr.io/rushlightlab/kinglet:0.5.0
 ```
 
 Open `http://localhost:8080`. Read the generated admin password with:
@@ -39,7 +39,7 @@ Save as `docker-compose.yml`:
 ```yaml title="docker-compose.yml"
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.4.0
+    image: ghcr.io/rushlightlab/kinglet:0.5.0
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:3000"
@@ -87,7 +87,7 @@ Then set `KINGLET_TRUSTED_PROXIES` to Traefik's address as shown in
 <Steps>
 
 1. Choose **+ New → Docker Image** and enter
-   `ghcr.io/rushlightlab/kinglet:0.4.0`.
+   `ghcr.io/rushlightlab/kinglet:0.5.0`.
 
 2. In **General**, set **Ports Exposes** to `3000`.
 
@@ -146,11 +146,32 @@ curl -X POST "$KINGLET_URL/v1/events" \
   --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
 ```
 
-The event appears in the live tail immediately. Clients for TypeScript, Python,
-Go, PHP, curl, and Vector are in [HTTP ingestion](/ingestion/).
+The event appears in the live tail immediately. Snippets for TypeScript, Python,
+Go, PHP, curl, Vector, and Fluent Bit are in [HTTP ingestion](/ingestion/), or
+install the [Node SDK](/node-sdk/) or [PHP SDK](/php-sdk/).
 
 <Aside type="caution" title="Going to production">
   The Docker, Compose, and source tabs serve plain HTTP on port 8080. For a public instance, set
   `KINGLET_BASE_URL` to your HTTPS origin, put a TLS proxy in front, and read [Security](/security/)
   first.
 </Aside>
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="Search with Trill"
+    description="Filter by level, service, structured fields, and live tail."
+    href="/trill/"
+  />
+  <LinkCard
+    title="Monitors & notifications"
+    description="Alert on matches, spikes, or silence across 10 channels."
+    href="/alerts/"
+  />
+  <LinkCard
+    title="Security checklist"
+    description="TLS, proxy trust, least-privilege roles, and scoped keys."
+    href="/security/"
+  />
+</CardGrid>

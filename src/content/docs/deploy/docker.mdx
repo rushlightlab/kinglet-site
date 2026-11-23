@@ -22,7 +22,7 @@ docker run -d --name kinglet \
   -p 127.0.0.1:8080:3000 \
   -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
-  ghcr.io/rushlightlab/kinglet:0.4.0
+  ghcr.io/rushlightlab/kinglet:0.5.0
 ```
 
 Open `http://localhost:8080` and sign in as `admin@kinglet.local`. If you did not
@@ -34,7 +34,9 @@ docker exec kinglet cat /data/admin-password.txt
 
 `127.0.0.1:8080` keeps the port on loopback. Drop the `127.0.0.1:` prefix only if
 other machines must reach the container directly, and never without TLS in
-front of it.
+front of it. The container runs as the non-root `node` user (UID `1000`); if you
+use a host bind mount instead of a named volume for `/data`, make sure the host
+directory is writable by UID `1000`.
 
 ## Environment variables
 

@@ -50,20 +50,19 @@ request logs.
 
 ## Monitors
 
-A monitor runs its query on a schedule (count monitors) or on every new event
-(match monitors). Some starting points:
+A monitor runs its query on a schedule (**spike** / `count_above` and **silence** / `count_below`) or on every new event (**instant match** / `match`). See [Monitors, alerts & notifications](/alerts/) for details. Some starting points:
 
-| Alert when                       | Kind        | Query                                           | Threshold   |
-| -------------------------------- | ----------- | ----------------------------------------------- | ----------- |
-| Any fatal error                  | match       | `level:fatal`                                   | —           |
-| More than 20 errors in 5 minutes | count above | `level>=error`                                  | 20          |
-| A burst of failed sign-ins       | count above | `field.path:/api/auth/sign-in field.status:401` | 10          |
-| A service goes quiet             | count below | `service:udp saved`                             | 1 in 15 min |
-| Slow responses pile up           | count above | `field.durationMs>2000`                         | 5           |
+| Alert when                       | Kind (UI / API)         | Query                                           | Threshold   |
+| -------------------------------- | ----------------------- | ----------------------------------------------- | ----------- |
+| Any fatal error                  | instant match (`match`) | `level:fatal`                                   | —           |
+| More than 20 errors in 5 minutes | spike (`count_above`)   | `level>=error`                                  | 20          |
+| A burst of failed sign-ins       | spike (`count_above`)   | `field.path:/api/auth/sign-in field.status:401` | 10          |
+| A service goes quiet             | silence (`count_below`) | `service:udp saved`                             | 1 in 15 min |
+| Slow responses pile up           | spike (`count_above`)   | `field.durationMs>2000`                         | 5           |
 
 ## Clearing logs
 
-**Clear logs** (in **Settings → Projects → manage**) accepts a Trill query and shows a preview
+**Clear logs** (in **Settings → Projects → manage → general**) accepts a Trill query and shows a preview
 of what it would delete. Useful clean-ups:
 
 | Remove                             | Query                        |

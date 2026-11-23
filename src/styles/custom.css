@@ -41,11 +41,19 @@
   --sl-color-text: #cfd6d0;
   --sl-color-text-invert: #07080a;
 
+  /* layout: give mono prose and wide reference tables breathing room */
+  --sl-content-width: 52rem;
+
   /* surfaces */
   --sl-color-bg: #07080a;
   --sl-color-bg-nav: #0a0c0e;
   --sl-color-bg-sidebar: #090b0d;
   --sl-color-bg-inline-code: #13161a;
+}
+
+.sl-markdown-content table {
+  font-size: 0.85rem;
+  line-height: 1.55;
 }
 
 /* faint gold grid behind the content, like the landing's atmosphere */

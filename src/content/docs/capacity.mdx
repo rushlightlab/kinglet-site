@@ -73,8 +73,9 @@ grow disk roughly in proportion.
   The defaults protect a shared database: `KINGLET_MAX_EVENTS_PER_PROJECT=1000000`,
   `KINGLET_MAX_PROJECT_DB_MB=1024`, and `KINGLET_MAX_DB_MB=4096`. At the default 14-day retention a
   project averaging more than about 0.8 events/s reaches the event cap, and ingest returns `429`
-  until retention frees space. Size the caps to the table above (`0` disables a cap) and keep
-  `KINGLET_MAX_DB_MB` below your free disk.
+  until retention frees space (exceeding `KINGLET_MAX_PROJECT_DB_MB` or `KINGLET_MAX_DB_MB` returns
+  `507`). Size the caps to the table above (`0` disables a cap) and leave extra free disk beyond
+  `KINGLET_MAX_DB_MB` for [S3 snapshots and staged restores](/backups/#snapshots).
 </Aside>
 
 ## Recommendations

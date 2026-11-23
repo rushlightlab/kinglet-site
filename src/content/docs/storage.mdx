@@ -70,15 +70,18 @@ docker run -d --name kinglet -p 127.0.0.1:8080:3000 \
   -e KINGLET_DB_PATH=libsql://your-db.turso.io \
   -e KINGLET_DB_AUTH_TOKEN=eyJ… \
   -e BETTER_AUTH_SECRET=<generated> \
+  -e KINGLET_SECRET_KEY=<generated> \
   -e KINGLET_ADMIN_EMAIL=you@example.com \
   -e KINGLET_ADMIN_PASSWORD=change-me-please \
-  ghcr.io/rushlightlab/kinglet:0.4.0
+  ghcr.io/rushlightlab/kinglet:0.5.0
 ```
 
 - **One Kinglet instance per database.** Ingest assumes a single writer.
 - **Every query is a network round trip.** Keep ingest batched; each enabled
   monitor's count check costs one round trip per interval.
-- **Backups are Turso's job.** Litestream applies to local SQLite files only.
+- **Backups are Turso's job.** Built-in [S3 snapshots](/backups/) and Litestream
+  apply to local SQLite files only; [log archive](/backups/#log-archive) works
+  with Turso.
 - Schema and migrations run automatically on first boot, same as a local file.
 
 **Recommended: the default local file.** It is the fastest option by a wide

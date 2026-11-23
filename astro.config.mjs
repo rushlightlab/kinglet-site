@@ -83,13 +83,13 @@ export default defineConfig({
             { label: "HTTP ingestion", link: "/ingestion/" },
             { label: "Node SDK", link: "/node-sdk/" },
             { label: "PHP SDK", link: "/php-sdk/" },
-            { label: "API reference", link: "/api/" },
           ],
         },
         {
           label: "Operating",
           items: [
             { label: "Authentication & projects", link: "/authentication/" },
+            { label: "Monitors & notifications", link: "/alerts/" },
             { label: "Storage backends", link: "/storage/" },
             { label: "Self-hosting", link: "/self-hosting/" },
             { label: "Capacity planning", link: "/capacity/" },
@@ -98,8 +98,11 @@ export default defineConfig({
           ],
         },
         {
-          label: "Integrations",
-          items: [{ label: "MCP server", link: "/mcp/" }],
+          label: "Reference & integrations",
+          items: [
+            { label: "API reference", link: "/api/" },
+            { label: "MCP server", link: "/mcp/" },
+          ],
         },
         {
           label: "Project",

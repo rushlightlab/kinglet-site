@@ -3,15 +3,15 @@ title: HTTP ingestion
 description: Send logs from Node.js, Python, Go, PHP, or any HTTP client.
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 
 Everything speaks HTTP, so everything can log to Kinglet. One endpoint accepts
 batches of events, authenticated with a project API key.
 
-<Aside type="tip" title="Using Node.js?">
-  [`@kinglet/sdk-node`](/node-sdk/#install) wraps the same endpoint with buffering and retries. The
-  dependency-free client below shows what it does under the hood, for other runtimes or when you
-  want no dependency at all.
+<Aside type="tip" title="Using Node.js or PHP?">
+  [`@kinglet/sdk-node`](/node-sdk/) and [`rushlightlab/kinglet`](/php-sdk/) wrap this endpoint with
+  batching and retries (plus PSR-3 and Monolog for PHP). The dependency-free snippets below show
+  what they do under the hood, for other runtimes or when you want zero dependencies.
 </Aside>
 
 ## Endpoint
@@ -96,7 +96,10 @@ invalid, the response is `422` with the same shape.
 
 Retry `429` and `5xx` with backoff; don't retry other `4xx`.
 
-## TypeScript / Node.js
+## Language examples
+
+<Tabs syncKey="lang">
+  <TabItem label="TypeScript / Node.js">
 
 Node 18+ has `fetch`, so no dependency is needed.
 
@@ -286,7 +289,8 @@ app.use((req, res, next) => {
 });
 ```
 
-## Python
+  </TabItem>
+  <TabItem label="Python">
 
 `urllib.request` is in the standard library, so this needs no packages. Swap it
 for `requests` if your project already uses it.
@@ -321,7 +325,8 @@ ship(
 For Django or Flask, call `ship` from a `logging.Handler.emit` and buffer in a
 list instead of sending per record.
 
-## Go
+  </TabItem>
+  <TabItem label="Go">
 
 `json.Encoder` already writes one object per line, so the request body is NDJSON
 without extra work.
@@ -382,7 +387,8 @@ func ship(events []Event) error {
 }
 ```
 
-## PHP
+  </TabItem>
+  <TabItem label="PHP">
 
 ```php title="kinglet.php"
 <?php
@@ -426,7 +432,8 @@ kinglet_ship([
 For batching, retries, PSR-3, and Monolog (Laravel and Symfony), use the
 [PHP SDK](/php-sdk/): `composer require rushlightlab/kinglet`.
 
-## curl
+  </TabItem>
+  <TabItem label="curl">
 
 Useful for smoke tests and CI one-liners:
 
@@ -440,16 +447,24 @@ curl -sS "$KINGLET_URL/v1/events" \
 EOF
 ```
 
+  </TabItem>
+</Tabs>
+
 ## Ship without changing your app
 
-Anything that can POST NDJSON with a bearer token works. With
-[Vector](https://vector.dev), point an HTTP sink at Kinglet:
+Anything that can POST uncompressed NDJSON with a bearer token works:
+
+<Tabs syncKey="shipper">
+  <TabItem label="Vector">
+
+Point a [Vector](https://vector.dev) HTTP sink at Kinglet:
 
 ```toml title="vector.toml"
 [sinks.kinglet]
 type = "http"
 inputs = ["app_logs"]
 uri = "https://logs.example.com/v1/events"
+compression = "none"
 encoding.codec = "json"
 framing.method = "newline_delimited"
 
@@ -465,12 +480,32 @@ max_events = 500
 timeout_secs = 1
 ```
 
-[Fluent Bit](https://docs.fluentbit.io/manual/data-pipeline/outputs/http) works
-the same way: use its HTTP output with `Format json_lines`,
-`json_date_key timestamp`, `json_date_format iso8601`, and a
-`Header Authorization Bearer kl_…`. Without the date settings, Fluent Bit writes
-the time under `date`, which Kinglet ignores. Keep compression off, and make
-sure records carry a `message` (or `msg`) key.
+  </TabItem>
+  <TabItem label="Fluent Bit">
+
+Use [Fluent Bit](https://docs.fluentbit.io/manual/data-pipeline/outputs/http)'s
+HTTP output with `Format json_lines`, `json_date_key timestamp`, and
+`json_date_format iso8601` (without the date settings, Fluent Bit writes the
+time under `date`, which Kinglet ignores). Keep compression off, and make sure
+records carry a `message` (or `msg`) key:
+
+```ini title="fluent-bit.conf"
+[OUTPUT]
+    Name             http
+    Match            *
+    Host             logs.example.com
+    Port             443
+    URI              /v1/events
+    tls              On
+    Format           json_lines
+    json_date_key    timestamp
+    json_date_format iso8601
+    Header           Content-Type application/x-ndjson
+    Header           Authorization Bearer ${KINGLET_KEY}
+```
+
+  </TabItem>
+</Tabs>
 
 <Aside type="note" title="Roadmap">
   Built-in receivers for OTLP (`/v1/otlp/v1/logs`) and syslog are planned, so OpenTelemetry

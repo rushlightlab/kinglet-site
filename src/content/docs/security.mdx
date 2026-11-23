@@ -12,9 +12,10 @@ and keep the image and database healthy.
 
 <Aside type="caution" title="Before you expose Kinglet">
   At minimum: set `KINGLET_BASE_URL` to the public HTTPS origin, put Kinglet behind a TLS reverse
-  proxy, keep the generated `BETTER_AUTH_SECRET` (or set one explicitly for several instances), set
-  a strong bootstrap admin password, and narrow `KINGLET_TRUSTED_PROXIES` to only your proxy.
-  [Deploy](/deploy/) covers installation; this page covers the security decisions.
+  proxy, keep the generated `BETTER_AUTH_SECRET` (or set one explicitly for remote databases and
+  reproducible container rebuilds), set a strong bootstrap admin password, and narrow
+  `KINGLET_TRUSTED_PROXIES` to only your proxy. [Deploy](/deploy/) covers installation; this page
+  covers the security decisions.
 </Aside>
 
 ## Reverse proxy and client IPs
@@ -123,12 +124,16 @@ not Cloudflare's `CF-Connecting-IP`.
 - Do not expose Kinglet directly to the internet without TLS. If you use the
   Caddy sample in `deploy/`, keep the Kinglet service unpublished and route to
   it over the Compose network.
+- Kinglet sends `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+no-referrer`, `X-Frame-Options: DENY`, and a strict `Content-Security-Policy`
+  on responses, plus `Cache-Control: no-store` on `/v1/*` and `/api/auth/*`.
 
 ## Secrets and first boot
 
 - Generate `BETTER_AUTH_SECRET` with at least 32 random bytes. Set it explicitly
-  when more than one instance shares a database. Rotating it signs every session
-  out.
+  with a remote database (required) or when you want sessions to survive
+  container rebuilds without relying on `/data/auth-secret.txt`. Rotating it
+  signs every session out.
 - Set `KINGLET_SECRET_KEY` (`openssl rand -base64 32`). It encrypts every stored
   notification channel secret and legacy monitor webhook URL with AES-256-GCM.
   Store a copy apart from `/data` and backups: a leaked database or snapshot
@@ -198,6 +203,8 @@ next request.
 - MCP results leave your server for the client's AI provider. Point the key at a
   project whose contents are appropriate for that provider.
 - Treat event text as untrusted input (prompt injection).
+- Each MCP key is rate-limited to **60 requests/minute** (burst 10, in memory
+  per process), returning `429` when exceeded.
 - Monitor writes need both the `monitors.write` scope and
   `KINGLET_MCP_ALLOW_MONITOR_WRITES=1` on the server. Enable the variable only
   when the client requires explicit approval for tool calls.
@@ -231,11 +238,14 @@ See [MCP server](/mcp/#security) for setup and details.
   admin-only secrets. Member monitor responses mask them, members cannot create
   inline webhook channels, and deleting or rotating a channel removes the legacy
   copy.
-- Notification text is sanitized (markdown and backslashes escaped) before
-  Discord, Slack, or webhook delivery. Telegram messages are sent as plain text
-  with no parse mode, and email HTML escapes all event text. Delivery errors are sanitized and shown as
-  `notifyError` to administrators only; everyone else, including MCP keys, gets
-  `null`.
+- Notification text is sanitized before delivery: Discord and Slack escape
+  markdown and wrap sample messages in a sanitized code block (truncated to 900
+  characters); generic system-event webhooks sanitize text fields, and alert
+  webhooks sanitize the `text` field while preserving the structured notice
+  fields in JSON. Telegram messages are sent as plain text with no parse mode,
+  and email HTML escapes all event text. Delivery errors are sanitized and shown
+  as `notifyError` to administrators only; everyone else, including MCP keys,
+  gets `null`.
 - Use a separate notification channel for production alerts, and review who can
   edit monitors and channels.
 
@@ -243,9 +253,9 @@ See [MCP server](/mcp/#security) for setup and details.
 
 - Set `KINGLET_RETENTION_DAYS` for your compliance and disk budget. The default
   is 14 days.
-- Set `KINGLET_MAX_EVENTS_PER_PROJECT` and `KINGLET_MAX_DB_MB` so one project
-  cannot fill the shared database. A full database makes ingest fail for every
-  project.
+- Set `KINGLET_MAX_EVENTS_PER_PROJECT`, `KINGLET_MAX_PROJECT_DB_MB` (default
+  `1024` MiB), and `KINGLET_MAX_DB_MB` so one project cannot fill the shared
+  database. A full database makes ingest fail for every project.
 - Back up with the built-in [S3 snapshots](/backups/), Litestream, or an atomic
   volume snapshot. A plain file copy of a running database can be inconsistent;
   stop Kinglet first if you copy files.
