@@ -3,7 +3,7 @@ title: Backups & archive
 description: Configure S3 snapshots, staged restore, log archive, and Litestream for a self-hosted Kinglet instance.
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 Kinglet has two separate data-retention features that both use an
 S3-compatible bucket:
@@ -44,13 +44,15 @@ exist only for legacy snapshots.
 The bucket is the source of truth: the UI list is a cache that is reconciled
 from the bucket. Use a private bucket and a dedicated credential scoped to it.
 
-### Cloudflare R2
+<Tabs syncKey="s3-provider">
+  <TabItem label="Cloudflare R2">
 
 R2 is the primary target. Create an R2 API token with **Object Read & Write**
 on the one bucket and use it with the endpoint format shown above. The defaults
 (`KINGLET_BACKUP_S3_REGION=auto`, path style `false`) are right for R2.
 
-### MinIO
+  </TabItem>
+  <TabItem label="MinIO">
 
 Use the endpoint and credentials for your MinIO deployment. Most MinIO setups
 need path-style addressing:
@@ -67,13 +69,17 @@ The endpoint must use HTTPS; plain `http://` is accepted only for `localhost`,
 disabled. If signature errors mention a region mismatch, set
 `KINGLET_BACKUP_S3_REGION` to the region the server expects.
 
-### AWS S3 and Backblaze B2
+  </TabItem>
+  <TabItem label="AWS S3 & Backblaze B2">
 
 Use the S3-compatible endpoint and region from the provider. For AWS, that is
 usually `https://s3.<region>.amazonaws.com` with the matching region. For B2,
 use the S3 endpoint and region shown in the bucket's details, with an
 application key ID as the access key. Leave path style at `false` unless the
 provider requires it.
+
+  </TabItem>
+</Tabs>
 
 ### Before configuration
 
@@ -188,6 +194,8 @@ when a list request finds the cache older than 60 seconds.
 Restore is staged, not immediate. Select a snapshot and choose **Restore
 (staged)**; the confirmation dialog calls it **Stage restore**.
 
+<Steps>
+
 1. Kinglet verifies the manifest signature, checks the stored object against the
    manifest's expected size, and confirms the data directory has at least
    `objectBytes + databaseBytes + max(64 MiB, 0.25 × databaseBytes)` of free
@@ -201,6 +209,8 @@ Restore is staged, not immediate. Select a snapshot and choose **Restore
    `pending.json` marker is written, and the server enters maintenance mode.
    Requests under `/v1` other than `GET`/`HEAD`/`OPTIONS` return `503` with
    `Retry-After: 30` until the restart.
+
+</Steps>
 
 The restore is applied **at the next boot**, before the database opens. Kinglet
 copies the current database to `<data-dir>/pre-restore-<timestamp>.db`, removes

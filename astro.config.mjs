@@ -83,7 +83,6 @@ export default defineConfig({
             { label: "HTTP ingestion", link: "/ingestion/" },
             { label: "Node SDK", link: "/node-sdk/" },
             { label: "PHP SDK", link: "/php-sdk/" },
-            { label: "API reference", link: "/api/" },
           ],
         },
         {
@@ -99,8 +98,11 @@ export default defineConfig({
           ],
         },
         {
-          label: "Integrations",
-          items: [{ label: "MCP server", link: "/mcp/" }],
+          label: "Reference & integrations",
+          items: [
+            { label: "API reference", link: "/api/" },
+            { label: "MCP server", link: "/mcp/" },
+          ],
         },
         {
           label: "Project",

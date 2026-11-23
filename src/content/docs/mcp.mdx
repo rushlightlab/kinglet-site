@@ -3,7 +3,7 @@ title: MCP server
 description: Connect Claude, Cursor, VS Code, Codex, and other MCP clients to a Kinglet project over local stdio.
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 import PackageManagers from "../../components/PackageManagers.astro";
 
 `@kinglet/mcp` is a local [Model Context Protocol](https://modelcontextprotocol.io/)
@@ -58,7 +58,10 @@ development.
   `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]`.
 </Aside>
 
-### JSON `mcpServers` clients
+### Client setup
+
+<Tabs syncKey="mcp-client">
+  <TabItem label="Claude Desktop / Cursor / Windsurf">
 
 These clients use the same `mcpServers` shape:
 
@@ -67,7 +70,7 @@ These clients use the same `mcpServers` shape:
 | Claude Desktop | `claude_desktop_config.json` (Settings → Developer → Edit Config) |
 | Cursor         | `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project)     |
 | Windsurf       | `~/.codeium/windsurf/mcp_config.json`                             |
-| Claude Code    | `.mcp.json` in the project (or use the command below)             |
+| Claude Code    | `.mcp.json` in the project (or use the CLI tab)                   |
 
 ```json
 {
@@ -87,7 +90,8 @@ These clients use the same `mcpServers` shape:
 In a committed file, prefer `${KINGLET_MCP_KEY}` environment expansion where the
 client supports it over a literal secret.
 
-### Claude Code
+  </TabItem>
+  <TabItem label="Claude Code">
 
 Add the server from a terminal:
 
@@ -98,7 +102,8 @@ claude mcp add kinglet \
   -- npx -y @kinglet/mcp@0.4.0
 ```
 
-### VS Code and Copilot
+  </TabItem>
+  <TabItem label="VS Code / Copilot">
 
 Edit `.vscode/mcp.json`:
 
@@ -121,7 +126,8 @@ Edit `.vscode/mcp.json`:
 VS Code supports `inputs` for secrets; use an input instead of a literal key when
 the configuration is shared.
 
-### Codex CLI
+  </TabItem>
+  <TabItem label="Codex CLI">
 
 Edit `~/.codex/config.toml`:
 
@@ -132,7 +138,8 @@ args = ["-y", "@kinglet/mcp@0.4.0"]
 env = { KINGLET_URL = "https://logs.example.com", KINGLET_MCP_KEY = "km_..." }
 ```
 
-### Zed
+  </TabItem>
+  <TabItem label="Zed">
 
 Add the server to `settings.json`; **Settings → AI → MCP Servers → Add Server**
 writes the same entry:
@@ -152,7 +159,8 @@ writes the same entry:
 }
 ```
 
-### OpenCode
+  </TabItem>
+  <TabItem label="OpenCode">
 
 Add a local server to `opencode.json` or `opencode.jsonc`:
 
@@ -177,7 +185,8 @@ Add a local server to `opencode.json` or `opencode.jsonc`:
 OpenCode releases before V2 put server names directly under `mcp` instead of
 `mcp.servers`.
 
-### Generic stdio
+  </TabItem>
+  <TabItem label="Generic stdio">
 
 Any MCP client that can launch a command with environment variables works:
 
@@ -187,6 +196,9 @@ args:    -y @kinglet/mcp@0.4.0
 env:     KINGLET_URL=https://logs.example.com
          KINGLET_MCP_KEY=km_...
 ```
+
+  </TabItem>
+</Tabs>
 
 ### Run from a checkout
 

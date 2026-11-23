@@ -3,7 +3,7 @@ title: Quickstart
 description: Run Kinglet with Docker, Docker Compose, Dokploy, Coolify, or from source, then send your first log.
 ---
 
-import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+import { Aside, CardGrid, LinkCard, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 Kinglet is self-hosted and ships as one public image, so no registry login or
 build is needed. Pick how you want to run it; each tab is the shortest path, and
@@ -155,3 +155,23 @@ install the [Node SDK](/node-sdk/) or [PHP SDK](/php-sdk/).
   `KINGLET_BASE_URL` to your HTTPS origin, put a TLS proxy in front, and read [Security](/security/)
   first.
 </Aside>
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="Search with Trill"
+    description="Filter by level, service, structured fields, and live tail."
+    href="/trill/"
+  />
+  <LinkCard
+    title="Monitors & notifications"
+    description="Alert on matches, spikes, or silence across 10 channels."
+    href="/alerts/"
+  />
+  <LinkCard
+    title="Security checklist"
+    description="TLS, proxy trust, least-privilege roles, and scoped keys."
+    href="/security/"
+  />
+</CardGrid>
