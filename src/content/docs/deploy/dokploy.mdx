@@ -24,7 +24,7 @@ Create or open a project, then create a **Docker Compose** service.
 ```yaml title="docker-compose.yml"
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.4.0
+    image: ghcr.io/rushlightlab/kinglet:0.5.0
     restart: unless-stopped
     expose:
       - "3000"
@@ -110,7 +110,7 @@ falling back to anonymous access. On the host:
 
 ```bash
 docker logout ghcr.io
-docker pull ghcr.io/rushlightlab/kinglet:0.4.0
+docker pull ghcr.io/rushlightlab/kinglet:0.5.0
 ```
 
 Or remove the GHCR entry under Dokploy's **Registry** settings. If the host uses

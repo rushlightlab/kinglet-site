@@ -20,7 +20,7 @@ docker run -d --name kinglet \
   -p 127.0.0.1:8080:3000 \
   -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
-  ghcr.io/rushlightlab/kinglet:0.4.0
+  ghcr.io/rushlightlab/kinglet:0.5.0
 ```
 
 Open `http://localhost:8080`. Read the generated admin password with:
@@ -39,7 +39,7 @@ Save as `docker-compose.yml`:
 ```yaml title="docker-compose.yml"
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.4.0
+    image: ghcr.io/rushlightlab/kinglet:0.5.0
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:3000"
@@ -87,7 +87,7 @@ Then set `KINGLET_TRUSTED_PROXIES` to Traefik's address as shown in
 <Steps>
 
 1. Choose **+ New → Docker Image** and enter
-   `ghcr.io/rushlightlab/kinglet:0.4.0`.
+   `ghcr.io/rushlightlab/kinglet:0.5.0`.
 
 2. In **General**, set **Ports Exposes** to `3000`.
 

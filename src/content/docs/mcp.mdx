@@ -54,8 +54,8 @@ development.
 
 <Aside type="note" title="Windows: wrap npx with cmd /c">
   Desktop clients often start without your shell `PATH`. If `npx` is not found, use `"command":
-  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]` in JSON clients. On Codex CLI, set
-  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.4.0"]`.
+  "cmd"` and `"args": ["/c", "npx", "-y", "@kinglet/mcp@0.5.0"]` in JSON clients. On Codex CLI, set
+  `command = "cmd"` and `args = ["/c", "npx", "-y", "@kinglet/mcp@0.5.0"]`.
 </Aside>
 
 ### Client setup
@@ -77,7 +77,7 @@ These clients use the same `mcpServers` shape:
   "mcpServers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "args": ["-y", "@kinglet/mcp@0.5.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -99,7 +99,7 @@ Add the server from a terminal:
 claude mcp add kinglet \
   --env KINGLET_URL=https://logs.example.com \
   --env KINGLET_MCP_KEY=km_... \
-  -- npx -y @kinglet/mcp@0.4.0
+  -- npx -y @kinglet/mcp@0.5.0
 ```
 
   </TabItem>
@@ -113,7 +113,7 @@ Edit `.vscode/mcp.json`:
     "kinglet": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "args": ["-y", "@kinglet/mcp@0.5.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -134,7 +134,7 @@ Edit `~/.codex/config.toml`:
 ```toml
 [mcp_servers.kinglet]
 command = "npx"
-args = ["-y", "@kinglet/mcp@0.4.0"]
+args = ["-y", "@kinglet/mcp@0.5.0"]
 env = { KINGLET_URL = "https://logs.example.com", KINGLET_MCP_KEY = "km_..." }
 ```
 
@@ -149,7 +149,7 @@ writes the same entry:
   "context_servers": {
     "kinglet": {
       "command": "npx",
-      "args": ["-y", "@kinglet/mcp@0.4.0"],
+      "args": ["-y", "@kinglet/mcp@0.5.0"],
       "env": {
         "KINGLET_URL": "https://logs.example.com",
         "KINGLET_MCP_KEY": "km_..."
@@ -171,7 +171,7 @@ Add a local server to `opencode.json` or `opencode.jsonc`:
     "servers": {
       "kinglet": {
         "type": "local",
-        "command": ["npx", "-y", "@kinglet/mcp@0.4.0"],
+        "command": ["npx", "-y", "@kinglet/mcp@0.5.0"],
         "environment": {
           "KINGLET_URL": "https://logs.example.com",
           "KINGLET_MCP_KEY": "km_...",
@@ -192,7 +192,7 @@ Any MCP client that can launch a command with environment variables works:
 
 ```text
 command: npx
-args:    -y @kinglet/mcp@0.4.0
+args:    -y @kinglet/mcp@0.5.0
 env:     KINGLET_URL=https://logs.example.com
          KINGLET_MCP_KEY=km_...
 ```
@@ -337,10 +337,10 @@ The Inspector passes only the variables you give it with `-e`:
 <PackageManagers
   type="dlx"
   pkg="@modelcontextprotocol/inspector"
-  args="-e KINGLET_URL=https://logs.example.com -e KINGLET_MCP_KEY=km_... npx -y @kinglet/mcp@0.4.0"
+  args="-e KINGLET_URL=https://logs.example.com -e KINGLET_MCP_KEY=km_... npx -y @kinglet/mcp@0.5.0"
 />
 
-To test a local build instead, replace `npx -y @kinglet/mcp@0.4.0` with
+To test a local build instead, replace `npx -y @kinglet/mcp@0.5.0` with
 `node /absolute/path/to/kinglet/packages/mcp/dist/cli.js`.
 
 ### Remote-only clients cannot connect
