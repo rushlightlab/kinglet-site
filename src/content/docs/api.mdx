@@ -235,40 +235,22 @@ target returns `400`; channel responses include `encrypted` and `locked`.
 
 ## Limits
 
-- Ingest: 8 MB / 10,000 events per request, 600 batches/minute per key or user,
-  and 4 requests in flight per key or session (16 across one person's keys);
-  over a limit returns `429` before the body is read.
-- JSON management & auth bodies: 256 KiB cap on `/api/auth/*`, `/v1/monitors/*`,
-  `/v1/users/*`, `/v1/projects/*`, `/v1/keys/*`, and `/v1/notifications/*`
-  (`413` when exceeded).
-- Query: `q` ≤ 500 characters and ≤ 32 whitespace-separated terms; `limit`
-  1–1000; `buckets` 1–240 (default 60).
-- Fields vocabulary (`/v1/fields`): samples up to 1,000 newest events in the
-  window (default 24 h), depth ≤ 4, up to 200 keys and top 10 values per key.
-- Aggregate: `groupBy` is `service`, `level`, or `env`; group `limit` 1–200,
-  default 50.
-- `from`/`to` are epoch ms and default to the last hour. The window is capped at
-  31 days ending at `to`, and `to` at 5 minutes in the future. `GET /v1/events`
-  returns 200 events by default.
-- Alerts: `limit` 1–500. Monitors: 100 per project, up to 8 channels per
-  monitor. Keys: 25 per person per project (`409` beyond that).
-- Caps: 1,000,000 events and 1 GB per project, 4 GB for a local database by
-  default (`0` disables each). The project cap counts on-disk size, search index
-  included. Beyond them ingest returns `429` (event cap) or `507` (storage
-  caps).
-- SSE (`/v1/stream`): at most 200 concurrent streams per process, 100 per
-  project, and 10 per person (streams opened with a key count against the person
-  who created it); 15 s `: ping` heartbeats, 60 s auth revalidation, 30-minute
-  max lifetime, slow-consumer drop at 500 pending writes or 1 MB pending bytes;
-  MCP keys cannot open a stream.
-- Monitor alerts: at most 30 sends per minute per channel and project. Sends
-  over that are skipped, and the first skipped one is logged as a failed
-  delivery.
-- Sign-in: 20 attempts per minute per client IP; other `/api/auth/*` endpoints
-  allow 300 per minute.
-- MCP keys (`km_…`): 60 requests/minute per key (burst 10), returning `429`.
-- Maintenance mode: while a staged restore is pending, mutating `/v1/*` requests
-  (methods other than `GET`/`HEAD`/`OPTIONS`) return `503` with `Retry-After: 30`.
+| Area                 | Limit                                                              | Notes                                                                                                         |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Ingest batch         | 8 MB / 10,000 events                                               | Extras are dropped with `truncated: true`                                                                     |
+| Ingest rate          | 600 batches/min per key or user; 4 in flight (16 per person)       | Over-limit requests return `429` before reading the body                                                      |
+| Management/auth JSON | 256 KiB body                                                       | `/api/auth/*`, `/v1/monitors/*`, `/v1/users/*`, `/v1/projects/*`, `/v1/keys/*`, `/v1/notifications/*` (`413`) |
+| Query (`q`)          | 500 chars, 32 whitespace-separated terms                           | `limit` 1–1000 (default 200); `buckets` 1–240 (default 60)                                                    |
+| Time windows         | 31 days max (default: last hour)                                   | `from`/`to` in epoch ms; `to` clamps to 5 min ahead                                                           |
+| Fields vocabulary    | 1,000 newest events (default: 24 h)                                | Depth ≤ 4, up to 200 keys, top 10 values per key                                                              |
+| Aggregate            | `groupBy`: `service`, `level`, or `env`                            | `limit` 1–200 (default 50)                                                                                    |
+| Monitors & alerts    | 100 monitors/project, 8 channels/monitor                           | Alert `limit` 1–500; alert sends capped at 30/min per channel & project (first skipped send is logged)        |
+| Keys                 | 25 per person per project                                          | Returns `409` beyond the cap                                                                                  |
+| Storage caps         | 1,000,000 events & 1 GiB/project; 4 GiB local DB (`0` = unlimited) | Project cap includes search index; returns `429` (events) or `507` (storage)                                  |
+| SSE (`/v1/stream`)   | 200/process, 100/project, 10/person                                | 15 s ping, 60 s auth check, 30 min max lifetime, drops slow consumers (500 writes / 1 MB); no MCP keys        |
+| Auth rate limits     | 20 sign-in attempts/min per IP                                     | Other `/api/auth/*` routes allow 300/min                                                                      |
+| MCP keys (`km_…`)    | 60 requests/min per key (burst 10)                                 | Returns `429` when exceeded                                                                                   |
+| Maintenance mode     | Read-only during staged restore                                    | Mutating `/v1/*` requests return `503` with `Retry-After: 30`                                                 |
 
 ## Pagination
 

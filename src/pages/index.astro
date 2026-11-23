@@ -155,7 +155,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 </div>
                 <div class="cmd-bar cmd-bar-stack">
                   <pre class="cmd-pre"><code><span style="color: var(--gold)">$</span> docker run -d --name kinglet \
-  -p 8080:3000 -v kinglet-data:/data \
+  -p 127.0.0.1:8080:3000 -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
   ghcr.io/rushlightlab/kinglet:latest</code></pre>
                   <button
@@ -317,8 +317,8 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 One database, multiple flavours.
               </h3>
               <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
-                SQLite on your own box, or Turso/libSQL as a managed remote replica. Same schema,
-                same queries, same app — pick what fits.
+                SQLite on your own box, or hosted Turso/libSQL over the network. Same schema, same
+                queries, same app — pick what fits.
               </p>
             </article>
 

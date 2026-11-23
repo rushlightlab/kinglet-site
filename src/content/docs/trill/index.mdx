@@ -46,7 +46,8 @@ Every Kinglet event has a **message** (the text line) and optional **fields**
 
 - **Free text** like `timeout` or `"conn refused"` matches the **message**, through
   the [search index](/storage/#search-index) when one exists.
-- **Field filters** like `field.status>=500` match **values in the fields**, exactly.
+- **Field filters** like `field.status>=500` target specific keys in `fields` by
+  value, numeric comparison, or existence.
 - **`in:fields`** or **`in:all`** makes free text search the fields' keys and
   values too, for when you don't know which field holds what you're after.
 

@@ -146,8 +146,9 @@ curl -X POST "$KINGLET_URL/v1/events" \
   --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
 ```
 
-The event appears in the live tail immediately. Clients for TypeScript, Python,
-Go, PHP, curl, and Vector are in [HTTP ingestion](/ingestion/).
+The event appears in the live tail immediately. Snippets for TypeScript, Python,
+Go, PHP, curl, Vector, and Fluent Bit are in [HTTP ingestion](/ingestion/), or
+install the [Node SDK](/node-sdk/) or [PHP SDK](/php-sdk/).
 
 <Aside type="caution" title="Going to production">
   The Docker, Compose, and source tabs serve plain HTTP on port 8080. For a public instance, set
