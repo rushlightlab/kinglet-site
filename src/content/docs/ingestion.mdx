@@ -8,10 +8,10 @@ import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 Everything speaks HTTP, so everything can log to Kinglet. One endpoint accepts
 batches of events, authenticated with a project API key.
 
-<Aside type="tip" title="Using Node.js?">
-  [`@kinglet/sdk-node`](/node-sdk/#install) wraps the same endpoint with buffering and retries. The
-  dependency-free client below shows what it does under the hood, for other runtimes or when you
-  want no dependency at all.
+<Aside type="tip" title="Using Node.js or PHP?">
+  [`@kinglet/sdk-node`](/node-sdk/) and [`rushlightlab/kinglet`](/php-sdk/) wrap this endpoint with
+  batching and retries (plus PSR-3 and Monolog for PHP). The dependency-free snippets below show
+  what they do under the hood, for other runtimes or when you want zero dependencies.
 </Aside>
 
 ## Endpoint
