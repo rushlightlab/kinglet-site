@@ -1,0 +1,104 @@
+---
+title: The log view
+description: Search with autocomplete, follow the live tail, read the histogram, and filter from an event.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The log view is where Trill queries run interactively. Your query `q` stays synced
+with the URL as you search; click the **link** button in the toolbar to freeze
+the current `project`, `q`, `from`, and `to` into a shareable URL and copy it to
+your clipboard.
+
+## Search and autocomplete
+
+Type a [Trill](/trill/) query in the search bar. Results update after a short
+debounce (pausing automatically while a term like `field.` or `level>=` is
+incomplete) and immediately when you press **Enter**.
+
+Autocomplete suggests as you type (and preserves a leading `-` negation):
+
+- **Terms:** `level:`, `level>=`, `service:`, `env:`, `field.`, `in:fields`,
+  `in:all`.
+- **Values:** level names after any `level` operator (`:`, `=`, `>`, `>=`, `<`,
+  `<=`), scope options (`in:message`, `in:fields`, `in:all`) after `in:`, and
+  the services and environments seen recently after `service:` and `env:`.
+- **Fields:** after `field.`, the keys found in the last 24 hours of events,
+  with their types. After `field.<key>:` (or `=`), `field.<key>:*` plus that
+  field's most common values. Typing a bare word that names a field, like
+  `imei`, offers `field.imei:`.
+
+| Key              | Does                                               |
+| ---------------- | -------------------------------------------------- |
+| `↓` / `↑`        | Move through suggestions (`↓` also opens them)     |
+| `Tab`            | Accept the highlighted suggestion, or the first    |
+| `Enter`          | Accept a highlighted suggestion; otherwise search  |
+| `Ctrl` + `Space` | Open suggestions                                   |
+| `Esc`            | Close suggestions; press again to clear the search |
+
+Below the bar:
+
+- **Level chips** toggle a `level:<name>` term in the query.
+- **Services** dropdown in the header lists up to 200 services with counts;
+  click one to toggle `service:<name>`.
+- **Text in** sets where free text looks: **message** (default), **fields**,
+  or **both**. It writes `in:fields` or `in:all` into the query.
+- **Link** freezes and copies a shareable URL with `project`, `q`, `from`, and
+  `to`; **Refresh** re-runs the query manually.
+- **Clear** (the × in the search bar) empties the search.
+- **Saved searches** keep up to 8 queries in this browser (cleared on sign-out).
+  Click one to apply it, or right-click / click its × to remove it.
+
+## Time window
+
+Pick a range from 5 minutes to 30 days, or enter exact start and end times.
+To zoom, drag across the histogram to select a range (drag the handles to
+refine it), then press **Zoom In** or Enter, or click a bar outside a level
+segment to zoom to that single bucket. Click **zoom out** in the histogram
+header (or **clear** in the time picker) to reset. A search window is at most
+31 days.
+
+## Live tail
+
+**Live** (on by default) streams new events over SSE as they arrive, filtered by
+the same query, with no polling, updating the newest histogram bucket in real
+time (buffering up to 5,000 live events). **Follow** (on by default while Live
+is active) keeps the newest event in view. The optional refresh rate in the time
+picker (off by default) re-queries the window every 15 seconds, 1 minute, or 5
+minutes, and rescales with the window.
+
+## Histogram
+
+The histogram shows event volume over the window, stacked by level, for the
+events that **match the query**. Click a coloured level segment in a bar to
+filter to that level (replacing any existing `level` term), or click outside a
+segment to zoom to that bucket. The histogram also supports keyboard navigation
+(`←`/`→`, `Home`/`End`, `Enter`/`Space`, `Esc`).
+
+## Event drawer
+
+Click any row to open the event: its time, level, service, env, numeric `id`,
+truncated API key (`key <8 chars>…`) or `session`, its UUID v7 `uid` (copyable),
+and the full message with a **copy message** button.
+
+Its **fields** are listed one per row, nested keys flattened (`data.rss`, up to
+100 leaves). Hover a field and click its filter button to add the matching
+`field.` term to the search. The **raw JSON** toggle shows the original object.
+
+## Keyboard shortcuts
+
+When focus is outside an input field:
+
+| Key       | Action                                |
+| --------- | ------------------------------------- |
+| `/`       | Focus the search bar                  |
+| `j` / `↓` | Select next event and open drawer     |
+| `k` / `↑` | Select previous event and open drawer |
+| `Esc`     | Close the event drawer                |
+| `l`       | Toggle Live tail                      |
+| `f`       | Toggle Follow mode                    |
+
+<Aside type="tip" title="Usage by key">
+  `key:<id>` matches events ingested by one API key. Open an app key's actions in
+  **Settings → Projects → manage → keys** and choose **View usage** to apply it.
+</Aside>

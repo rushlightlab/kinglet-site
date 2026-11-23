@@ -1,67 +1,50 @@
 ---
 title: Quickstart
-description: Run Kinglet on your own server in a few minutes.
+description: Run Kinglet with Docker, Docker Compose, Dokploy, Coolify, or from source, then send your first log.
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside, CardGrid, LinkCard, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-Kinglet is self-hosted. The fastest path is the public Docker image - no clone,
-no build. If you already run Coolify or Dokploy, jump to their guides in
-[Self-hosting](/self-hosting/#coolify).
+Kinglet is self-hosted and ships as one public image, so no registry login or
+build is needed. Pick how you want to run it; each tab is the shortest path, and
+its full page in [Deploy](/deploy/) covers TLS, upgrades, and troubleshooting.
 
-<Aside type="caution" title="Exposing this beyond localhost?">
-  Read [Security](/security/) first. It covers TLS, narrowing `KINGLET_TRUSTED_PROXIES`, strong
-  secrets, API-key offboarding, webhooks, and image pinning. Do not use the all-private-ranges
-  shortcut.
-</Aside>
+## 1. Run Kinglet
 
-## Docker (one command)
+<Tabs syncKey="deploy-method">
+<TabItem label="Docker">
 
 ```bash
 docker run -d --name kinglet \
   --restart unless-stopped \
-  -p 8080:3000 \
+  -p 127.0.0.1:8080:3000 \
   -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
-  ghcr.io/rushlightlab/kinglet:latest
+  ghcr.io/rushlightlab/kinglet:0.5.0
 ```
 
-Open `http://localhost:8080`.
-
-If you didn't set an admin password, the generated one is printed in the logs
-and saved in `/data/admin-password.txt`:
+Open `http://localhost:8080`. Read the generated admin password with:
 
 ```bash
 docker exec kinglet cat /data/admin-password.txt
 ```
 
-Sign in with `admin@kinglet.local` (or the email you set through
-`KINGLET_ADMIN_EMAIL`) and that password.
+Full guide: [Docker](/deploy/docker/).
 
-<Aside type="tip" title="Pin a version">
-  `:latest` is convenient for a trial. For production, pin a release tag such as `:0.4.0`, or a
-  digest for an immutable deployment. See [Updates and image
-  pinning](/security/#updates-and-image-pinning).
-</Aside>
+</TabItem>
+<TabItem label="Docker Compose">
 
-## Docker Compose (single host)
+Save as `docker-compose.yml`:
 
-Use this when Docker runs directly on the server. Coolify and Dokploy have their
-own compose definitions below — don't publish a host port there.
-
-Create `docker-compose.yml`:
-
-```yaml
+```yaml title="docker-compose.yml"
 services:
   kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.4.0
+    image: ghcr.io/rushlightlab/kinglet:0.5.0
     restart: unless-stopped
     ports:
-      - "8080:3000"
+      - "127.0.0.1:8080:3000"
     environment:
       KINGLET_BASE_URL: http://localhost:8080
-      # KINGLET_ADMIN_EMAIL: you@example.com
-      # KINGLET_ADMIN_PASSWORD: choose-a-strong-password
     volumes:
       - kinglet-data:/data
 
@@ -71,57 +54,124 @@ volumes:
 
 ```bash
 docker compose up -d
-```
-
-If you leave the admin password unset, read the generated one with:
-
-```bash
 docker compose exec kinglet cat /data/admin-password.txt
 ```
 
-<Aside type="tip" title="Coolify or Dokploy?">
-  The image is public, so neither platform needs registry credentials. Follow the
-  [Coolify](/self-hosting/#coolify) or [Dokploy](/self-hosting/#dokploy) guide in Self-hosting. On
-  those platforms, remove the `ports:` mapping and use `expose: ["3000"]` — the platform proxy
-  handles routing, and `8080` may already be taken on the host.
-</Aside>
+Open `http://localhost:8080`. For HTTPS with Caddy, see
+[Docker Compose](/deploy/docker-compose/#https-with-caddy).
 
-## Create your first API key
+</TabItem>
+<TabItem label="Dokploy">
+
+<Steps>
+
+1. Create a **Docker Compose** service and paste the
+   [Kinglet compose file](/deploy/dokploy/#2-paste-the-compose-file).
+
+2. In **Environment**, set `KINGLET_BASE_URL=https://<your-domain>`.
+
+3. In **Domains**, add your domain with container port `3000`, HTTPS on, and
+   **Let's Encrypt**.
+
+4. Click **Deploy** and open `https://<your-domain>`. The generated admin
+   password is in the service logs.
+
+</Steps>
+
+Then set `KINGLET_TRUSTED_PROXIES` to Traefik's address as shown in
+[Dokploy](/deploy/dokploy/#trusted-proxy).
+
+</TabItem>
+<TabItem label="Coolify">
+
+<Steps>
+
+1. Choose **+ New → Docker Image** and enter
+   `ghcr.io/rushlightlab/kinglet:0.5.0`.
+
+2. In **General**, set **Ports Exposes** to `3000`.
+
+3. In **Persistent Storage**, add a **Volume Mount** with destination `/data`.
+
+4. In **Environment Variables**, set `KINGLET_BASE_URL=https://<your-domain>`.
+
+5. In **Domains**, add `https://<your-domain>:3000`.
+
+6. Click **Deploy** and open `https://<your-domain>`. The generated admin
+   password is in the application logs.
+
+</Steps>
+
+Then set `KINGLET_TRUSTED_PROXIES` to the proxy's address as shown in
+[Coolify](/deploy/coolify/#trusted-proxy).
+
+</TabItem>
+<TabItem label="From source">
+
+```bash
+git clone https://github.com/rushlightlab/kinglet.git
+cd kinglet
+cp .env.example .env
+docker compose up -d --build
+docker compose exec kinglet cat /data/admin-password.txt
+```
+
+Open `http://localhost:8080`. For the development servers instead, see
+[Build from source](/deploy/build-from-source/#development-servers).
+
+</TabItem>
+</Tabs>
+
+## 2. Sign in
+
+Sign in as `admin@kinglet.local` with the generated password, or with the
+`KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` you set before the first boot.
+Store the password somewhere safe and delete `/data/admin-password.txt`.
+
+## 3. Send your first event
 
 1. Open **Settings → Projects**.
 2. Choose **manage** next to the project.
 3. Create a key with **ingest** (and **query** if scripts should read logs).
 4. Copy it now — it is shown once.
 
+Set `KINGLET_URL` to the address you opened in step 1, then send an event:
+
 ```bash
-curl -X POST http://localhost:8080/v1/events \
+export KINGLET_URL=http://localhost:8080   # or https://<your-domain>
+
+curl -X POST "$KINGLET_URL/v1/events" \
   -H "Authorization: Bearer kl_…" \
   -H "Content-Type: application/x-ndjson" \
   --data-binary '{"level":"info","message":"hello from my app","service":"my-app"}'
 ```
 
-The event appears in the live tail immediately. If the project is empty, that
-first event also seeds the histogram.
+The event appears in the live tail immediately. Snippets for TypeScript, Python,
+Go, PHP, curl, Vector, and Fluent Bit are in [HTTP ingestion](/ingestion/), or
+install the [Node SDK](/node-sdk/) or [PHP SDK](/php-sdk/).
 
-More clients — TypeScript, Python, Go, PHP, curl, Vector — are in
-[HTTP ingestion](/ingestion/).
-
-## From source
-
-For development or a custom build, clone the repository and run both dev
-servers (Node 26+ and pnpm 12+):
-
-```bash
-git clone https://github.com/rushlightlab/kinglet.git
-cd kinglet
-pnpm install
-pnpm dev
-```
-
-The API listens on `:3000` and the UI on `:5173`.
-
-<Aside type="note" title="Going to production">
-  Set `KINGLET_BASE_URL` to your public HTTPS origin, use a persistent volume at `/data`, and pin a
-  release tag or digest. The full checklist, TLS setup, backups, and platform guides are in
-  [Self-hosting](/self-hosting/); the hardening checklist is in [Security](/security/).
+<Aside type="caution" title="Going to production">
+  The Docker, Compose, and source tabs serve plain HTTP on port 8080. For a public instance, set
+  `KINGLET_BASE_URL` to your HTTPS origin, put a TLS proxy in front, and read [Security](/security/)
+  first.
 </Aside>
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="Search with Trill"
+    description="Filter by level, service, structured fields, and live tail."
+    href="/trill/"
+  />
+  <LinkCard
+    title="Monitors & notifications"
+    description="Alert on matches, spikes, or silence across 10 channels."
+    href="/alerts/"
+  />
+  <LinkCard
+    title="Security checklist"
+    description="TLS, proxy trust, least-privilege roles, and scoped keys."
+    href="/security/"
+  />
+</CardGrid>

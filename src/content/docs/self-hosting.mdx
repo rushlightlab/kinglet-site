@@ -1,357 +1,150 @@
 ---
 title: Self-hosting
-description: Deploy and operate Kinglet on Docker, Coolify, or Dokploy.
+description: Configuration, secrets, sizing, backups, upgrades, and troubleshooting for a running Kinglet instance.
 ---
 
 import { Aside } from "@astrojs/starlight/components";
 
-Kinglet is self-hosted today: this page covers running your own instance.
-The Docker image is public, so no registry login is needed. Pick the path that
-matches your setup:
+This page is the reference for running Kinglet once it is deployed. For
+installation steps, pick a method in [Deploy](/deploy/): Docker, Docker
+Compose, Dokploy, Coolify, or a source build.
 
 <Aside type="caution" title="Security first">
-  Read [Security](/security/) before exposing Kinglet. It covers TLS, narrow proxy trust, secrets,
-  API-key offboarding, webhooks, storage limits, and image pinning. The short version: put Kinglet
-  behind TLS, trust only your proxy, and do not use the all-private-ranges shortcut.
+  Read [Security](/security/) before exposing Kinglet: TLS, narrow proxy trust, secrets, key
+  offboarding, webhooks, and image pinning.
 </Aside>
 
-| Path                                      | Best for                                    |
-| ----------------------------------------- | ------------------------------------------- |
-| [Docker one command](#docker-one-command) | a quick trial on a single server            |
-| [Docker Compose](#docker-compose)         | a single server with explicit configuration |
-| [Coolify](#coolify)                       | an existing Coolify installation            |
-| [Dokploy](#dokploy)                       | an existing Dokploy installation            |
-| [From source](#from-source)               | development or a custom build               |
+## Configuration
 
-## Before you deploy
+Kinglet is configured entirely through environment variables. For anything
+beyond localhost, set `KINGLET_BASE_URL` to the exact public origin; secure
+cookies, origin checks, and alert links depend on it.
 
-Set these for anything beyond localhost:
+### Server & storage
 
-| Variable                                         | Why                                                                                                                                                                 |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `KINGLET_BASE_URL`                               | Public origin, e.g. `https://logs.example.com`. Required for secure cookies, origin checks, and alert links. It must match the browser URL.                         |
-| `BETTER_AUTH_SECRET`                             | 32+ random bytes. Optional for one instance (a secret is generated and persisted in `/data/auth-secret.txt`), required when several instances share a database.     |
-| `KINGLET_ADMIN_EMAIL` / `KINGLET_ADMIN_PASSWORD` | Used only when no administrator exists. After that they are ignored.                                                                                                |
-| `KINGLET_TRUSTED_PROXIES`                        | Set to the proxy address or proxy network only. Otherwise all clients share the proxy's rate-limit bucket. See [Common deployments](/security/#common-deployments). |
-| `KINGLET_HOST`                                   | Optional bind address. Unset listens on all interfaces; set `127.0.0.1` when a same-host proxy is the only client.                                                  |
-| `KINGLET_DB_PATH`                                | `/data/kinglet.db` in the image. Keep the volume mounted at `/data`.                                                                                                |
+| Env var                 | Default                                        | What it does                                                                                                                  |
+| ----------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `KINGLET_PORT`          | `3000`                                         | HTTP port inside the container                                                                                                |
+| `KINGLET_HOST`          | —                                              | Bind address; unset listens on all interfaces                                                                                 |
+| `KINGLET_BASE_URL`      | —                                              | Public HTTPS origin for cookies, origin checks, and alert links (falls back to `http://localhost:<port>` without alert links) |
+| `KINGLET_STORAGE`       | `auto`                                         | `sqlite`, `libsql`, or `auto` (picks by db path scheme)                                                                       |
+| `KINGLET_SEARCH`        | `substring`                                    | Search index: `substring`, `words`, or `off` ([trade-offs](/storage/#search-index))                                           |
+| `KINGLET_DB_PATH`       | `data/kinglet.db` (Docker: `/data/kinglet.db`) | Local path/`file:` URL, or `libsql://` / `http(s)://` / `ws(s)://` for remote libSQL                                          |
+| `KINGLET_DB_AUTH_TOKEN` | —                                              | Auth token for remote libSQL/Turso                                                                                            |
 
-Generate a secret with:
+### Auth, secrets & access
+
+| Env var                            | Default                   | What it does                                                                     |
+| ---------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`               | _(generated in data dir)_ | Session secret (legacy: `KINGLET_AUTH_SECRET`); required with a remote database  |
+| `KINGLET_SECRET_KEY`               | —                         | Encrypts stored channel secrets; required to add or change notification channels |
+| `KINGLET_TRUSTED_PROXIES`          | —                         | CIDRs allowed to set `X-Forwarded-For`                                           |
+| `KINGLET_ADMIN_EMAIL`              | `admin@kinglet.local`     | Bootstrap administrator email (when no active administrator exists)              |
+| `KINGLET_ADMIN_PASSWORD`           | _(generated)_             | Bootstrap administrator password (when no active administrator exists)           |
+| `KINGLET_SESSION_DAYS`             | `30`                      | Web session lifetime                                                             |
+| `KINGLET_MCP_ALLOW_MONITOR_WRITES` | —                         | Allow MCP keys to create/update/delete monitors; off by default                  |
+
+### Retention & caps
+
+| Env var                          | Default   | What it does                                                                     |
+| -------------------------------- | --------- | -------------------------------------------------------------------------------- |
+| `KINGLET_RETENTION_DAYS`         | `14`      | Delete events older than this                                                    |
+| `KINGLET_ALERT_RETENTION_DAYS`   | `90`      | Delete alert history older than this                                             |
+| `KINGLET_MAX_EVENTS_PER_PROJECT` | `1000000` | Hard cap on retained events per project (`0` = unlimited)                        |
+| `KINGLET_MAX_PROJECT_DB_MB`      | `1024`    | Cap on a project's on-disk event size in MiB, indexes included (`0` = unlimited) |
+| `KINGLET_MAX_DB_MB`              | `4096`    | Hard cap on local database size in MiB (`0` = unlimited)                         |
+
+### Notifications & SMTP
+
+| Env var                          | Default                   | What it does                                                                 |
+| -------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
+| `KINGLET_ALLOW_PRIVATE_WEBHOOKS` | —                         | Allow private/internal webhook, ntfy, and Gotify targets (SSRF escape hatch) |
+| `KINGLET_SMTP_HOST`              | —                         | SMTP server for email channels; email channels are off without it            |
+| `KINGLET_SMTP_FROM`              | —                         | Sender address, e.g. `Kinglet <alerts@example.com>`; required with the host  |
+| `KINGLET_SMTP_PORT`              | `587` (`465` when secure) | SMTP port                                                                    |
+| `KINGLET_SMTP_SECURE`            | on for port 465           | TLS from the first byte; otherwise STARTTLS when offered                     |
+| `KINGLET_SMTP_USER`              | —                         | SMTP login user                                                              |
+| `KINGLET_SMTP_PASSWORD`          | —                         | SMTP password (env-only, never stored)                                       |
+| `KINGLET_SMTP_REQUIRE_TLS`       | on when a user is set     | Refuse to send without TLS; `0` for a trusted local relay                    |
+
+### Encrypted channel secrets
+
+Notification channels hold secrets: webhook URLs, bot tokens, and API keys.
+Kinglet stores them encrypted with `KINGLET_SECRET_KEY` (AES-256-GCM, a fresh
+IV per value, each value bound to its row). Legacy per-monitor webhook URLs are
+encrypted too. SMTP and S3 credentials never reach the database.
 
 ```bash
 openssl rand -base64 32
 ```
 
-No OpenSSL (Windows, slim images)? Node works too:
+Set the output as `KINGLET_SECRET_KEY` and restart.
+
+- Without a key, adding a channel or pointing one somewhere new is disabled,
+  and the UI says why. Existing channels keep sending, so upgrading never
+  silently stops alerts, but their secrets stay unencrypted until a key is set.
+- The first start with a key encrypts existing plaintext secrets in place.
+- Back the key up apart from `/data` and your snapshots. A snapshot holds the
+  database, not the key, so a leaked snapshot doesn't reveal channel secrets,
+  and a restored database needs the same key.
+- A changed or lost key leaves affected channels **locked**: they stop sending
+  and show a notice until their settings are entered again.
+- A key shorter than 32 bytes, or not base64 or hex, stops startup rather than
+  storing secrets unencrypted.
+
+### Secrets
+
+`BETTER_AUTH_SECRET` is optional with a local database: Kinglet generates one on
+first boot and keeps it in `<dataDir>/auth-secret.txt` (`/data/auth-secret.txt`
+in Docker). Set it explicitly (32+ random bytes) so sessions survive container
+rebuilds without a persisted secret file, and always with a remote database such
+as Turso, where there is nowhere local to keep a generated one (Kinglet won't
+start without it). `KINGLET_AUTH_SECRET` is accepted as a legacy fallback when
+`BETTER_AUTH_SECRET` is unset:
 
 ```bash
+openssl rand -base64 32
+# or, without OpenSSL:
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-If you leave it unset, Kinglet generates one on first boot and stores it at
-`/data/auth-secret.txt`. Set a new value later only if you accept that every
-existing session is signed out.
-
-`KINGLET_TRUSTED_PROXIES` is for proxies, not client networks. Set it to the
-proxy's address or Docker network, for example:
-
-```dotenv
-KINGLET_TRUSTED_PROXIES=172.30.0.10/32
-```
-
-Do not use `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`; those ranges include LAN,
-VPN, and Tailscale clients, so private-range clients can be stripped to no IP or
-spoofed. If Kinglet is reached directly, leave the variable empty. See
-[Reverse proxy and client IPs](/security/#reverse-proxy-and-client-ips).
-
-## Docker one command
-
-```bash
-docker run -d --name kinglet \
-  --restart unless-stopped \
-  -p 8080:3000 \
-  -v kinglet-data:/data \
-  -e KINGLET_BASE_URL=http://localhost:8080 \
-  ghcr.io/rushlightlab/kinglet:0.4.0
-```
-
-Open `http://localhost:8080`. If you did not set an admin password, read the
-generated one from the logs or the volume:
-
-```bash
-docker logs kinglet
-# or
-docker exec kinglet cat /data/admin-password.txt
-```
-
-For a public server, set `KINGLET_BASE_URL=https://logs.example.com` before the
-first boot.
-
-<Aside type="tip" title="Pin versions">
-  `:latest` moves with each release. Pin a version tag such as `:0.4.0` in production, or use a
-  digest for an immutable deployment.
-</Aside>
-
-## Docker Compose (single host)
-
-Use this when Docker runs directly on the server. On Coolify or Dokploy, use
-the platform sections below instead.
-
-```yaml
-services:
-  kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.4.0
-    restart: unless-stopped
-    ports:
-      - "8080:3000" # standalone only — remove behind Coolify/Dokploy
-    environment:
-      KINGLET_DB_PATH: /data/kinglet.db
-      KINGLET_BASE_URL: https://logs.example.com
-      KINGLET_ADMIN_EMAIL: you@example.com
-      KINGLET_ADMIN_PASSWORD: change-me-please
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
-      # Only when behind a proxy; trust the proxy network, not client ranges.
-      # KINGLET_TRUSTED_PROXIES: 172.30.0.10/32
-    volumes:
-      - kinglet-data:/data
-
-volumes:
-  kinglet-data:
-```
-
-<Aside type="caution" title="Coolify and Dokploy: no host port">
-  The `ports:` mapping is only for Compose running directly on a server. On Coolify or Dokploy,
-  remove it and use `expose: ["3000"]` instead — the platform proxy reaches the container over the
-  compose network. Publishing `8080` is a common `address already in use` failure because the host
-  usually has something on it already.
-</Aside>
-
-Put `BETTER_AUTH_SECRET=...` in a `.env` file, then:
-
-```bash
-docker compose up -d
-```
-
-If you leave the admin password unset, read the generated one with
-`docker compose exec kinglet cat /data/admin-password.txt`.
-
-For TLS without a platform, use the Caddy sample in `deploy/`:
-
-- `deploy/docker-compose.tls.yml`
-- `deploy/Caddyfile`
-
-It terminates TLS, sets HSTS, and keeps Kinglet off the public network.
-
-## Coolify
-
-Coolify's **Docker Image** resource deploys the public image without a Git
-repository or build.
-
-### 1. Create the Docker Image app
-
-Create or open a project, then choose **+ New → Docker Image**.
-
-### 2. Choose the image
-
-Set the image name to `ghcr.io/rushlightlab/kinglet` and the tag to `0.4.0`
-(or `latest`). No registry credentials are needed.
-
-### 3. Set the port
-
-Open **General** and set **Ports Exposes** to `3000`.
-
-### 4. Add environment variables
-
-Add these under **Environment Variables** (runtime):
-
-Behind Cloudflare, start with the Coolify proxy address; add Cloudflare's
-current ranges only if the proxy preserves the client XFF. See
-[Common deployments](/security/#common-deployments).
-
-```dotenv
-KINGLET_BASE_URL=https://logs.example.com
-KINGLET_ADMIN_EMAIL=you@example.com
-KINGLET_ADMIN_PASSWORD=change-me-please
-BETTER_AUTH_SECRET=<32+ random bytes>
-# Replace with the Coolify proxy network (Traefik by default), not all private ranges.
-# Find it with: docker network inspect <coolify-proxy-network>
-KINGLET_TRUSTED_PROXIES=172.30.0.0/24
-```
-
-### 5. Add persistent storage
-
-Open **Persistent Storage → Add → Volume Mount** and set the destination to
-`/data`.
-
-### 6. Add the domain
-
-Open **Domains**, add `https://logs.example.com`, and target port `3000`.
-
-### 7. Deploy
-
-Click **Deploy**, wait for it to finish, then open the domain.
-
-The app writes its database and generated auth secret under `/data`, so the
-volume mount is required. If you didn't set an admin password, the generated one
-appears in the application's runtime logs on first boot. Redeploy after changing
-the image tag or runtime environment.
-
-See Coolify's [Docker Image guide](https://coolify.io/docs/applications/deployments/docker-image)
-and [Persistent Storage guide](https://coolify.io/docs/applications/configuration/persistent-storage)
-for the current UI details.
-
-## Dokploy
-
-Dokploy deploys prebuilt images through a **Docker Compose** service. Its
-Application build types are Git/Dockerfile-based, so Compose is the right fit
-for the published image.
-
-### 1. Create a Docker Compose service
-
-Create or open a project, then create a **Docker Compose** service.
-
-### 2. Paste the compose file
-
-```yaml
-services:
-  kinglet:
-    image: ghcr.io/rushlightlab/kinglet:0.4.0
-    restart: unless-stopped
-    expose:
-      - "3000"
-    env_file:
-      - .env
-    volumes:
-      - kinglet-data:/data
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-
-volumes:
-  kinglet-data:
-```
-
-Don't add a `ports:` mapping here. Dokploy routes the domain through Traefik to
-the compose network; `expose` is enough, and a host port can collide with
-Dokploy itself or another app.
-
-### 3. Add environment variables
-
-Use the **Environment** tab. Dokploy writes these to `.env`; the
-`env_file: .env` line loads them into the container.
-
-Behind Cloudflare, start with the Dokploy proxy address; add Cloudflare's
-current ranges only if the proxy preserves the client XFF. See
-[Common deployments](/security/#common-deployments).
-
-```dotenv
-KINGLET_BASE_URL=https://logs.example.com
-KINGLET_ADMIN_EMAIL=you@example.com
-KINGLET_ADMIN_PASSWORD=change-me-please
-BETTER_AUTH_SECRET=<32+ random bytes>
-# Replace with the Traefik network used by Dokploy, not all private ranges.
-# Find it with: docker network inspect dokploy-network
-KINGLET_TRUSTED_PROXIES=172.30.0.0/24
-```
-
-<Aside type="caution" title="Replace every placeholder">
-  Change `logs.example.com` to your actual host in both `KINGLET_BASE_URL` and the domain below.
-  `KINGLET_BASE_URL` must match the origin in the browser exactly. If it still points at
-  `logs.example.com`, the page loads but sign-in fails with `403 INVALID_ORIGIN`.
-</Aside>
-
-### 4. Add the domain
-
-Open **Domains → Add Domain**: host `logs.example.com`, container port `3000`,
-HTTPS with Let's Encrypt enabled.
-
-### 5. Deploy
-
-Click **Deploy**. Dokploy adds the Traefik networking; redeploy after domain or
-compose changes.
-
-The named volume keeps the SQLite database and auth secret across deployments;
-Dokploy's volume backups can target named volumes. If you didn't set an admin
-password, the generated one appears in the service logs on first boot.
-
-### Pull fails with `denied: denied`
-
-The image is public, so this is almost always a stale registry login on the
-Dokploy server. Docker sends the saved `ghcr.io` token and GHCR rejects it
-instead of falling back to anonymous access. Remove the login on the host:
-
-```bash
-docker logout ghcr.io
-docker pull ghcr.io/rushlightlab/kinglet:latest
-```
-
-Then redeploy the compose service. If the host uses a credential helper, delete
-the `ghcr.io` entry from `~/.docker/config.json` instead. If you _want_ private
-authenticated pulls, create a classic GitHub token with `read:packages`, then add
-or update the GHCR registry under Dokploy's **Registry** settings with that
-token as the password.
-
-### `address already in use` on port 8080
-
-The compose file publishes a host port. Dokploy doesn't need one: remove
-`ports:` and keep `expose: ["3000"]`, then add the domain in **Domains** with
-container port `3000`. If you only need temporary host access, map a free port
-such as `18080:3000` instead of `8080`.
-
-See Dokploy's [Docker Compose guide](https://docs.dokploy.com/docs/core/docker-compose)
-and [Domains guide](https://docs.dokploy.com/docs/core/domains) for the current
-UI details.
-
-## Configuration
-
-| Env var                            | Default                  | What it does                                                                        |
-| ---------------------------------- | ------------------------ | ----------------------------------------------------------------------------------- |
-| `KINGLET_PORT`                     | `3000`                   | HTTP port inside the container                                                      |
-| `KINGLET_HOST`                     | —                        | Bind address; unset listens on all interfaces                                       |
-| `KINGLET_STORAGE`                  | `auto`                   | `sqlite`, `libsql`, or `auto` (picks by db path scheme)                             |
-| `KINGLET_SEARCH`                   | `substring`              | Search index: `substring`, `words`, or `off` ([trade-offs](/storage/#search-index)) |
-| `KINGLET_DB_PATH`                  | `/data/kinglet.db`       | Local SQLite path; `libsql://`/`https://`/`file:` → libSQL                          |
-| `KINGLET_DB_AUTH_TOKEN`            | —                        | Auth token for remote libSQL/Turso                                                  |
-| `KINGLET_BASE_URL`                 | —                        | Public HTTPS origin — secure cookies and alert deep links                           |
-| `BETTER_AUTH_SECRET`               | _(generated in `/data`)_ | Session signing secret; set explicitly for multi-instance installs                  |
-| `KINGLET_TRUSTED_PROXIES`          | —                        | CIDRs allowed to set `X-Forwarded-For`                                              |
-| `KINGLET_ADMIN_EMAIL`              | `admin@kinglet.local`    | Bootstrap administrator email (when no administrator exists)                        |
-| `KINGLET_ADMIN_PASSWORD`           | _(generated)_            | Bootstrap administrator password (when no administrator exists)                     |
-| `KINGLET_SESSION_DAYS`             | `30`                     | Web session lifetime                                                                |
-| `KINGLET_RETENTION_DAYS`           | `14`                     | Delete events older than this                                                       |
-| `KINGLET_ALERT_RETENTION_DAYS`     | `90`                     | Delete alert history older than this                                                |
-| `KINGLET_MAX_EVENTS_PER_PROJECT`   | `1000000`                | Hard cap on retained events per project (`0` = unlimited)                           |
-| `KINGLET_MAX_PROJECT_DB_MB`        | `1024`                   | Hard cap on retained event bytes per project (`0` = unlimited)                      |
-| `KINGLET_MAX_DB_MB`                | `4096`                   | Hard cap on local database size in MB (`0` = unlimited)                             |
-| `KINGLET_ALLOW_PRIVATE_WEBHOOKS`   | —                        | Allow private/internal webhook targets (SSRF escape hatch)                          |
-| `KINGLET_MCP_ALLOW_MONITOR_WRITES` | —                        | Allow MCP keys to create/update/delete monitors; off by default                     |
+Changing the secret later signs every session out.
+
+### Proxy trust
+
+`KINGLET_TRUSTED_PROXIES` lists the proxies allowed to set `X-Forwarded-For`,
+not client networks. Set it to your proxy's address (usually a `/32`), or leave
+it empty when Kinglet is reached directly. Never use
+`10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`. See
+[Reverse proxy and client IPs](/security/#reverse-proxy-and-client-ips) and the
+per-platform values in [Common deployments](/security/#common-deployments).
 
 ### S3 backups (optional)
 
 S3-compatible backups are configured entirely through the environment. The
-Backups tab and scheduler stay disabled until the required S3 values are present
-and valid. If only some of the required values are set, or a supplied value is
-invalid, one warning is logged at boot with the missing or invalid variable
-names — never their values — and backups stay disabled.
+scheduler stays off until the required values are present and valid (the
+**Backups** tab in Settings remains visible to admins and shows a **Connect a
+bucket** setup card); a partial or invalid configuration logs one warning at
+boot naming the variables (never their values). Setup is in
+[Backups & archive](/backups/).
 
 | Env var                                      | Default          | What it does                                                                      |
 | -------------------------------------------- | ---------------- | --------------------------------------------------------------------------------- |
 | `KINGLET_TIMEZONE`                           | server time zone | Time zone for backup and archive schedules; invalid values warn and fall back     |
 | `KINGLET_BACKUP_S3_BUCKET`                   | —                | Bucket name (required for backups)                                                |
-| `KINGLET_BACKUP_S3_ENDPOINT`                 | —                | S3-compatible endpoint URL (required)                                             |
+| `KINGLET_BACKUP_S3_ENDPOINT`                 | —                | S3-compatible endpoint URL (required; HTTPS only except loopback)                 |
 | `KINGLET_BACKUP_S3_REGION`                   | `auto`           | SigV4 region                                                                      |
 | `KINGLET_BACKUP_S3_ACCESS_KEY_ID`            | —                | Access key id (required)                                                          |
 | `KINGLET_BACKUP_S3_SECRET_ACCESS_KEY`        | —                | Secret access key (required)                                                      |
 | `KINGLET_BACKUP_S3_SESSION_TOKEN`            | —                | Session token for temporary credentials                                           |
-| `KINGLET_BACKUP_S3_PREFIX`                   | `kinglet`        | Key prefix for snapshot objects                                                   |
+| `KINGLET_BACKUP_S3_PREFIX`                   | `kinglet`        | Key prefix for snapshot and archive objects                                       |
 | `KINGLET_BACKUP_S3_FORCE_PATH_STYLE`         | `false`          | Use path-style bucket URLs                                                        |
 | `KINGLET_BACKUP_S3_SSE`                      | `AES256`         | Server-side encryption: `AES256`, `aws:kms`, or `none`                            |
 | `KINGLET_BACKUP_S3_KMS_KEY_ID`               | —                | KMS key id; required when `KINGLET_BACKUP_S3_SSE=aws:kms`                         |
 | `KINGLET_BACKUP_PASSPHRASE`                  | —                | Optional age passphrase; when set, restores require age-encrypted snapshots       |
 | `KINGLET_BACKUP_MANIFEST_SECRET`             | S3 secret        | Stable HMAC key for manifests; set a dedicated value when rotating S3 credentials |
 | `KINGLET_BACKUP_ALLOW_UNSIGNED_MANIFESTS`    | `0`              | Legacy compatibility for pre-signing manifests; leave off for new deployments     |
-| `KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS` | `0`              | Legacy compatibility for unencrypted snapshots while a passphrase is configured   |
+| `KINGLET_BACKUP_ALLOW_UNENCRYPTED_SNAPSHOTS` | `0`              | Legacy: unencrypted snapshots and archive parts while a passphrase is configured  |
 | `KINGLET_BACKUP_MAX_SNAPSHOT_MB`             | `8192`           | Absolute restore size cap in MiB; larger snapshots are rejected before download   |
 | `KINGLET_BACKUP_PART_SIZE_MB`                | `8`              | Multipart part size in MiB (minimum 5)                                            |
 
@@ -360,87 +153,49 @@ the database or an image layer.
 
 ## Sizing
 
-Measured in Docker with ~200-byte events (a message plus a few fields). See
-[Capacity planning](/capacity/) for the full test, results per machine size,
-and recommendations by volume.
-
-- **Smallest tested**: 0.5 vCPU / 512 MB sustains 2,000 events/s; 1 vCPU /
-  512 MB sustains 3,000 (6,000 with `KINGLET_SEARCH=words`), with five
-  dashboard users active.
-- **RAM**: ~70–180 MB idle and ~300–410 MB peak under load. 512 MB was enough
-  in every test.
-- **Disk**: ~0.55 GB per million events with the default substring search,
-  ~0.42 GB with `words`, ~0.38 GB with `off`. For most installs retention, not
-  CPU, decides the machine size, and the default per-project caps need raising
-  above ~0.8 events/s average.
-- **Boot**: ~3–4 s to healthy, including container start.
+For most installs retention, not CPU, decides the machine size: disk is about
+0.55 GB per million events with the default search index, and 512 MB of RAM was
+enough in every load test. Raise the default per-project caps for projects
+averaging more than ~0.8 events/s. Measured rates and recommendations are in
+[Capacity planning](/capacity/).
 
 ## Backups
 
-Kinglet also includes optional S3 snapshots, staged restore, and log archive.
-See [Backups & archive](/backups/) for setup, encryption, schedules, and
-recovery. The rest of this section covers continuous replication with external
-tools.
+The store is one SQLite database: `kinglet.db`, plus `-wal`/`-shm` while running.
+Back up the whole `/data` volume, never only the `.db` file from a live WAL
+store. Options:
 
-The store is one SQLite database (`kinglet.db` plus `-wal`/`-shm` while running).
-[Litestream](https://litestream.io/) replicates it continuously to S3-compatible
-storage with a one-line sidecar:
-
-```yaml
-litestream:
-  image: litestream/litestream
-  volumes:
-    - kinglet-data:/data
-  command: replicate /data/kinglet.db s3://your-bucket/kinglet
-```
-
-On Coolify or Dokploy, use the platform's volume backup for the `/data` volume.
-Don't copy only the `.db` file from a live WAL store.
+- Kinglet's built-in S3 snapshots, staged restore, and log archive —
+  [Backups & archive](/backups/).
+- Continuous replication with a [Litestream](/backups/#litestream-advanced)
+  sidecar.
+- Your platform's volume backup for `/data`, where it offers one (Dokploy
+  does).
 
 ## Upgrades
 
-- **Docker**: pull the new tag, remove the old container, and start it again with
-  the same `/data` volume.
-- **Compose**: `docker compose pull && docker compose up -d`.
-- **Coolify**: change the image tag under General, then **Deploy**.
-- **Dokploy**: change the image tag in the compose service, then **Deploy**.
+1. Read the [changelog](/changelog/) for the target release.
+2. Back up `/data`.
+3. Change the pinned image tag and redeploy. Steps per method:
+   [Docker](/deploy/docker/#upgrade),
+   [Docker Compose](/deploy/docker-compose/#upgrade),
+   [Dokploy](/deploy/dokploy/#upgrade),
+   [Coolify](/deploy/coolify/#upgrade),
+   [source build](/deploy/build-from-source/#upgrade).
 
-Pin a release tag in production; `:latest` moves with each release. Migrations
-run automatically on boot.
-
-<Aside type="caution" title="UUID v7 upgrade">
-  Databases created before this release are converted from integer ids to UUID v7 text ids on first
-  boot. The migration preserves rows and rewires every project, key, monitor, alert, and member
-  reference, but it rewrites tables, so take a backup of `/data` first. Expect a one-time pause
-  proportional to the database size.
-</Aside>
-
-<Aside type="caution" title="Compact event storage upgrade">
-  The release that introduces integer project keys rebuilds the `events` table and its indexes on
-  first boot (schema v11). Rows, ids, and search are preserved, and the database shrinks by about a
-  quarter. The rebuild takes roughly a minute per million events, during which the API is not yet
-  listening. Back up `/data` first.
-</Aside>
+Migrations run automatically on boot. Pin a release tag in production;
+`:latest` moves with each release.
 
 ## Troubleshooting
 
-### The page loads but sign-in returns `403 INVALID_ORIGIN`
+### Sign-in returns `403 INVALID_ORIGIN`
 
-`KINGLET_BASE_URL` doesn't match the origin in the browser. Set it to the exact
-public URL — scheme and host — then restart the container.
+`KINGLET_BASE_URL` does not match the origin in the browser. Set it to the exact
+public URL, scheme and host, then restart or redeploy.
 
-### HTTPS shows a 526 or Traefik's default certificate
+### HTTPS shows a 526 or the proxy's default certificate
 
-The domain probably has no certificate attached. In Dokploy, set the
-certificate provider to **Let's Encrypt**; Coolify provisions one automatically
-when the domain is verified. Redeploy after changing a Compose domain — Docker
-Compose domains only pick up changes on redeploy. Behind Cloudflare, use
-**Full (strict)** once the origin has a valid certificate; a 526 means Cloudflare
-could not validate the origin certificate.
-
-## From source
-
-For development or a custom build, use the repository's
-[Dockerfile and README](https://github.com/rushlightlab/kinglet). The published
-image is built from the same source; development uses `pnpm install && pnpm dev`
-with Node 26+.
+The domain has no valid certificate at the origin. Check the certificate
+settings on your [deploy method's page](/deploy/). Behind Cloudflare, use
+**Full (strict)** once the origin has a valid certificate; a 526 means
+Cloudflare could not validate it.

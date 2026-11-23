@@ -73,8 +73,9 @@ grow disk roughly in proportion.
   The defaults protect a shared database: `KINGLET_MAX_EVENTS_PER_PROJECT=1000000`,
   `KINGLET_MAX_PROJECT_DB_MB=1024`, and `KINGLET_MAX_DB_MB=4096`. At the default 14-day retention a
   project averaging more than about 0.8 events/s reaches the event cap, and ingest returns `429`
-  until retention frees space. Size the caps to the table above (`0` disables a cap) and keep
-  `KINGLET_MAX_DB_MB` below your free disk.
+  until retention frees space (exceeding `KINGLET_MAX_PROJECT_DB_MB` or `KINGLET_MAX_DB_MB` returns
+  `507`). Size the caps to the table above (`0` disables a cap) and leave extra free disk beyond
+  `KINGLET_MAX_DB_MB` for [S3 snapshots and staged restores](/backups/#snapshots).
 </Aside>
 
 ## Recommendations
@@ -92,5 +93,7 @@ Whatever the size:
   allows 600 requests per minute per API key, so give each service or instance
   its own key.
 - If you do not need substring search, `KINGLET_SEARCH=words` is the biggest
-  single lever: 1.5–2× the sustained rate and ~22% less disk. See [Search index](/storage/#search-index).
+  single lever: about 20% faster raw ingest, 1.5–2× the sustained rate under
+  dashboard load in the runs above, and ~22% less disk. See
+  [Search index](/storage/#search-index).
 - Shorter retention shrinks disk linearly and keeps long-window queries fast.

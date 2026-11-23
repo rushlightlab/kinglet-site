@@ -1,0 +1,46 @@
+---
+/**
+ * Package-manager tabs for install and one-off run commands. Every instance
+ * shares one syncKey, so a reader's choice applies on every page and is
+ * remembered by Starlight in localStorage.
+ *
+ *   <PackageManagers pkg="@kinglet/sdk-node" />                 add a dependency
+ *   <PackageManagers type="dlx" pkg="@kinglet/mcp@0.5.0" />     run without installing
+ */
+import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
+
+interface Props {
+  pkg: string;
+  type?: "add" | "dlx";
+  args?: string;
+}
+
+const { pkg, type = "add", args } = Astro.props;
+
+const commands =
+  type === "add"
+    ? {
+        npm: `npm install ${pkg}`,
+        pnpm: `pnpm add ${pkg}`,
+        yarn: `yarn add ${pkg}`,
+        bun: `bun add ${pkg}`,
+        nub: `nub add ${pkg}`,
+      }
+    : {
+        npm: `npx -y ${pkg}`,
+        pnpm: `pnpm dlx ${pkg}`,
+        yarn: `yarn dlx ${pkg}`,
+        bun: `bunx ${pkg}`,
+        nub: `nub dlx ${pkg}`,
+      };
+
+const suffix = args ? ` ${args}` : "";
+---
+
+<Tabs syncKey="package-manager">
+  {Object.entries(commands).map(([label, command]) => (
+    <TabItem label={label}>
+      <Code code={command + suffix} lang="sh" />
+    </TabItem>
+  ))}
+</Tabs>

@@ -1,0 +1,123 @@
+---
+title: Coolify
+description: Deploy the public Kinglet image on Coolify with a Docker Image resource, a /data volume, and an HTTPS domain.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Coolify's **Docker Image** resource runs the published image directly, with no
+Git repository or build. Coolify's Traefik proxy (the `coolify-proxy`
+container) terminates TLS and routes the domain to the container.
+
+## Prerequisites
+
+- A working Coolify installation.
+- A domain whose DNS points at the Coolify server, with ports 80 and 443
+  reachable so Let's Encrypt can issue a certificate.
+
+## Deploy
+
+### 1. Create the resource
+
+Open a project and environment, choose **+ New**, then **Docker Image**.
+
+### 2. Choose the image
+
+Set **Image Name** to `ghcr.io/rushlightlab/kinglet` and the tag to a release
+such as `0.5.0`, or paste `ghcr.io/rushlightlab/kinglet:0.5.0`. Leaving the tag
+empty means `latest`. The image is public, so no registry credentials are
+needed.
+
+### 3. Set the port
+
+In **General**, set **Ports Exposes** to `3000`. Docker Image resources default
+to `80`.
+
+### 4. Add persistent storage
+
+Open **Persistent Storage → Add → Volume Mount** and set **Destination Path** to
+`/data`. Without it, every redeploy starts with an empty database.
+
+### 5. Add environment variables
+
+Under **Environment Variables**, add:
+
+```dotenv
+KINGLET_BASE_URL=https://logs.example.com
+KINGLET_ADMIN_EMAIL=you@example.com
+KINGLET_ADMIN_PASSWORD=<strong-password>
+# Encrypts notification channel secrets: openssl rand -base64 32
+KINGLET_SECRET_KEY=<generated key>
+KINGLET_TRUSTED_PROXIES=<coolify-proxy-ip>/32
+```
+
+Make sure each variable is available at runtime; the build-time option has no
+effect on a prebuilt image. See [Trusted proxy](#trusted-proxy) for the address.
+
+### 6. Add the domain
+
+Under **Domains**, add `https://logs.example.com:3000`. The `https://` scheme
+turns on automatic TLS; the `:3000` is the container port Traefik routes to, not
+a public port.
+
+### 7. Deploy
+
+Click **Deploy** and open the domain. If you left the admin password unset, the
+generated one is in the application logs from the first boot.
+
+After changing runtime variables, use **Restart**; after changing the image or
+domain, **Redeploy**.
+
+## Trusted proxy
+
+Set `KINGLET_TRUSTED_PROXIES` to the address of `coolify-proxy` on the network
+it shares with Kinglet, as a single `/32`. List the networks of both containers
+and pick the one they have in common:
+
+```bash
+docker inspect coolify-proxy \
+  --format '{{range $name, $net := .NetworkSettings.Networks}}{{$name}} {{$net.IPAddress}}{{println}}{{end}}'
+docker inspect <kinglet-container> \
+  --format '{{range $name, $net := .NetworkSettings.Networks}}{{$name}}{{println}}{{end}}'
+```
+
+Do not list the whole network: other resources can share it, and listing it
+makes Kinglet skip their addresses. The proxy's address can change when Coolify
+recreates it; re-check after a Coolify or proxy update.
+Behind Cloudflare, see [Common deployments](/security/#common-deployments).
+
+## Upgrade
+
+Back up the volume, then change the tag in **General** (Docker Registry) and
+**Redeploy**. Coolify pulls the new image before replacing the container.
+Migrations run on boot; read the [upgrade notes](/self-hosting/#upgrades) first.
+
+<Aside type="caution" title="Restart pulls again">
+  **Restart** also pulls the saved image reference. With a moving tag such as `latest`, a restart
+  can upgrade Kinglet. Pin a version tag or digest.
+</Aside>
+
+## Docker Compose instead
+
+Coolify can also deploy a Docker Compose resource. Start from the
+[Dokploy compose file](/deploy/dokploy/#2-paste-the-compose-file), replace
+`env_file:` with an `environment:` block of `${VAR}` references (for example
+`KINGLET_BASE_URL: ${KINGLET_BASE_URL}`) so Coolify shows them as editable
+variables, and assign the domain to the `kinglet` service with port `3000`.
+
+## Troubleshooting
+
+- **Sign-in returns `403 INVALID_ORIGIN`.** `KINGLET_BASE_URL` does not match
+  the domain. Fix the variable and restart.
+- **The domain does not reach Kinglet.** **Ports Exposes** or the domain port is
+  not `3000`.
+- **No certificate.** DNS does not point at the server yet, or ports 80/443 are
+  blocked.
+- **Data is gone after a redeploy.** The `/data` volume mount is missing.
+- **Two resources use the same domain.** Coolify warns and routing becomes
+  unpredictable; give each resource its own domain.
+
+See Coolify's [Docker Image](https://coolify.io/docs/applications/deployments/docker-image),
+[Persistent Storage](https://coolify.io/docs/core/persistent-storage/storage-mounts/volume-mounts),
+and [Domains](https://coolify.io/docs/core/networking/domains) guides for current
+UI details.

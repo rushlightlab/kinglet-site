@@ -1,0 +1,195 @@
+---
+title: PHP SDK
+description: Batch and ship logs from PHP, Laravel, Symfony, or any PSR-3 or Monolog setup.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+`rushlightlab/kinglet` is a batching client for PHP 8.1+ (requiring only the
+bundled `ext-json` extension and no third-party Composer packages): it uses
+ext-curl when loaded and PHP streams otherwise. It works on its own, as a
+PSR-3 logger (`psr/log:^3.0`), or as a Monolog 3 handler (`monolog/monolog:^3.0`)
+for Laravel and Symfony. Install `psr/log` or `monolog/monolog` separately if
+your app does not already include them.
+
+## Install
+
+```bash
+composer require rushlightlab/kinglet
+```
+
+## Projects and keys
+
+There is no `project` option. A Kinglet API key is bound to one project on the
+server, so the key you pass as `token` selects where the events go. Create a key
+with the **ingest** scope in **Settings → Projects → manage**.
+
+`service` and `env` only tag events for filtering. They don't route them.
+
+## Use
+
+<Tabs syncKey="php-framework">
+  <TabItem label="Plain PHP">
+
+```php
+use Kinglet\Client;
+
+$kinglet = new Client(
+    url: 'https://logs.example.com',
+    token: 'kl_...',
+    service: 'checkout',
+    env: 'prod',
+);
+
+$kinglet->info('order placed', ['orderId' => 'A-42', 'amount' => 19.5]);
+$kinglet->error('payment failed', ['exception' => $e]);
+```
+
+`Client::fromEnvironment(array $options = [])` reads `KINGLET_URL`,
+`KINGLET_KEY`, and optionally `KINGLET_SERVICE` and `KINGLET_ENV` instead, with
+`$options` overriding any constructor parameter. You can also call
+`$kinglet->log(Level|string $level, string|\Stringable $message, array $fields = [], ?\DateTimeInterface $time = null)`,
+check `$kinglet->enabled()`, inspect `$kinglet->pending()`, and check the
+boolean result of `$kinglet->flush()`.
+
+  </TabItem>
+  <TabItem label="Laravel">
+
+Add a channel to `config/logging.php`:
+
+```php
+'kinglet' => [
+    'driver' => 'monolog',
+    'handler' => Kinglet\Monolog\KingletHandler::class,
+    'handler_with' => [
+        'url' => env('KINGLET_URL'),
+        'token' => env('KINGLET_KEY'),
+        'service' => env('KINGLET_SERVICE', 'laravel'),
+        'env' => env('APP_ENV'),
+    ],
+    'level' => env('LOG_LEVEL', 'debug'),
+],
+```
+
+Log to it directly, or add `kinglet` to the `channels` of your `stack` channel:
+
+```php
+Log::channel('kinglet')->info('order placed', ['orderId' => 'A-42']);
+```
+
+  </TabItem>
+  <TabItem label="Symfony">
+
+```yaml
+# config/services.yaml
+services:
+  Kinglet\Monolog\KingletHandler:
+    arguments:
+      $url: "%env(KINGLET_URL)%"
+      $token: "%env(KINGLET_KEY)%"
+      $service: "symfony"
+      $env: "%kernel.environment%"
+
+# config/packages/monolog.yaml
+monolog:
+  handlers:
+    kinglet:
+      type: service
+      id: Kinglet\Monolog\KingletHandler
+```
+
+  </TabItem>
+  <TabItem label="PSR-3">
+
+```php
+use Kinglet\Client;
+use Kinglet\Psr\KingletLogger;
+
+$logger = new KingletLogger(Client::fromEnvironment());
+$logger->warning('Payment {id} retried', ['id' => 'pay_42', 'attempt' => 2]);
+```
+
+`{placeholders}` are filled from the context, and the whole context becomes
+the event's fields.
+
+  </TabItem>
+</Tabs>
+
+## What gets sent
+
+Each call becomes one Kinglet event:
+
+- **Level.** `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. PSR-3 and
+  Monolog levels map onto these: `notice` becomes `info`; `critical`, `alert`,
+  and `emergency` become `fatal`.
+- **Message.** The text you logged.
+- **Fields.** The array you pass, or the PSR-3/Monolog context. Monolog also
+  adds the `channel`, and the record's `extra` when it isn't empty.
+
+Fields are encoded so Kinglet can store and filter them:
+
+- An **exception** keeps its class, message, code, file, line, a trace cut at
+  4,000 bytes, and up to two levels of `previous` exceptions.
+- **Dates** become ISO 8601 strings; **backed enums** serialize to their value
+  and pure **unit enums** to their name.
+- Objects use **`JsonSerializable`** or **`__toString`** when they have one;
+  other objects are named, not dumped.
+- Nesting stops at 6 levels, and long strings are cut at 8,000 bytes.
+
+Search them with [Trill](/trill/): `field.orderId:A-42`, `field.amount>10`,
+`field.exception.class:RuntimeException`.
+
+## When events are sent
+
+PHP has no background thread, so the client sends from inside a log call or
+when the script ends:
+
+- when `batchSize` events are buffered (default 100), or when a batch approaches
+  the 7.5 MB payload split cap;
+- on a log call at least `flushInterval` seconds after the last send (default
+  5), for queue workers, daemons, and Octane;
+- when the script ends, from a shutdown handler;
+- whenever you call `$kinglet->flush()`.
+
+Long-running processes can call `flush()` between jobs. `close()` sends what's
+left and stops accepting events.
+
+<Aside type="note" title="PHP-FPM">
+  The shutdown flush runs before the response is finished unless your framework calls
+  `fastcgi_finish_request()` first. Laravel and Symfony both do. In plain PHP, call it yourself
+  before the script ends to keep the flush off the response time.
+</Aside>
+
+## Failures
+
+Logging never throws, and one request takes at most `timeout` seconds (2 by
+default):
+
+- A batch that **fails to send** (network error, 429, or 5xx) stays buffered and
+  is retried. Automatic sends back off from 1 to 60 seconds, so an unreachable
+  Kinglet doesn't slow every log call down.
+- A batch Kinglet **rejects** (for example 401 for a bad key) is dropped, since
+  sending it again would fail the same way.
+- At most `maxBuffered` events (default 10,000) are kept while Kinglet is
+  unreachable; the oldest are dropped first.
+
+Both cases call `onError` with a `KingletException` that has the HTTP `status`
+(null for a network error) and the number of `events`. Without `onError`, a
+line goes to PHP's error log, at most once a minute.
+
+## Options
+
+| Option            | Default | What it does                                                                      |
+| ----------------- | ------- | --------------------------------------------------------------------------------- |
+| `url`, `token`    | —       | Kinglet base URL and API key. Leave either empty to disable                       |
+| `service`, `env`  | `null`  | Tag every event                                                                   |
+| `batchSize`       | `100`   | Send when this many events are buffered (max 5,000)                               |
+| `flushInterval`   | `5.0`   | Also send when this many seconds have passed, checked on each call                |
+| `maxBuffered`     | `10000` | Most events kept while Kinglet is unreachable                                     |
+| `timeout`         | `2.0`   | Seconds one request may take                                                      |
+| `flushOnShutdown` | `true`  | Send what's left when the script ends                                             |
+| `onError`         | `null`  | `fn (KingletException $e)`, called for failed batches                             |
+| `transport`       | `null`  | Optional `Kinglet\Transport\Transport` (e.g. `new HttpTransport(useCurl: false)`) |
+
+A client with an empty `url` or `token` is disabled and ignores every call, so
+an app without Kinglet configured, such as a local checkout, keeps running.

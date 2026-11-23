@@ -4,6 +4,7 @@ description: Buffer, batch, and ship logs from Node.js without blocking your app
 ---
 
 import { Aside } from "@astrojs/starlight/components";
+import PackageManagers from "../../components/PackageManagers.astro";
 
 `@kinglet/sdk-node` is a zero-dependency batching client for Node 24+. Events
 buffer in-process and ship as a single NDJSON batch — 1,000 events or every
@@ -12,10 +13,7 @@ reported through `onError`, so your app never blocks on logging.
 
 ## Install
 
-```bash
-npm install @kinglet/sdk-node
-# or: pnpm add @kinglet/sdk-node
-```
+<PackageManagers pkg="@kinglet/sdk-node" />
 
 ## Projects and keys
 
@@ -49,10 +47,18 @@ await log.close();
 
 The SDK is written in TypeScript and builds with declaration output, so
 `dist/index.d.ts` ships alongside the JavaScript. `Logger`, `LoggerOptions`,
-and `LogFields` are exported — no separate `@types` package is needed:
+`LogFields`, `JsonValue`, and `JsonObject` are exported — no separate `@types`
+package is needed:
 
 ```ts
-import { createLogger, type Logger, type LoggerOptions, type LogFields } from "@kinglet/sdk-node";
+import {
+  createLogger,
+  type Logger,
+  type LoggerOptions,
+  type LogFields,
+  type JsonValue,
+  type JsonObject,
+} from "@kinglet/sdk-node";
 ```
 
 It is ESM-only (`"type": "module"`, with an `import` export) and requires
@@ -69,13 +75,17 @@ Node 24 or newer.
 | `flushMs`         | `1000`  | flush at least this often                                              |
 | `onError`         | —       | called when a flush fails; the batch is re-queued                      |
 
+Every non-2xx response is re-queued, including `401`, `403`, `413`, and `422`,
+which will not succeed on retry. Use `onError` to spot a revoked key or an
+oversized batch.
+
 ## Methods
 
-| Method            | What it does                                    |
-| ----------------- | ----------------------------------------------- |
-| `trace` … `fatal` | buffer one event with an optional fields object |
-| `flush()`         | send the current buffer now                     |
-| `close()`         | wait for a request in flight, then drain buffer |
+| Method            | What it does                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `trace` … `fatal` | buffer one event with an optional fields object                                              |
+| `flush()`         | send the current buffer now (joins an in-flight request if one is already running)           |
+| `close()`         | stop accepting new events, wait for an in-flight request, then drain until empty or an error |
 
 ## Why 1000 events per batch
 
@@ -85,20 +95,22 @@ for busy services:
 
 - **Rate limit.** Ingest allows 600 requests per minute per key. At 200 events
   per request that caps one key near 2,000 events/s; at 1,000 it is 10,000,
-  about what one Kinglet server can absorb.
+  more than one server sustains (see [Capacity planning](/capacity/)).
 - **Server cost.** Each request pays fixed work (auth, parsing, a commit).
   1,000-event batches ingest roughly 25% faster per event than 100-event ones.
 - **Outage buffer.** The client keeps up to 10 batches in memory while the
   server is unreachable, so a larger batch also rides out a longer restart.
 
-The trade-off is memory (up to 10,000 buffered events) and, on a hard crash,
-losing up to one batch or one second of logs, whichever is smaller. Lower
-`batchSize` if your events are large; one request never carries more than 5,000
-events.
+The trade-off is memory (up to `10 × batchSize` buffered events — 10,000 at the
+default `batchSize`, up to `11 × batchSize` transiently before trimming) and, on
+a hard crash, losing up to one batch or one second of logs, whichever is
+smaller. The SDK batches by event count only (not payload bytes), so lower
+`batchSize` if your events are large so requests stay under Kinglet's 8 MB
+ingest limit; one request never carries more than 5,000 events.
 
 <Aside type="note" title="Roadmap">
   A pino transport (`transport: { target: "@kinglet/pino" }`) and a zero-code
   preload — `node --import @kinglet/preload app.js`, which hooks `console`,
-  `uncaughtException`, and `unhandledRejection` — are next. A Monolog handler
-  covers PHP (Laravel, Symfony, WordPress) after that.
+  `uncaughtException`, and `unhandledRejection` — are planned. For PHP (Laravel,
+  Symfony, PSR-3, Monolog), see the [PHP SDK](/php-sdk/).
 </Aside>

@@ -1,0 +1,144 @@
+---
+title: Dokploy
+description: Deploy Kinglet on Dokploy as a Docker Compose service behind its Traefik proxy.
+---
+
+Dokploy runs prebuilt images through a **Docker Compose** service. Its
+Application type builds from Git or a Dockerfile, so Compose is the right fit
+for the published image. Dokploy's Traefik terminates TLS and routes the domain
+to the container.
+
+## Prerequisites
+
+- A working Dokploy installation.
+- A domain whose DNS points at the Dokploy server.
+
+## Deploy
+
+### 1. Create a Docker Compose service
+
+Create or open a project, then create a **Docker Compose** service.
+
+### 2. Paste the compose file
+
+```yaml title="docker-compose.yml"
+services:
+  kinglet:
+    image: ghcr.io/rushlightlab/kinglet:0.5.0
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    volumes:
+      - kinglet-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  kinglet-data:
+```
+
+Use `expose`, not `ports:`. Traefik reaches the container over
+`dokploy-network`, and a host port can collide with Dokploy or another app.
+
+### 3. Set environment variables
+
+Add these in the service's **Environment** tab. Dokploy writes them to `.env`,
+and the `env_file: .env` line loads them into the container. Without that line
+(or explicit `environment:` entries), the variables never reach Kinglet.
+
+```dotenv
+KINGLET_BASE_URL=https://logs.example.com
+KINGLET_ADMIN_EMAIL=you@example.com
+KINGLET_ADMIN_PASSWORD=<strong-password>
+# Encrypts notification channel secrets: openssl rand -base64 32
+KINGLET_SECRET_KEY=<generated key>
+KINGLET_TRUSTED_PROXIES=<traefik-ip>/32
+```
+
+`KINGLET_BASE_URL` must be the exact origin you will open in the browser.
+Replace `<traefik-ip>` with the address from [Trusted proxy](#trusted-proxy).
+
+### 4. Add the domain
+
+Open **Domains → Add Domain**: your host, container port `3000`, HTTPS on, and
+**Let's Encrypt** as the certificate provider.
+
+### 5. Deploy
+
+Click **Deploy**. If you left the admin password unset, the generated one is in
+the service logs from the first boot.
+
+Redeploy after any change to the environment, domain, or compose file; running
+containers do not pick up changes until then.
+
+## Trusted proxy
+
+Set `KINGLET_TRUSTED_PROXIES` to the address of the `dokploy-traefik` container
+on `dokploy-network`, as a single `/32`:
+
+```bash
+docker inspect dokploy-traefik \
+  --format '{{(index .NetworkSettings.Networks "dokploy-network").IPAddress}}'
+```
+
+Do not use the whole `dokploy-network` subnet. Other apps on the server join
+that network too, and listing it makes Kinglet skip their addresses. See
+[Reverse proxy and client IPs](/security/#reverse-proxy-and-client-ips).
+
+The Traefik address can change when Dokploy recreates the container, for example
+after a Dokploy update; re-run the command and update the variable if it
+differs. Behind Cloudflare, see [Common deployments](/security/#common-deployments)
+before adding Cloudflare's ranges.
+
+## Upgrade
+
+Back up the volume, change the image tag in the compose file, then **Deploy**.
+Migrations run on boot; read the [upgrade notes](/self-hosting/#upgrades) first.
+Dokploy's volume backups can target the `kinglet-data` named volume.
+
+## Troubleshooting
+
+### Pull fails with `denied: denied`
+
+The image is public, so this is almost always a stale `ghcr.io` login on the
+Dokploy server: Docker sends the saved token and GHCR rejects it instead of
+falling back to anonymous access. On the host:
+
+```bash
+docker logout ghcr.io
+docker pull ghcr.io/rushlightlab/kinglet:0.5.0
+```
+
+Or remove the GHCR entry under Dokploy's **Registry** settings. If the host uses
+a credential helper, delete the `ghcr.io` entry from `~/.docker/config.json`.
+Then redeploy.
+
+### Sign-in returns `403 INVALID_ORIGIN`
+
+`KINGLET_BASE_URL` does not match the browser origin, often because it still
+says `logs.example.com`. Fix it in **Environment** and redeploy.
+
+### HTTPS shows a 526 or Traefik's default certificate
+
+The domain has no certificate. Set the certificate provider to
+**Let's Encrypt** and redeploy; compose domains only pick up changes on
+redeploy. Behind Cloudflare, use **Full (strict)** once the origin has a valid
+certificate.
+
+### `address already in use`
+
+The compose file publishes a host port. Remove `ports:`, keep
+`expose: ["3000"]`, and route through **Domains** instead.
+
+### Variables have no effect
+
+The compose file has no `env_file: .env` (or matching `environment:` entries),
+or the service was not redeployed after the change.
+
+See Dokploy's [Docker Compose](https://docs.dokploy.com/docs/core/docker-compose)
+and [Domains](https://docs.dokploy.com/docs/core/domains) guides for current UI
+details.

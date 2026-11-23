@@ -7,7 +7,7 @@ import "../styles/landing.css";
 import releases from "../data/releases.json";
 import dashboardPreview from "../assets/dashboard-preview.png";
 
-const latestVersion = releases.latest?.version ?? "0.3.0";
+const latestVersion = releases.latest?.version ?? "0.5.0";
 ---
 
 <!doctype html>
@@ -46,8 +46,12 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           aria-label="Kinglet home"
           style="display: inline-flex; align-items: center; gap: 10px;"
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path fill="#fbbf24" d="M3 8l4.5 3L12 4l4.5 7 4.5-3v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <svg viewBox="5 -2 88 88" width="20" height="20" aria-hidden="true">
+            <path
+              fill="#fbbf24"
+              fill-rule="evenodd"
+              d="M91 38 80 43.5C80 50 76 57 70 62 59 72 43 73 32 67L8 52.5l3.5-3L7 43.5 30 54C36 44 45 32 54 30l1-13 5 6 4-10 4 9.5 5-6.5 1 12.5c3 1 5 3.5 6 6zM69 36a2.4 2.4 0 1 0 0 .01z"
+            />
           </svg>
           <span class="brand-name">KINGLET</span>
         </a>
@@ -61,6 +65,9 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
           </a>
           <a href="/quickstart/" class="nav-link">
             /quickstart
+          </a>
+          <a href="/trill/" class="nav-link">
+            /trill
           </a>
           <a href="/ingestion/" class="nav-link">
             /ingestion
@@ -151,7 +158,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 </div>
                 <div class="cmd-bar cmd-bar-stack">
                   <pre class="cmd-pre"><code><span style="color: var(--gold)">$</span> docker run -d --name kinglet \
-  -p 8080:3000 -v kinglet-data:/data \
+  -p 127.0.0.1:8080:3000 -v kinglet-data:/data \
   -e KINGLET_BASE_URL=http://localhost:8080 \
   ghcr.io/rushlightlab/kinglet:latest</code></pre>
                   <button
@@ -297,8 +304,8 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 If it can POST, it can log.
               </h3>
               <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
-                NDJSON over HTTP: curl, Vector, Fluent Bit, the Node SDK, or your own two-line
-                fetch. No agents, no sidecars, no lock-in.
+                NDJSON over HTTP: curl, Vector, Fluent Bit, the Node and PHP SDKs, or your own
+                two-line fetch. No agents, no sidecars, no lock-in.
               </p>
             </article>
 
@@ -313,8 +320,8 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 One database, multiple flavours.
               </h3>
               <p style="font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.7;">
-                SQLite on your own box, or Turso/libSQL as a managed remote replica. Same schema,
-                same queries, same app — pick what fits.
+                SQLite on your own box, or hosted Turso/libSQL over the network. Same schema, same
+                queries, same app — pick what fits.
               </p>
             </article>
 
@@ -337,7 +344,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                   <span class="tick">✓</span> one volume
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
-                  <span class="tick">✓</span> optional S3 snapshots
+                  <span class="tick">✓</span> optional S3 snapshots &amp; archive
                 </span>
                 <span style="display: flex; align-items: center; gap: 8px;">
                   <span class="tick">✓</span> no telemetry
@@ -354,10 +361,11 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 <p style="font-size: 13px; color: var(--muted); margin-top: 12px; max-width: 28rem; line-height: 1.7;">
                   Watch for <span style="color: var(--text)">level:fatal</span>, alert when error
                   rates spike, or get pinged when your cron goes quiet. Cooldowns and auto-resolve
-                  keep it calm. Channels are plain webhook URLs — Discord, Slack, n8n, anything.
+                  keep it calm. Deliver to webhooks, Discord, Slack, Telegram, ntfy, Gotify,
+                  Pushover, or email (SMTP, Resend, Plunk).
                 </p>
-                <a href="/api/" class="text-link" style="margin-top: 20px;">
-                  Explore the API <span aria-hidden="true">↗</span>
+                <a href="/alerts/" class="text-link" style="margin-top: 20px;">
+                  Explore monitors &amp; alerts <span aria-hidden="true">↗</span>
                 </a>
               </div>
               <div class="alert-mock" aria-hidden="true">
@@ -442,6 +450,16 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 >
                   Node.js
                 </button>
+                <button
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="panel-php"
+                  id="tab-php"
+                  data-tab="php"
+                  class="code-tab"
+                >
+                  PHP
+                </button>
               </div>
               <button
                 class="copy-btn code-copy"
@@ -457,7 +475,7 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
                 <pre><code><span class="c-com"># start kinglet — one container, one volume</span>
 <span class="c-punc">$</span> docker run -d --name kinglet \
     --restart unless-stopped \
-    -p 8080:3000 \
+    -p 127.0.0.1:8080:3000 \
     -v kinglet-data:/data \
     -e KINGLET_BASE_URL=http://localhost:8080 \
     ghcr.io/rushlightlab/kinglet:latest
@@ -489,12 +507,30 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
   ].join(<span class="c-str">'\n'</span>),
 &#125;);</code></pre>
               </div>
+              <div role="tabpanel" id="panel-php" data-panel="php" class="code-panel hidden">
+                <pre><code><span class="c-com">// composer require rushlightlab/kinglet</span>
+<span class="c-kw">use</span> Kinglet\Client;
+
+$kinglet = <span class="c-kw">new</span> Client(
+    url: <span class="c-str">'http://localhost:8080'</span>,
+    token: <span class="c-str">'kl_…'</span>,
+    service: <span class="c-str">'my-app'</span>,
+);
+
+$kinglet-&gt;info(<span class="c-str">'user signed in'</span>, [<span class="c-str">'userId'</span> =&gt; 42]);</code></pre>
+              </div>
             </div>
 
             <div class="code-footbar">
               <span>
-                <span style="color: var(--gold)">↳</span> one NDJSON request per batch — no agent,
-                no sidecar
+                <span style="color: var(--gold)">↳</span> one NDJSON request per batch — or use the{" "}
+                <a href="/node-sdk/" style="color: var(--text); text-decoration: underline;">
+                  Node SDK
+                </a>{" "}
+                /{" "}
+                <a href="/php-sdk/" style="color: var(--text); text-decoration: underline;">
+                  PHP SDK
+                </a>
               </span>
             </div>
           </div>
@@ -621,10 +657,11 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
         <div class="footer-grid">
           <div>
             <a href="/" class="brand" style="display: inline-flex; align-items: center; gap: 10px;">
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <svg viewBox="5 -2 88 88" width="20" height="20" aria-hidden="true">
                 <path
                   fill="#fbbf24"
-                  d="M3 8l4.5 3L12 4l4.5 7 4.5-3v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                  fill-rule="evenodd"
+                  d="M91 38 80 43.5C80 50 76 57 70 62 59 72 43 73 32 67L8 52.5l3.5-3L7 43.5 30 54C36 44 45 32 54 30l1-13 5 6 4-10 4 9.5 5-6.5 1 12.5c3 1 5 3.5 6 6zM69 36a2.4 2.4 0 1 0 0 .01z"
                 />
               </svg>
               <span class="brand-name" style="font-size: 16px;">
@@ -640,6 +677,12 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             <a href="/quickstart/" class="footer-link">
               Quickstart
             </a>
+            <a href="/trill/" class="footer-link">
+              Search with Trill
+            </a>
+            <a href="/alerts/" class="footer-link">
+              Monitors &amp; alerts
+            </a>
             <a href="/ingestion/" class="footer-link">
               HTTP ingestion
             </a>
@@ -654,6 +697,15 @@ const latestVersion = releases.latest?.version ?? "0.3.0";
             <div class="footer-head">Project</div>
             <a href="/storage/" class="footer-link">
               Storage backends
+            </a>
+            <a href="/backups/" class="footer-link">
+              Backups &amp; archive
+            </a>
+            <a href="/mcp/" class="footer-link">
+              MCP server
+            </a>
+            <a href="/security/" class="footer-link">
+              Security
             </a>
             <a href="/overview/" class="footer-link">
               Overview

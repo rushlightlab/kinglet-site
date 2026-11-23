@@ -14,9 +14,10 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 `/api/auth/*`. Public self-signup is disabled — administrators create accounts.
 
 <Aside type="caution" title="CSRF header">
-  Cookie-authenticated mutations (`POST`, `PATCH`, `DELETE` under `/v1`) must send
-  `X-Kinglet-Request: 1`. The web UI does this automatically; scripts driving the API with a session
-  cookie must set it too. Requests using an `Authorization: Bearer` key are exempt.
+  Cookie-authenticated `/v1` requests other than `GET`/`HEAD`/`OPTIONS` must send
+  `X-Kinglet-Request: 1`, and a cross-origin `Origin` header is rejected with `403`. The web UI does
+  this automatically; scripts driving the API with a session cookie must set it too. Requests using
+  an `Authorization: Bearer` key are exempt.
 </Aside>
 
 ## Auth & workspace
@@ -26,7 +27,7 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/api/auth/sign-in/email`          | `POST`           | Sign in — sets the session cookie                                             |
 | `/api/auth/sign-out`               | `POST`           | Sign out                                                                      |
 | `/api/auth/get-session`            | `GET`            | Current Better Auth session                                                   |
-| `/api/auth/change-password`        | `POST`           | Change your password                                                          |
+| `/api/auth/change-password`        | `POST`           | Change your password; with `revokeOtherSessions` it also deletes your keys    |
 | `/v1/me`                           | `GET`            | Current user + permissions                                                    |
 | `/v1/projects`                     | `GET`/`POST`     | List assigned projects / create a project (admin)                             |
 | `/v1/projects/:id`                 | `PATCH`          | Rename a project (admin) — body `{ "name": "…" }`                             |
@@ -41,6 +42,7 @@ Browser sign-in, sign-out, and password changes are served by Better Auth under
 | `/v1/projects/:id/members/:userId` | `PATCH`/`DELETE` | Grant/revoke `canClearLogs` / remove a member (admin)                         |
 | `/v1/context`                      | `GET`            | Machine-key project, scopes, capabilities, write gate, version, retention     |
 | `/v1/system/status`                | `GET`            | Operational diagnostics — retention, monitors, counts (admin)                 |
+| `/v1/system/events`                | `GET`            | Admin-only SSE stream for backup, restore, and archive lifecycle events       |
 
 `GET /v1/context` is the machine-credential view for `kl_` and `km_` keys. It
 returns the key's project, scopes, effective capabilities, server version and
@@ -53,18 +55,20 @@ environment value.
 See [HTTP ingestion](/ingestion/) for copy-paste clients in TypeScript, Python,
 Go, and PHP.
 
-| Route                     | Method   | What it does                                                                                                         |
-| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `/v1/events`              | `POST`   | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events                                                             |
-| `/v1/events`              | `GET`    | Query events. Params: `q`, `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor`                                       |
-| `/v1/events/:uid`         | `GET`    | Fetch one event by its UUID v7 (project-scoped)                                                                      |
-| `/v1/events/:uid/context` | `GET`    | Neighbouring events. Params: `before`, `after` (0–20, default 5)                                                     |
-| `/v1/events`              | `DELETE` | Clear a project's events. Optional `from`/`to` epoch ms; omit both for all. Admin or a member granted **clear logs** |
-| `/v1/histogram`           | `GET`    | Counts per level per bucket. Params: `from`, `to`, `buckets` (≤ 240)                                                 |
-| `/v1/services`            | `GET`    | Known services with event counts                                                                                     |
-| `/v1/aggregate`           | `GET`    | Totals for a filter; optional `groupBy=service\|level\|env`, `limit` ≤ 200                                           |
-| `/v1/stream`              | `GET`    | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients                                          |
-| `/healthz`                | `GET`    | Health check (no auth)                                                                                               |
+| Route                      | Method   | What it does                                                                                                                                         |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/v1/events`               | `POST`   | Ingest a batch — NDJSON or JSON, ≤ 8 MB, ≤ 10,000 events                                                                                             |
+| `/v1/events`               | `GET`    | Query events. Params: `q` ([Trill](/trill/)), `from`, `to` (epoch ms), `limit` (≤ 1000), `cursor`                                                    |
+| `/v1/events/:uid`          | `GET`    | Fetch one event by its UUID v7 (project-scoped)                                                                                                      |
+| `/v1/events/:uid/context`  | `GET`    | Neighbouring events. Params: `before`, `after` (0–20, default 5)                                                                                     |
+| `/v1/events`               | `DELETE` | Clear a project's events (requires `?project=`). Optional `from`/`to` epoch ms (omit both for all time) and `q`. See [Clearing logs](#clearing-logs) |
+| `/v1/events/clear/preview` | `GET`    | What the same `DELETE` would remove (requires `?project=`): count, top services, newest examples                                                     |
+| `/v1/histogram`            | `GET`    | Counts per level per bucket, for events matching `q`. Params: `q`, `from`, `to`, `buckets` (1–240, default 60)                                       |
+| `/v1/services`             | `GET`    | Known services with event counts                                                                                                                     |
+| `/v1/fields`               | `GET`    | Field keys, types, and top 10 values sampled from up to 1,000 recent events (optional `from`/`to`, default 24 h), plus services and envs             |
+| `/v1/aggregate`            | `GET`    | Totals for a filter; optional `groupBy=service\|level\|env`, `limit` ≤ 200                                                                           |
+| `/v1/stream`               | `GET`    | SSE live tail. Params: `q` — cookie auth, plus `key` for headerless clients                                                                          |
+| `/healthz`                 | `GET`    | Health check (no auth) — returns `{ "ok", "version" }` (`200` or `503`)                                                                              |
 
 Every event has two identifiers:
 
@@ -72,6 +76,7 @@ Every event has two identifiers:
 {
   "id": 84021,
   "uid": "0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30",
+  "projectId": "0190f3a2-6b01-7c2d-8e3f-4a5b6c7d8e9f",
   "apiKeyId": "0190f3a2-8d10-7f3b-9c4a-1e2d3f4a5b6c",
   "ts": 1795076053357,
   "level": 4,
@@ -82,7 +87,7 @@ Every event has two identifiers:
 }
 ```
 
-`id` is the integer row id used for pagination and full-text search. `uid` is a
+`id` is the integer row id used for pagination. `uid` is a
 UUID v7 that is stable and safe to share; fetch one event with
 `GET /v1/events/<uid>`.
 
@@ -119,16 +124,66 @@ Without `groupBy` the response is just `{ from, to, total }`. With
 and caps at 200. Null `service` or `env` keys are events that omitted the field;
 `level` keys are names such as `error` or `fatal`.
 
+## Clearing logs
+
+`DELETE /v1/events` removes a project's events. It requires `?project=<uuid>`
+explicitly (unlike read routes, it does not fall back to the default project)
+and a signed-in user who is an admin, or a member granted **clear logs** on the
+project; API and MCP keys can never delete. Choose what to remove with any
+combination of:
+
+- `from` and `to` (epoch ms), together. Omit both for all time. Unlike
+  searches, a clear isn't limited to 31 days.
+- `q`, a [Trill](/trill/) query, such as `service:worker`, `level<=debug`, or
+  `field.imei:864351050000202`.
+
+`GET /v1/events/clear/preview` takes the same parameters (including `?project=`)
+and permission and deletes nothing. It returns what the clear would remove:
+
+```json
+{
+  "projectId": "0190f3a2-6b01-7c2d-8e3f-4a5b6c7d8e9f",
+  "q": "service:worker",
+  "total": 4212,
+  "services": [{ "key": "worker", "count": 4212 }],
+  "moreServices": false,
+  "sample": [{ "uid": "…", "message": "worker tick 1", "…": "…" }],
+  "archive": false
+}
+```
+
+`archive` is `true` only for an all-time clear without a query. That case also
+deletes the project's [archived logs](/backups/). Range and query clears leave
+the archive alone.
+
 ## Monitors & alerts
 
-| Route                       | Method           | What it does                                                                |
-| --------------------------- | ---------------- | --------------------------------------------------------------------------- |
-| `/v1/monitors`              | `GET`/`POST`     | List / create monitors (session cookie only — `kl_` keys can't manage them) |
-| `/v1/monitors/:id`          | `PATCH`/`DELETE` | Update / delete a monitor                                                   |
-| `/v1/monitors/:id/test`     | `POST`           | Send a test notification through every channel                              |
-| `/v1/monitors/test-channel` | `POST`           | Test an unsaved channel — body `{ "type": "webhook", "url": "…" }`          |
-| `/v1/alerts`                | `GET`            | Alert history. Optional `monitorId`, `state`, `from`, `to`; newest first    |
-| `/v1/alerts/:id`            | `GET`            | One alert by id; 404 outside the project                                    |
+See [Monitors, alerts & notifications](/alerts/) for monitor kinds, channel
+setup, and system event subscriptions.
+
+| Route                       | Method           | What it does                                                                         |
+| --------------------------- | ---------------- | ------------------------------------------------------------------------------------ |
+| `/v1/monitors`              | `GET`/`POST`     | List / create monitors (session or `km_` MCP key; `kl_` keys get `403`)              |
+| `/v1/monitors/:id`          | `PATCH`/`DELETE` | Update / delete a monitor                                                            |
+| `/v1/monitors/:id/test`     | `POST`           | Send a test notification through every channel (session only)                        |
+| `/v1/monitors/test-channel` | `POST`           | Test an unsaved legacy channel (`webhook`, `discord`, or `slack` only; session only) |
+| `/v1/alerts`                | `GET`            | Alert history. Optional `monitorId`, `state`, `from`, `to`; newest first             |
+| `/v1/alerts/:id`            | `GET`            | One alert by id; 404 outside the project                                             |
+
+Each monitor test has a 60-second cooldown; a repeat returns `429` with
+`Retry-After`.
+
+| Notification route                    | Method                 | Auth & notes                                                                                 |
+| ------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
+| `/v1/notifications/capabilities`      | `GET`                  | Admin — reports SMTP availability/sender and `secrets.configured`                            |
+| `/v1/notifications/channels/summary`  | `GET`                  | Any caller with `monitors.read` (including viewers and `km_` keys) — URL-free summaries      |
+| `/v1/notifications/channels`          | `GET`/`POST`           | Admin — list channels (URLs masked) / create channel (`409` on duplicate target)             |
+| `/v1/notifications/channels/:id`      | `GET`/`PATCH`/`DELETE` | Admin — read unmasked target & last test error / update (`409` on duplicate target) / delete |
+| `/v1/notifications/channels/:id/test` | `POST`                 | Admin — send a test notification through one channel                                         |
+| `/v1/notifications/deliveries`        | `GET`                  | Admin — recent delivery log (pruned daily to 30 days / 1,000 rows)                           |
+
+Monitors attach channels by id (up to 8 per monitor). Backup, restore, and
+archive routes are admin-only too; see [Backups & archive](/backups/).
 
 Alert delivery errors are sanitized and returned as `notifyError` only to
 administrators. Members, viewers, and MCP keys receive `null` for that field.
@@ -152,19 +207,50 @@ project.
   env, monitor, level, query, count/threshold/window, a code block for the sample
   event, a link back to Kinglet, and a timestamp.
 - `slack` channels receive the same information as an attachment.
+- `telegram`, `ntfy`, `gotify`, and `pushover` channels receive a plain-text
+  title and body with the state, monitor, project, query, count, sample, and a
+  link back to Kinglet. ntfy, Gotify, and Pushover set a higher priority when a
+  monitor fires.
+- `email` (SMTP), `resend`, and `plunk` channels send an HTML email (rendered
+  with React Email) with a plain-text copy.
+
+Each channel stores one secret target URL. The UI builds it from per-service
+fields; over the API, send it as `url` with the matching `type`:
+
+| Type       | `url`                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------ |
+| `ntfy`     | `https://ntfy.sh/<topic>` or self-hosted `http(s)` server, optional `?auth=<base64("Bearer <token>")>` |
+| `gotify`   | `https://<server>/message?token=<app token>`                                                           |
+| `telegram` | `https://api.telegram.org/bot<token>/sendMessage?chat_id=<chat>`                                       |
+| `pushover` | `https://api.pushover.net/1/messages.json?token=<app>&user=<user>`                                     |
+| `email`    | `mailto:<address>[,<address>…]`, up to 10 (needs `KINGLET_SMTP_*`)                                     |
+| `resend`   | `https://api.resend.com/emails?key=<re_…>&from=<from>&to=<a,b>`                                        |
+| `plunk`    | `https://api.useplunk.com/v1/send?key=<sk_…>&to=<a,b>`                                                 |
+
+Telegram, Pushover, Resend, and Plunk targets must use their official hosts.
+`GET /v1/notifications/capabilities` (admin) reports whether email over SMTP
+is available and its sender address, and whether `KINGLET_SECRET_KEY` is set
+(`secrets.configured`). Without the key, creating a channel or changing its
+target returns `400`; channel responses include `encrypted` and `locked`.
 
 ## Limits
 
-- Ingest: 8 MB / 10,000 events per request, 600 batches/minute per identity.
-- Query: `q` ≤ 500 characters and ≤ 32 terms; `limit` 1–1000; `buckets` 1–240.
-- Aggregate: `groupBy` is `service`, `level`, or `env`; group `limit` 1–200,
-  default 50.
-- `from`/`to` must be epoch ms and are clamped to the last 31 days and 5 minutes
-  of future skew.
-- Alerts: `limit` 1–500. Monitors: 100 per project.
-- Per-project event cap: 1,000,000 events by default; local database cap: 4 GB
-  by default (`0` disables either). Beyond the caps ingest returns `429`/`507`.
-- SSE: at most 200 concurrent streams per process; slow consumers are dropped.
+| Area                 | Limit                                                              | Notes                                                                                                         |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Ingest batch         | 8 MB / 10,000 events                                               | Extras are dropped with `truncated: true`                                                                     |
+| Ingest rate          | 600 batches/min per key or user; 4 in flight (16 per person)       | Over-limit requests return `429` before reading the body                                                      |
+| Management/auth JSON | 256 KiB body                                                       | `/api/auth/*`, `/v1/monitors/*`, `/v1/users/*`, `/v1/projects/*`, `/v1/keys/*`, `/v1/notifications/*` (`413`) |
+| Query (`q`)          | 500 chars, 32 whitespace-separated terms                           | `limit` 1–1000 (default 200); `buckets` 1–240 (default 60)                                                    |
+| Time windows         | 31 days max (default: last hour)                                   | `from`/`to` in epoch ms; `to` clamps to 5 min ahead                                                           |
+| Fields vocabulary    | 1,000 newest events (default: 24 h)                                | Depth ≤ 4, up to 200 keys, top 10 values per key                                                              |
+| Aggregate            | `groupBy`: `service`, `level`, or `env`                            | `limit` 1–200 (default 50)                                                                                    |
+| Monitors & alerts    | 100 monitors/project, 8 channels/monitor                           | Alert `limit` 1–500; alert sends capped at 30/min per channel & project (first skipped send is logged)        |
+| Keys                 | 25 per person per project                                          | Returns `409` beyond the cap                                                                                  |
+| Storage caps         | 1,000,000 events & 1 GiB/project; 4 GiB local DB (`0` = unlimited) | Project cap includes search index; returns `429` (events) or `507` (storage)                                  |
+| SSE (`/v1/stream`)   | 200/process, 100/project, 10/person                                | 15 s ping, 60 s auth check, 30 min max lifetime, drops slow consumers (500 writes / 1 MB); no MCP keys        |
+| Auth rate limits     | 20 sign-in attempts/min per IP                                     | Other `/api/auth/*` routes allow 300/min                                                                      |
+| MCP keys (`km_…`)    | 60 requests/min per key (burst 10)                                 | Returns `429` when exceeded                                                                                   |
+| Maintenance mode     | Read-only during staged restore                                    | Mutating `/v1/*` requests return `503` with `Retry-After: 30`                                                 |
 
 ## Pagination
 
@@ -173,24 +259,46 @@ ties broken by row id, plus a `nextCursor` (the numeric row id of the last row
 returned) when more may exist. Request the next page with
 `cursor=<nextCursor>`; the server resumes from that row's timestamp and id, so
 new events written while you page do not shift later pages. A backfilled event
-with an older timestamp can still appear on a later page. Project ids are UUID
-v7; the cursor is deliberately still the integer row id.
+with an older timestamp can still appear on a later page. Event `uid`s are UUID
+v7; the cursor is the integer row `id`.
 
 ```bash
-curl "http://localhost:8080/v1/events?project=0190f3a2-7c4e-7a11-9b65-2f1d8e6a4c30&q=level:error&limit=500&cursor=84021" \
+curl "http://localhost:8080/v1/events?q=level:error&limit=500&cursor=84021" \
   -H "Authorization: Bearer kl_…"
+```
+
+### Table lists
+
+The lists behind the UI's tables page with `limit`, `offset`, and `q`, and
+return `total`, the number of matching rows across every page:
+`/v1/monitors`, `/v1/alerts`, `/v1/notifications/channels`,
+`/v1/notifications/deliveries`, `/v1/users`, `/v1/projects`,
+`/v1/projects/:id/keys` (also `type=api|mcp`), `/v1/projects/:id/members`, and
+`/v1/backups`.
+
+- `q` keeps rows that contain every word, in any order and case (capped at 200
+  characters and 8 words). It never searches delivery errors or webhook URLs.
+- `limit` is 1–100 (alerts 1–500); `offset` is capped at 1,000,000. Without
+  `limit` a route returns every row, except alerts (100 by default) and
+  deliveries (at most 100).
+- Monitors include `lastAlertAt` and `firing`, taken from each monitor's newest
+  alert.
+
+```bash
+curl "http://localhost:8080/v1/alerts?project=<id>&limit=20&offset=20&q=checkout" \
+  -b "better-auth.session_token=…"
 ```
 
 ## Ingest responses
 
-```json
-{ "accepted": 1998, "rejected": 2, "errors": ["missing message"] }
-```
-
-Bad lines are counted and (up to three) reported — the rest of the batch
-still lands.
+`POST /v1/events` returns `{ "accepted", "rejected" }`, adding `"errors"` (up to
+three validation messages) when validation errors occur and `"truncated": true`
+when a batch exceeds 10,000 events. Malformed NDJSON lines increment `rejected`
+while the rest of the batch lands. Status codes are in
+[HTTP ingestion](/ingestion/#responses).
 
 <Aside type="tip" title="Live tail auth">
-  Browsers use the session cookie. Shippers that cannot send headers can use `?key=kl_…` (API key)
-  on `/v1/stream`.
+  Browsers use the session cookie. Clients that cannot send headers, such as `EventSource`, can pass
+  `?key=kl_…` on `/v1/stream`; `Authorization: Bearer` also works and keeps the key out of access
+  logs.
 </Aside>
