@@ -1,0 +1,132 @@
+---
+import Default from "@astrojs/starlight/components/TableOfContents.astro";
+---
+
+<Default {...Astro.props} />
+
+<script>
+  type TocElement = HTMLElement & { current?: HTMLAnchorElement };
+
+  const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+
+  const tocs = [...document.querySelectorAll<TocElement>("starlight-toc, mobile-starlight-toc")];
+
+  if (tocs.length > 0) {
+    let pinnedHash: string | null = null;
+    let settledScrollY: number | null = null;
+    let settleTimer: number | undefined;
+    let applying = false;
+
+    const findLink = (toc: TocElement, hash: string): HTMLAnchorElement | undefined => {
+      const normalized = hash.startsWith("#") ? hash : `#${hash}`;
+      const encoded = "#" + encodeURIComponent(decodeURIComponent(normalized.slice(1)));
+
+      return [...toc.querySelectorAll<HTMLAnchorElement>("a")].find(
+        (a) => a.hash === normalized || a.hash === encoded,
+      );
+    };
+
+    const applyPinned = () => {
+      if (!pinnedHash || applying) return;
+      applying = true;
+
+      try {
+        for (const toc of tocs) {
+          const link = findLink(toc, pinnedHash);
+
+          if (!link) continue;
+
+          if (link.getAttribute("aria-current") === "true") continue;
+
+          if ("current" in toc) {
+            toc.current = link;
+          } else {
+            toc.querySelector('a[aria-current="true"]')?.removeAttribute("aria-current");
+            link.setAttribute("aria-current", "true");
+          }
+        }
+      } finally {
+        applying = false;
+      }
+    };
+
+    const clearPin = () => {
+      pinnedHash = null;
+      settledScrollY = null;
+
+      if (settleTimer !== undefined) {
+        window.clearTimeout(settleTimer);
+        settleTimer = undefined;
+      }
+    };
+
+    const pinHash = (hash: string) => {
+      if (!hash || hash === "#") return;
+
+      if (!tocs.some((toc) => findLink(toc, hash))) return;
+      pinnedHash = hash;
+      settledScrollY = null;
+      applyPinned();
+
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(() => {
+        if (pinnedHash === hash) {
+          settledScrollY = window.scrollY;
+          applyPinned();
+        }
+      }, 250);
+    };
+
+    // Keep the pinned hash active when Starlight's IntersectionObserver fires
+    // after initial load or an anchor jump near the bottom of the page.
+    const observer = new MutationObserver(() => {
+      if (pinnedHash && !applying) applyPinned();
+    });
+
+    for (const toc of tocs) {
+      observer.observe(toc, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["aria-current"],
+      });
+      toc.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest("a") : null;
+
+        if (target instanceof HTMLAnchorElement && target.hash) {
+          pinHash(target.hash);
+        }
+      });
+    }
+
+    window.addEventListener("hashchange", () => {
+      if (window.location.hash) pinHash(window.location.hash);
+    });
+
+    // Release the pin as soon as the user manually scrolls.
+    window.addEventListener("wheel", clearPin, { passive: true });
+    window.addEventListener("touchmove", clearPin, { passive: true });
+    window.addEventListener("keydown", (event) => {
+      if (SCROLL_KEYS.has(event.key)) clearPin();
+    });
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (
+          pinnedHash &&
+          settledScrollY !== null &&
+          Math.abs(window.scrollY - settledScrollY) > 10
+        ) {
+          clearPin();
+        }
+      },
+      { passive: true },
+    );
+
+    if (window.location.hash) {
+      pinHash(window.location.hash);
+      void customElements.whenDefined("starlight-toc").then(() => {
+        if (pinnedHash) applyPinned();
+      });
+    }
+  }
+</script>

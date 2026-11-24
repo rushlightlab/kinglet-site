@@ -48,6 +48,9 @@ export default defineConfig({
         },
       ],
       customCss: ["./src/styles/custom.css"],
+      components: {
+        TableOfContents: "./src/components/TableOfContents.astro",
+      },
       expressiveCode: { themes: [kingletCodeTheme] },
       sidebar: [
         {
@@ -95,6 +98,7 @@ export default defineConfig({
             { label: "Capacity planning", link: "/capacity/" },
             { label: "Backups & archive", link: "/backups/" },
             { label: "Security", link: "/security/" },
+            { label: "Privacy & data", link: "/privacy/" },
           ],
         },
         {

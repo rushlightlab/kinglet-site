@@ -1,0 +1,111 @@
+---
+title: Privacy & data
+description: What Kinglet stores, what leaves your server and when, and what this website collects.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Kinglet is software you run yourself. The Kinglet project never sees your logs,
+your users, or your settings: there is no Kinglet cloud for them to go to.
+
+<Aside type="tip" title="Short version">
+  No telemetry, no usage stats, no update checks. Data leaves your server only through integrations
+  you turn on.
+</Aside>
+
+## What Kinglet stores
+
+Everything lives in your database: the SQLite file under `/data` by default, or
+a remote libSQL/Turso database if you point `KINGLET_DB_PATH` at one (see
+[Storage backends](/storage/)).
+
+| Data                  | What it holds                                                                           | How long                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Log events            | Whatever your applications send: message, level, service, env, fields                   | `KINGLET_RETENTION_DAYS` (default `14`), or earlier if a project hits its cap |
+| User accounts         | Name, email, password hash, role, project memberships                                   | Until an admin deletes the user                                               |
+| Sessions              | Session token, plus the IP address and user agent from sign-in                          | `KINGLET_SESSION_DAYS` (default `30`), or on sign-out, role change, or reset  |
+| API & MCP keys        | Key name, prefix, hash (never plaintext after creation), scopes, creator, and last used | Until revoked, or the project or creator is removed                           |
+| Alerts                | Monitor firings: summary, count, and a sample event message                             | `KINGLET_ALERT_RETENTION_DAYS` (default `90`)                                 |
+| Notification channels | Channel settings; URLs, tokens, and API keys are encrypted with `KINGLET_SECRET_KEY`    | Until you delete the channel                                                  |
+| Delivery history      | Recent notification attempts: channel, event type, subject, status, sanitized error     | Pruned daily to `30` days and capped at `1,000` rows                          |
+
+The web UI signs you in with a session cookie set by your own server and keeps
+local preferences (selected project, saved searches, table page size) in your
+browser's `localStorage`. It loads no third-party scripts, fonts, or trackers.
+
+## What leaves your server
+
+Kinglet makes no outbound connections on its own. Each of these happens only
+when you configure it:
+
+- **Notification channels** — webhook, Discord, Slack, Telegram, ntfy, Gotify,
+  Pushover, and email (SMTP, Resend, Plunk). Alert messages include a sample of
+  the matching event's text, so that text is sent to the service you chose. The
+  ntfy form starts with the public `ntfy.sh` server; replace it with your own
+  server if you run one. See [Monitors & notifications](/alerts/).
+- **Backups** — compressed full database snapshots (including accounts,
+  sessions, and logs) uploaded to your S3-compatible bucket. Set
+  `KINGLET_BACKUP_PASSPHRASE` to age-encrypt them before upload. See
+  [Backups & archive](/backups/).
+- **Log archive** — per-project compressed NDJSON exports to your bucket before
+  retention deletes events (also age-encrypted when `KINGLET_BACKUP_PASSPHRASE`
+  is set). Archived events outlive `KINGLET_RETENTION_DAYS`, so give the bucket
+  its own lifecycle rule.
+- **Remote database** — with a remote libSQL/Turso database, all data is stored
+  by that provider.
+- **MCP clients** — query results go to the MCP client holding the `km_…` key,
+  and from there to whatever AI model that client uses. See
+  [MCP server](/mcp/).
+
+Kinglet's sign-in library, Better Auth, includes anonymous telemetry that is off
+by default. Kinglet doesn't turn it on; it stays off unless you set
+`BETTER_AUTH_TELEMETRY=1` yourself.
+
+## Your responsibilities as the operator
+
+Whoever runs a Kinglet server is responsible for the data on it. Under laws like
+the GDPR, that makes you the data controller, not the Kinglet project.
+
+Logs often carry personal data without anyone deciding they should: IP
+addresses, emails, user IDs, request bodies. To keep that under control:
+
+- **Log less.** Leave secrets, tokens, and unnecessary personal data out of
+  events at the source.
+- **Keep retention short.** Set `KINGLET_RETENTION_DAYS` to what you actually
+  need, and an expiry rule on any archive or backup bucket.
+- **Handle deletion requests.** Admins, and members granted **clear logs**, can
+  delete a project's events by time range and query (see
+  [Clearing logs](/api/#clearing-logs)). Clearing removes events from the live
+  database, not from S3 snapshots or archive parts already written.
+- **Encrypt what leaves.** Use a backup passphrase, and HTTPS for every webhook
+  and channel.
+- **Limit access.** Give people the lowest role that works, and only the
+  projects they need. See [Authentication & projects](/authentication/).
+
+[Security](/security/) covers hardening the server itself.
+
+## This website
+
+`kinglet.rushlightlab.com` is a static site. It sets no cookies, has no accounts
+or forms, and loads no analytics or third-party scripts; fonts and search are
+served from the site itself.
+
+The site is hosted on Cloudflare, which processes standard request data, such
+as IP addresses, to deliver and protect it. See
+[Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/).
+
+Links to GitHub and other sites are governed by those sites' own policies.
+
+## License & terms
+
+Kinglet is open-source software released under the
+[MIT License](https://github.com/rushlightlab/kinglet/blob/main/LICENSE).
+Because there is no hosted Kinglet service, there are no separate terms of
+service — the MIT License governs your use of the software, which is provided
+"as is", without warranty.
+
+## Questions
+
+Open an issue on [GitHub](https://github.com/rushlightlab/kinglet/issues). For
+security issues, use the private process in
+[Reporting a vulnerability](/security/#reporting-a-vulnerability).
