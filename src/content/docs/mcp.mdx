@@ -42,15 +42,19 @@ request; the old secret then gets `401`.
 
 ## Configuration
 
-| Variable                 | Required | Description                                                                       |
-| ------------------------ | -------- | --------------------------------------------------------------------------------- |
-| `KINGLET_URL`            | yes      | Base URL, for example `https://logs.example.com`; must be `http://` or `https://` |
-| `KINGLET_MCP_KEY`        | yes      | MCP key starting with `km_...`; a `kl_...` API key is rejected                    |
-| `KINGLET_MCP_TIMEOUT_MS` | no       | Per-request timeout in milliseconds; default `15000` (1000–300000)                |
+| Variable                          | Required | Description                                                                         |
+| --------------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `KINGLET_URL`                     | yes      | Base URL, for example `https://logs.example.com`; `http://` only for localhost      |
+| `KINGLET_MCP_KEY`                 | yes      | MCP key starting with `km_...`; a `kl_...` API key is rejected                      |
+| `KINGLET_MCP_TIMEOUT_MS`          | no       | Per-request timeout in milliseconds; default `15000` (1000–300000)                  |
+| `KINGLET_MCP_ALLOW_INSECURE_HTTP` | no       | `1` allows `http://` to a host other than localhost (trusted private networks only) |
 
 The URL may include a path prefix, such as `https://example.com/kinglet`, but
-not credentials, a query string, or a fragment. Use HTTPS outside local
-development.
+not credentials, a query string, or a fragment. Because the key is sent with
+every request, `http://` is accepted only for `localhost`, `*.localhost`,
+`127.0.0.0/8`, and `[::1]`; any other host needs HTTPS or the explicit
+`KINGLET_MCP_ALLOW_INSECURE_HTTP=1` opt-in. Redirects are never followed, so
+point `KINGLET_URL` at the final address.
 
 <Aside type="note" title="Windows: wrap npx with cmd /c">
   Desktop clients often start without your shell `PATH`. If `npx` is not found, use `"command":
@@ -275,7 +279,11 @@ settings, SQL, or shell: an MCP client cannot delete logs or change access.
 - Event messages and fields are untrusted input. A log line can contain text
   that looks like an instruction; the server never acts on it, but prompt
   injection defense ultimately depends on the client and model. Be cautious with
-  agents that can take follow-up actions.
+  agents that can take follow-up actions. With monitor writes enabled, a log line
+  could ask the model to disable or delete a monitor: enable
+  `KINGLET_MCP_ALLOW_MONITOR_WRITES` only with a client that asks you to approve
+  each `create_monitor`, `update_monitor`, and `delete_monitor` call, and never
+  auto-approve those tools.
 - Never paste secrets into logs you plan to search, and grant only the scopes the
   client needs. Omit `monitors.write` unless the client should change monitors.
 - The server logs one line per tool call to stderr with the tool name, duration,

@@ -134,7 +134,9 @@ no-referrer`, `X-Frame-Options: DENY`, and a strict `Content-Security-Policy`
   with a remote database (required) or when you want sessions to survive
   container rebuilds without relying on `/data/auth-secret.txt`. Rotating it
   signs every session out.
-- Set `KINGLET_SECRET_KEY` (`openssl rand -base64 32`). It encrypts every stored
+- Set `KINGLET_SECRET_KEY` (`openssl rand -base64 32`). It must be random bytes,
+  as hex or canonical base64 of at least 32 bytes; a passphrase stops startup.
+  It encrypts every stored
   notification channel secret and legacy monitor webhook URL with AES-256-GCM.
   Store a copy apart from `/data` and backups: a leaked database or snapshot
   doesn't reveal channel secrets without it, and a restore needs it. Changing

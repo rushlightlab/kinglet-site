@@ -26,9 +26,10 @@ docker compose up -d --build
 
 The compose file loads `.env` when it exists, with two exceptions: it sets
 `KINGLET_DB_PATH` and `KINGLET_RETENTION_DAYS` in its `environment:` block, which
-overrides `.env`, so edit those there. It also publishes `8080` on every
-interface; change the mapping to `"127.0.0.1:8080:3000"` unless other machines
-must reach it.
+overrides `.env`, so edit those there. It publishes `8080` on loopback only
+(`"127.0.0.1:8080:3000"`); change the mapping to `"8080:3000"` only if other
+machines must reach it directly, since Docker-published ports bypass host
+firewalls such as ufw.
 
 To build an image for another host, use `docker build -t kinglet:<tag> .` and
 deploy it like the published image with any method in [Deploy](/deploy/). For

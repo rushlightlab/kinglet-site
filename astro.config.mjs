@@ -110,7 +110,10 @@ export default defineConfig({
         },
         {
           label: "Project",
-          items: [{ label: "Changelog", link: "/changelog/" }],
+          items: [
+            { label: "Changelog", link: "/changelog/" },
+            { label: "Upgrading", link: "/upgrading/" },
+          ],
         },
       ],
     }),
