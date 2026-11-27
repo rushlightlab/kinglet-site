@@ -11,7 +11,9 @@ project-scoped routes pass `?project=<uuid>`; API keys are bound to their projec
 and enforce their `ingest` / `query` scopes.
 
 Browser sign-in, sign-out, and password changes are served by Better Auth under
-`/api/auth/*`. Public self-signup is disabled — administrators create accounts.
+`/api/auth/*`. Only the four auth routes listed below are served; any other
+`/api/auth/*` path returns `404`. Public self-signup is disabled — administrators
+create accounts.
 
 <Aside type="caution" title="CSRF header">
   Cookie-authenticated `/v1` requests other than `GET`/`HEAD`/`OPTIONS` must send

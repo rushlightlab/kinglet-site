@@ -19,7 +19,13 @@ import Default from "@astrojs/starlight/components/TableOfContents.astro";
 
     const findLink = (toc: TocElement, hash: string): HTMLAnchorElement | undefined => {
       const normalized = hash.startsWith("#") ? hash : `#${hash}`;
-      const encoded = "#" + encodeURIComponent(decodeURIComponent(normalized.slice(1)));
+      let encoded = normalized;
+
+      try {
+        encoded = "#" + encodeURIComponent(decodeURIComponent(normalized.slice(1)));
+      } catch {
+        // A malformed escape in the hash: compare the raw hash only.
+      }
 
       return [...toc.querySelectorAll<HTMLAnchorElement>("a")].find(
         (a) => a.hash === normalized || a.hash === encoded,

@@ -1,0 +1,160 @@
+---
+title: Upgrading
+description: Breaking changes between Kinglet releases and what to do about each one.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Read the section for every release between the version you run and the one you
+are moving to. Each entry says who is affected and how to fix it. The
+[changelog](/changelog/) has the full release notes.
+
+<Aside type="caution" title="Back up first">
+  Take a [snapshot](/backups/#snapshots) or copy `/data` before upgrading. A release that adds a
+  database migration applies it on first boot and cannot be rolled back in place.
+</Aside>
+
+## Next release (after 0.5.0)
+
+These changes come from the run-4 security review. Most deployments only need
+to check the first three items.
+
+### Before you upgrade
+
+- **`KINGLET_SECRET_KEY` must be random bytes.** The key must be hex or
+  canonical base64 of at least 32 bytes, such as the output of
+  `openssl rand -base64 32`. A typed passphrase used to be half-decoded and
+  accepted; Kinglet now refuses to start with it.
+
+  _Fix:_ if your key came from `openssl rand`, nothing changes. Otherwise, while
+  still on 0.5.0, open each notification channel in **Settings →
+  Notifications** and note its target. Then set a new key from
+  `openssl rand -base64 32`, upgrade, and re-enter each channel's target and any
+  legacy monitor destination. Channels sealed with the old key show as locked
+  until you do.
+
+- **Docker Compose publishes port 8080 on loopback only.** The shipped
+  `docker-compose.yml` now maps `"127.0.0.1:8080:3000"`, because
+  Docker-published ports bypass host firewalls such as ufw. The README's
+  `docker run` example does the same.
+
+  _Fix:_ put a TLS proxy such as Caddy in front (see [Docker Compose](/deploy/docker-compose/)).
+  If other machines must reach port 8080 directly, change the mapping back to
+  `"8080:3000"` in your own compose file.
+
+- **The first boot rewrites per-event storage sizes.** Migration `0013`
+  replaces each stored event's raw byte count with an estimate of its on-disk
+  size, including its share of the search index. `KINGLET_MAX_PROJECT_DB_MB` is
+  now charged from each project's own rows instead of a database-wide ratio,
+  so another project's data can no longer push yours over its cap. On a large
+  database the migration can take a few seconds.
+
+  _Fix:_ after upgrading, watch for `507 project storage limit reached` on
+  projects close to their cap, and raise `KINGLET_MAX_PROJECT_DB_MB` if a
+  project that was under its cap is now over it.
+
+### API and auth
+
+- **Only four `/api/auth/*` routes are served:** `sign-in/email`, `sign-out`,
+  `get-session`, and `change-password`. Every other Better Auth path, including
+  `ok`, `list-sessions`, `revoke-session(s)`, `update-user`, and the remaining
+  `admin/*` endpoints, now returns `404`.
+
+  _Fix:_ use the web UI or the `/v1` API for account and user management.
+
+- **API and MCP keys follow their creator's current access.** A key whose
+  creator is no longer an admin, or no longer a member of the key's project,
+  returns `401`. Offboarding already revoked these keys; this closes the gap
+  for a key created while a demotion or ban was in flight.
+
+  _Fix:_ have a current admin or project member create a replacement key.
+
+- **Local development origins are accepted only for a local base URL.** With a
+  public `KINGLET_BASE_URL`, cookie-authenticated `/v1` mutations from
+  `http://localhost:5173` and similar origins get `403 cross-origin request rejected`.
+
+  _Fix:_ set `KINGLET_BASE_URL` to the local origin while developing, or use a
+  `kl_` key with `Authorization: Bearer`.
+
+- **An empty `Authorization: Bearer` header no longer skips the CSRF check.**
+  A cookie request that sent `Bearer` with no token used to be exempt.
+
+  _Fix:_ send `X-Kinglet-Request: 1` with cookie requests, or a real key.
+
+- **`404` responses no longer echo the request path.** The body is now
+  `{ "error": "not found" }`.
+
+### Notifications
+
+- **Private-webhook test sends are admin-only.** With
+  `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1`, `POST /v1/monitors/test-channel` to a
+  private or loopback address now returns `400` for members. Admins can still
+  test them.
+
+  _Fix:_ ask an admin to test internal destinations.
+
+- **An unlinked channel no longer keeps receiving through its legacy copy.**
+  The 0.5.0 migration kept each monitor's old inline destination next to the
+  new channel. If a monitor was unlinked from that channel, alerts fell back to
+  the inline copy, even when an admin had disabled the channel. Destinations
+  that are also managed channels are now skipped.
+
+  _Fix:_ if a monitor stopped alerting after the upgrade, edit the monitor,
+  select the channel again, and make sure the channel is enabled in
+  **Settings → Notifications**.
+
+- **Notification text drops C1 control characters and bidi overrides**, and
+  Slack messages escape `&`. Alert text that relied on them displays
+  differently.
+
+### Users and projects
+
+- **Demoting a user to viewer removes their clear-logs grants.** They no longer
+  come back silently if the user is promoted again.
+
+  _Fix:_ after a re-promotion, turn the clear-logs switch back on in the
+  project's **members** settings.
+
+### Ingest, backups, and archive
+
+- **Malformed NDJSON lines count toward the 10,000-line batch cap.** A batch
+  with more than 10,000 non-empty lines is truncated at that point
+  (`truncated: true`), whether or not the lines are valid.
+
+  _Fix:_ send at most 10,000 lines per request; the SDKs already do.
+
+- **Archive import stops at `KINGLET_MAX_DB_MB`.** Before each part, import
+  checks the database size and stops with `507` once the cap is reached.
+
+  _Fix:_ free space or raise `KINGLET_MAX_DB_MB`, then run the import again.
+  Rows that were already imported are skipped.
+
+- **Snapshots no longer contain sessions or verification tokens.** Restores
+  already signed everyone out, so no action is needed.
+
+- **Notification channel secrets stored in plaintext after boot are refused.**
+  Once Kinglet has encrypted existing secrets at boot, a plaintext value
+  written directly to the database reads as damaged.
+
+  _Fix:_ change channels through the UI or API, never by editing the database.
+
+### SDKs and MCP server
+
+- **The MCP server refuses `http://` for hosts other than localhost.** The key
+  is sent with every request, so `KINGLET_URL` must use HTTPS unless it points
+  at `localhost`, `*.localhost`, `127.0.0.0/8`, or `[::1]`.
+
+  _Fix:_ use HTTPS, or set `KINGLET_MCP_ALLOW_INSECURE_HTTP=1` on a trusted
+  private network.
+
+- **The MCP server, Node SDK, and PHP SDK never follow redirects.** A redirect
+  used to replay the key to the new location.
+
+  _Fix:_ point `KINGLET_URL` (or the SDK `url`) at the final address, for
+  example `https://` instead of an `http://` URL that redirects.
+
+### For maintainers
+
+- **Release workflows publish only commits on `main`.** The Docker and npm
+  workflows now fail when the tag or ref points at a commit that is not
+  already on `main`.

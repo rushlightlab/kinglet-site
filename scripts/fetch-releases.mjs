@@ -115,7 +115,8 @@ description: Kinglet release notes, generated from GitHub Releases.
 ---
 
 Every release is published on [GitHub Releases](https://github.com/${repo}/releases).
-This page is regenerated from those releases during the site build.
+This page is regenerated from those releases during the site build. Breaking
+changes and how to handle each one are collected in [Upgrading](/upgrading/).
 
 ${sections}`;
 }
