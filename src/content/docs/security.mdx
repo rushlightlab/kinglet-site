@@ -163,10 +163,13 @@ Use the smallest role that works:
   Disabling blocks sign-in and revokes keys owned by that user; enabling the
   account does not restore them.
 - A role change deletes the user's sessions; a demotion (to viewer, or admin to
-  member) also revokes the keys they created. Account deletion removes both.
-  Mutating requests bypass the session cookie cache; read-only requests can use a
-  signed cache for up to 60 seconds. For immediate read revocation, sign the user
-  out or delete the sessions.
+  member) also revokes the keys they created, and a demotion to viewer clears
+  their clear-logs grants. A key only authenticates while its creator is still an
+  admin, or a member of the key's project. Account deletion removes both.
+  Mutating requests, and reads that return admin secrets (unmasked channel
+  targets, snapshot downloads, backup refresh), bypass the session cookie cache.
+  Other read-only requests can use a signed cache for up to 60 seconds, so a
+  signed-out or demoted user may keep read access for up to a minute.
 - A password reset revokes the user's keys and sessions. Changing your own
   password signs out your other sessions and, unless you untick "also revoke my
   keys" (`revokeApiKeys: false` in the API), deletes the API and MCP keys you
@@ -224,8 +227,9 @@ See [MCP server](/mcp/#security) for setup and details.
 - Private, loopback, and metadata webhook targets are blocked by default,
   including after DNS resolution, and redirects are refused.
   `KINGLET_ALLOW_PRIVATE_WEBHOOKS=1` lifts that block. Only admins can set channel
-  URLs, so enable it only if every admin may reach internal hosts, and add egress
-  rules at the container or host level. Self-hosted ntfy and Gotify servers
+  URLs, and only admins' channel test sends get private reach, so enable it only
+  if every admin may reach internal hosts, and add egress rules at the container
+  or host level. Self-hosted ntfy and Gotify servers
   follow the same rule; Telegram, Pushover, Resend, and Plunk channels can only
   reach their official API hosts.
 - Channel tokens and API keys (Telegram bot tokens, Pushover keys, Resend and
